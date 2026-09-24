@@ -1,0 +1,16 @@
+pandas
+numpy
+scikit-learn
+lightgbm
+xgboost
+catboost
+matplotlib
+tqdm
+# text / matching stack (likely needed — see README rules hint)
+sentence-transformers
+faiss-cpu          # swap to faiss-gpu-cu12 on the GPU box
+rapidfuzz
+# deep learning (install torch per-machine: GPU box uses CUDA build)
+transformers
+datasets
+accelerate

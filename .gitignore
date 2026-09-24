@@ -1,0 +1,15 @@
+data/
+*.parquet
+*.feather
+*.pkl
+*.pt
+*.bin
+*.ckpt
+*.npy
+*.zip
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+*.log
