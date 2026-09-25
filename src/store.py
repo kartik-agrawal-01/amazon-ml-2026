@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 from .data import count_lines, find_files, raw_frame, read_source_chunks
-from .normalize import add_normalized, fold
+from .normalize import _normalize_frame, fold
 
 try:
     import pyarrow as pa
@@ -143,7 +143,7 @@ def _raw_schema():
     return pa.schema([(c, pa.int8() if c == "src" else pa.int64() if c == "pos" else pa.string()) for c in RAW_SCHEMA_COLS])
 
 
-def _stage_raw_by_country(files: dict, cache_dir: str, split: str, chunksize: int = 500_000):
+def _stage_raw_by_country(files: dict, cache_dir: str, split: str, chunksize: int = 500_000, skip=()):
     """Stream the three source TSVs in chunks and append every row to cache/<split>__raw__<country>.parquet.
     Only one chunk is in RAM at a time. Returns (paths by country, schema info, n_rows)."""
     writers, paths, schema_info = {}, {}, {}
@@ -156,6 +156,8 @@ def _stage_raw_by_country(files: dict, cache_dir: str, split: str, chunksize: in
             out["pos"] = offset + n + np.arange(len(out), dtype=np.int64)
             key = _country_key(out).to_numpy()
             for c in np.unique(key):
+                if c in skip:
+                    continue
                 sub = out[key == c]
                 if c not in writers:
                     fname = "".join(ch if ch.isalnum() else "_" for ch in (c or "none"))
@@ -176,10 +178,100 @@ def _stage_raw_by_country(files: dict, cache_dir: str, split: str, chunksize: in
     return paths, schema_info, offset
 
 
+CNT_COLS = ["cnt_core_s1", "cnt_core_all", "cnt_ph_s1", "cnt_ph_all", "cnt_nsp_s1", "cnt_nsp_all", "cnt_addr_all", "cnt_addr_s1"]
+UNIQ_KEY_COLS = ["src", "country", "n_core", "n_ph", "n_nospace", "n_addr"]
+
+
+def _normalise_country(raw_path: str, tmp_path: str, n_jobs: int, keep_raw: bool, chunk: int = 100_000) -> int:
+    """Normalise one country's raw rows (file order: S1, S2, S3) with spawned workers, streaming every finished
+    100K-row chunk into tmp_path as its own parquet row group. Parent RAM ~ the raw table + one chunk."""
+    import multiprocessing as mp
+    from concurrent.futures import ProcessPoolExecutor
+    raw = pq.read_table(raw_path).to_pandas(self_destruct=True)
+    dup = raw["rid"].duplicated()
+    if dup.any():
+        raise ValueError(f"[{raw_path}] {int(dup.sum())} record ids repeat, e.g. {raw.rid[dup].head(3).tolist()}")
+    raw = raw.sort_values("pos", kind="stable").reset_index(drop=True)
+    n = len(raw)
+    cols_in = [c for c in ("name", "addr", "city", "zip", "state", "country") if c in raw]
+    base_cols = ["rid", "src", "pos"] + (RAW_COLS if keep_raw else [])
+    bounds = [(a, min(a + chunk, n)) for a in range(0, n, chunk)]
+    writer = None
+
+    def emit(a, b, part):
+        nonlocal writer
+        frame = raw.iloc[a:b][base_cols].reset_index(drop=True)
+        part = part.reset_index(drop=True)
+        for c in part.columns:
+            frame[c] = part[c]
+        frame["n_full"] = (frame["n_core"] + " " + frame["n_addr"]).str.strip()
+        frame["src"] = frame["src"].astype(np.int8)
+        frame["pos"] = frame["pos"].astype(np.int64)
+        table = pa.Table.from_pandas(frame, preserve_index=False)
+        if writer is None:
+            writer = pq.ParquetWriter(tmp_path, table.schema, compression="zstd")
+        writer.write_table(table.cast(writer.schema))
+
+    n_jobs = n_jobs or (os.cpu_count() or 1)
+    if n_jobs > 1 and len(bounds) > 1:
+        with ProcessPoolExecutor(min(n_jobs, len(bounds)), mp_context=mp.get_context("spawn")) as ex:
+            for (a, b), part in zip(bounds, ex.map(_normalize_frame, (raw.iloc[a:b][cols_in] for a, b in bounds))):
+                emit(a, b, part)
+                del part
+    else:
+        emit(0, n, _normalize_frame(raw[cols_in]))
+    writer.close()
+    del raw
+    return n
+
+
+def _finalise_country(tmp_path: str, final_path: str, keep_cols: List[str]) -> dict:
+    """Uniqueness counts from the key columns only, then stream tmp -> final row group by row group with the
+    count columns attached and the columns in KEEP_COLS order."""
+    key = pq.read_table(tmp_path, columns=UNIQ_KEY_COLS).to_pandas(self_destruct=True)
+    key = add_uniqueness(key)
+    cnt = {c: key[c].to_numpy() for c in CNT_COLS}
+    src = key["src"].to_numpy()
+    info = dict(n_rows=int(len(key)), n_s1=int((src == 1).sum()), n_s2=int((src == 2).sum()), n_s3=int((src == 3).sum()))
+    del key, src
+    pf = pq.ParquetFile(tmp_path)
+    writer, off = None, 0
+    for i in range(pf.num_row_groups):
+        t = pf.read_row_group(i)
+        m = t.num_rows
+        for c in CNT_COLS:
+            t = t.append_column(c, pa.array(cnt[c][off:off + m], type=pa.int32()))
+        t = t.select([c for c in keep_cols if c in t.column_names])
+        if writer is None:
+            writer = pq.ParquetWriter(final_path, t.schema, compression="zstd")
+        writer.write_table(t)
+        off += m
+    writer.close()
+    os.remove(tmp_path)
+    info["path"] = final_path
+    return info
+
+
+def _done_path(final_path: str) -> str:
+    return final_path[: -len(".parquet")] + ".done.json"
+
+
+def _load_done(cache_dir: str, split: str) -> Dict[str, dict]:
+    """Countries whose final parquet was completed by an earlier (interrupted) build: {country: info}."""
+    import glob
+    done = {}
+    for p in glob.glob(os.path.join(cache_dir, f"{split}__*.done.json")):
+        with open(p) as fh:
+            info = json.load(fh)
+        if os.path.exists(info.get("path", "")) and info.get("keep_raw") is not None:
+            done[info["country"]] = info
+    return done
+
+
 def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw: bool = False) -> dict:
     """Stream the split into per-country RAW parquet files (one chunk in RAM at a time), then normalise + count
-    one country at a time and write the final per-country parquet + meta json. Returns meta.
-    Peak RAM ~ one raw country + its normalised columns (the largest country, not the whole split)."""
+    one country at a time (streamed, see _normalise_country/_finalise_country) and write the meta json.
+    Resumable: countries with a .done.json marker from an interrupted build are skipped. Returns meta."""
     if pq is None:
         raise ImportError("pyarrow is required for the per-country store (pip install pyarrow)")
     t0 = time.time()
@@ -188,8 +280,11 @@ def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw
     missing = [s for s in (1, 2, 3) if s not in files]
     if missing:
         raise FileNotFoundError(f"[{split}] could not find source files {missing} under {data_dir}")
+    done = {c: i for c, i in _load_done(cache_dir, split).items() if bool(i["keep_raw"]) == bool(keep_raw)}
+    if done:
+        _log(f"{split}: resuming, countries already built: {sorted(done)}")
     print(f"== {split}", flush=True)
-    raw_paths, schema_info, n_rows = _stage_raw_by_country(files, cache_dir, split)
+    raw_paths, schema_info, n_rows = _stage_raw_by_country(files, cache_dir, split, skip=set(done))
     _log(f"{split}: staged {n_rows} raw rows into {len(raw_paths)} country files ({time.time() - t0:.0f}s)")
     meta = {"split": split, "n_rows": int(n_rows), "files": files, "schema": schema_info, "countries": {},
             "cols": KEEP_COLS + (RAW_COLS if keep_raw else []), "keep_raw": keep_raw}
@@ -200,7 +295,7 @@ def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw
         dist = n_true.clip(upper=4).value_counts().sort_index().to_dict()
         dist[0] = n_s1 - len(n_true)
         s1_ids = set()
-        for c, rp in raw_paths.items():
+        for rp in list(raw_paths.values()) + [i["path"] for i in done.values()]:
             t = pq.read_table(rp, columns=["rid", "src"], filters=[("src", "==", 1)])
             s1_ids |= set(t.column("rid").to_pylist())
             del t
@@ -214,32 +309,25 @@ def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw
                       "singleton_rate": float((n_s1 - len(n_true)) / max(n_s1, 1))}
         del pairs, s1_ids, gt_ids, n_true
     import gc
-    for c in sorted(raw_paths):
+    for c in sorted(set(raw_paths) | set(done)):
+        if c in done:
+            meta["countries"][c] = {k: done[c][k] for k in ("path", "n_rows", "n_s1", "n_s2", "n_s3")}
+            continue
         t = time.time()
-        sub = pq.read_table(raw_paths[c]).to_pandas(self_destruct=True)
-        dup = sub["rid"].duplicated()
-        if dup.any():
-            raise ValueError(f"[{split}/{c}] {int(dup.sum())} record ids repeat, e.g. {sub.rid[dup].head(3).tolist()}")
-        sub = sub.sort_values("pos", kind="stable").reset_index(drop=True)  # S1 rows first, then S2, S3 (file order)
-        sub = add_normalized(sub, n_jobs=n_jobs)
-        sub["n_full"] = (sub["n_core"] + " " + sub["n_addr"]).str.strip()
-        sub = add_uniqueness(sub)
-        if not keep_raw:
-            sub = sub.drop(columns=[col for col in RAW_COLS if col in sub])
-        sub["src"] = sub["src"].astype(np.int8)
-        sub["pos"] = sub["pos"].astype(np.int64)
-        cols = [col for col in meta["cols"] if col in sub]
-        sub = sub[cols]
         fname = "".join(ch if ch.isalnum() else "_" for ch in (c or "none"))
-        path = _write_table(sub, os.path.join(cache_dir, f"{split}__{fname}.parquet"))
-        src = sub["src"].to_numpy()
-        meta["countries"][c] = {"path": path, "n_rows": int(len(sub)), "n_s1": int((src == 1).sum()),
-                                "n_s2": int((src == 2).sum()), "n_s3": int((src == 3).sum())}
-        _log(f"{split}/{c!r}: normalised {len(sub)} rows -> {os.path.basename(path)} "
-             f"({os.path.getsize(path) / 1e6:.0f} MB, {time.time() - t:.0f}s)")
-        del sub, src
+        tmp_path = os.path.join(cache_dir, f"{split}__tmp__{fname}.parquet")
+        final_path = os.path.join(cache_dir, f"{split}__{fname}.parquet")
+        n = _normalise_country(raw_paths[c], tmp_path, n_jobs, keep_raw)
+        gc.collect()
+        info = _finalise_country(tmp_path, final_path, meta["cols"])
+        meta["countries"][c] = info
+        with open(_done_path(final_path), "w") as fh:
+            json.dump({**info, "country": c, "keep_raw": keep_raw}, fh)
+        _log(f"{split}/{c!r}: normalised {n} rows -> {os.path.basename(final_path)} "
+             f"({os.path.getsize(final_path) / 1e6:.0f} MB, {time.time() - t:.0f}s)")
         gc.collect()
         os.remove(raw_paths[c])
+    meta["n_rows"] = int(sum(i["n_rows"] for i in meta["countries"].values()))
     with open(meta_path(cache_dir, split), "w") as fh:
         json.dump(meta, fh, indent=1, default=str)
     _log(f"{split}: store complete in {time.time() - t0:.0f}s")
