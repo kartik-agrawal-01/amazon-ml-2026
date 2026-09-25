@@ -1,18 +1,20 @@
-"""End-to-end pipeline, per country and block-wise so it fits the shared 15 GB box (~5 GB for us).
+"""End-to-end pipeline, per country and block-wise so it fits the shared 15 GB box (~5 GB for us),
+with the CASCADE candidate filter (docs/CASCADE_INTEGRATION.md) as the last candidate-generation stage.
 
 Flow
   1. build/load the per-country store (src/store.py): normalised records of each split as one parquet per
      country; ground truth as a (s1, m) pair table. Only one country is in RAM at a time.
   2. fit TF-IDF vectorisers on a text sample drawn across splits/countries (~2.5M rows)
-  3. TRAIN: for each country: sample S1 (--train-s1 split proportionally to the countries' S1 counts) ->
-     blocks -> candidates -> stage A -> labels -> prune threshold calibrated PER COUNTRY (--keep-recall) ->
-     stage B; features go to a float32 memmap, ids are kept as fixed-width bytes. Then GroupKFold OOF,
-     rule sweep on OOF, final model.
-  4. TEST: for each country (an unseen country uses the smallest train prune threshold): blocks -> candidates
-     -> stage A -> prune -> stage B -> predict -> decide -> rows appended to matching_results.tsv +
-     candidate_pairs.tsv as they are produced.
-Modelling logic (views, features, model, decision rule) is unchanged from the previous single-table version;
-group/rank context features are computed WITHIN a block (block size is the same for train and test).
+  3. TRAIN, phase A: for each country: sample S1 (--train-s1 split proportionally to the countries' S1
+     counts) -> blocks -> lexical/dense candidates -> stage A -> labels. Stage-A features of ALL countries
+     go to a float32 memmap; ids/labels stay as small arrays.
+     Cascade: cheap GBDT on the stage-A features (3-fold GroupKFold OOF by S1) -> keep top --cascade-top
+     pairs per S1 with probability >= --cascade-floor (--no-cascade: the old per-country score prune).
+     Phase B: for each country again: stage B on the kept pairs only -> features to a second memmap.
+     Then GroupKFold OOF of the full model, rule sweep on OOF, final model.
+  4. TEST: for each country: blocks -> candidates -> stage A -> cascade -> stage B -> predict -> decide ->
+     rows appended to matching_results.tsv + candidate_pairs.tsv (= the kept pairs) as they are produced.
+Group/rank context features are computed WITHIN a block (block size is the same for train and test).
 
 Run from the repo root:
   python -m src.pipeline --data-dir data --out-dir output --run-name v2 [--dense]
@@ -33,6 +35,7 @@ import pandas as pd
 
 from .blocking import (DEFAULT_VIEWS, blocking_recall, fit_vectorizers, gt_pairs_block, lexical_candidates,
                        transform, union_candidates, view_text)
+from .cascade import candidate_stats, cascade_keep, fit_cascade, stage_a_columns
 from .features import calibrate_prune, feature_columns, prune_score, stage_a, stage_b
 from .metric import macro_f05, read_matches_tsv
 from .model import decide, feature_importance, make_model, oof_predict, subsample_negatives, sweep_rules
@@ -41,6 +44,7 @@ from .store import (KEEP_COLS, RAW_COLS, allocate, ensure_store, gt_dict, load_c
 
 T0 = time.time()
 ID_DTYPE = "S16"  # fixed-width bytes for record ids (S1-xxxxxxxx / S2-xxxxxxxxx fit easily)
+ROW_CHUNK = 1_000_000  # rows per to_numpy / predict_proba chunk (bounds the float32 copies)
 
 
 def log(msg: str) -> None:
@@ -99,6 +103,31 @@ def blocks(n: int, block_size: int):
         yield np.arange(st, min(st + block_size, n))
 
 
+def write_rows(fh, df: pd.DataFrame, cols: List[str]) -> int:
+    """Append df[cols] as float32 rows to an open binary file, ROW_CHUNK rows at a time. Returns rows written."""
+    for st in range(0, len(df), ROW_CHUNK):
+        fh.write(np.ascontiguousarray(df[cols].iloc[st:st + ROW_CHUNK].to_numpy(dtype=np.float32)).tobytes())
+    return len(df)
+
+
+def predict_chunked(model, cands: pd.DataFrame, feats: List[str]) -> np.ndarray:
+    out = np.empty(len(cands), dtype=np.float32)
+    for st in range(0, len(cands), ROW_CHUNK):
+        out[st:st + ROW_CHUNK] = model.predict_proba(cands[feats].iloc[st:st + ROW_CHUNK].to_numpy(dtype=np.float32))[:, 1]
+    return out
+
+
+def stats_from_counts(counts: np.ndarray, n_kept: int = None, n_true: int = None) -> Dict:
+    """candidate_stats() equivalent from per-S1 candidate counts (aggregated over blocks/countries)."""
+    out = dict(pairs=int(counts.sum()), n_s1=int(len(counts)), mean=float(counts.mean()) if len(counts) else 0.0,
+               median=float(np.median(counts)) if len(counts) else 0.0,
+               p90=float(np.percentile(counts, 90)) if len(counts) else 0.0, max=int(counts.max()) if len(counts) else 0,
+               zero_share=float((counts == 0).mean()) if len(counts) else 0.0)
+    if n_kept is not None and n_true:
+        out["pair_recall"] = float(n_kept / n_true)
+    return out
+
+
 # --------------------------------------------------------------- block step
 class CountryContext:
     """Doc matrices (+ dense embeddings) of ONE country's S2/S3 records, plus candidates + stage A per query block."""
@@ -146,11 +175,26 @@ def need_cols(dense: bool) -> List[str]:
     return [c for c in KEEP_COLS if c != "n_full"] + (RAW_COLS if dense else [])
 
 
-def predict_chunked(model, cands: pd.DataFrame, feats: List[str], chunk: int = 1_000_000) -> np.ndarray:
-    out = np.empty(len(cands), dtype=np.float32)
-    for st in range(0, len(cands), chunk):
-        out[st:st + chunk] = model.predict_proba(cands[feats].iloc[st:st + chunk].to_numpy(dtype=np.float32))[:, 1]
-    return out
+def load_train_country(meta, c, cols, n_c, seed, dense_model, cache_dir):
+    """One train country: (sampled S1 table, doc table, sample positions, S1 embeddings of the sample or None)."""
+    rec = load_country(meta, c, cols)
+    q_all, d = split_tables(rec)
+    del rec
+    q_emb_all = None
+    if n_c < len(q_all):
+        q = q_all.sample(n_c, random_state=seed)
+        sel = q.index.to_numpy()
+        q = q.reset_index(drop=True)
+    else:
+        q, sel = q_all, None
+    if dense_model is not None:
+        from .dense import dense_text, encode
+        fname = "".join(ch if ch.isalnum() else "_" for ch in f"train/{c}")
+        emb = encode(dense_text(q_all), dense_model, cache_path=os.path.join(cache_dir, f"{fname}_s1_emb.npy"))
+        q_emb_all = np.asarray(emb) if sel is None else np.asarray(emb)[sel]
+        del emb
+    del q_all
+    return q, d, sel, q_emb_all
 
 
 # ---------------------------------------------------------------------- main
@@ -170,7 +214,10 @@ def main() -> None:
     ap.add_argument("--train-s1", type=int, default=150_000, help="S1 entities used for training, split across countries (0 = all)")
     ap.add_argument("--neg-rate", type=float, default=0.5, help="keep this share of negative pairs when FITTING (weighted 1/rate); OOF/rules use all pairs")
     ap.add_argument("--test-limit", type=int, default=0, help="only predict the first N test S1 rows (dev)")
-    ap.add_argument("--keep-recall", type=float, default=0.998)
+    ap.add_argument("--cascade-top", type=int, default=10, help="cascade: keep at most this many candidates per S1")
+    ap.add_argument("--cascade-floor", type=float, default=0.002, help="cascade: drop candidates below this probability")
+    ap.add_argument("--no-cascade", action="store_true", help="fall back to the per-country score-threshold prune")
+    ap.add_argument("--keep-recall", type=float, default=0.998, help="(--no-cascade only) prune keeps this pair recall")
     ap.add_argument("--vec-sample", type=int, default=2_500_000, help="rows of text the vectorisers are fitted on")
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--seed", type=int, default=42)
@@ -191,6 +238,8 @@ def main() -> None:
     sb_jobs = a.stage_b_jobs or max(1, (a.n_jobs or (os.cpu_count() or 1)) // 2)
     log(f"top-k device: {a.topk_device} (cuda available: {_blocking._cuda_ok()}) | stage-B workers: {sb_jobs}")
     views = [v for v in a.views.split(",") if v]
+    use_cascade = not a.no_cascade
+    lgb_jobs = a.n_jobs or -1  # shared box: LightGBM with all 20 threads spin-waits itself to a crawl under load
     report = dict(args=vars(a), env=dict(python=platform.python_version(), machine=platform.node()), peak_rss_mb={})
     device = None
     dense_model = None
@@ -222,18 +271,18 @@ def main() -> None:
     del sample
     release_memory()
 
-    # 3. TRAIN pass, one country at a time
+    # 3a. TRAIN phase A: blocking + stage A per country -> stage-A memmap + labels
     countries_tr = sorted(meta_tr["countries"])
     alloc = allocate({c: meta_tr["countries"][c]["n_s1"] for c in countries_tr}, a.train_s1)
     log(f"train S1 sample per country: {alloc}")
-    all_views = views + (["dense"] if a.dense else [])
-    feat_path = os.path.join(a.out_dir, "train_X.f32")
-    feat_fh = open(feat_path, "wb")
-    feats: Optional[List[str]] = None
-    n_pairs_tr = 0
-    y_parts, qg_parts, cid_parts, qrid_parts = [], [], [], []
-    rec_curves, thr_prune, prune_info = [], {}, {}
-    gp_total = 0
+    xa_path = os.path.join(a.out_dir, "train_Xa.f32")
+    xa_fh = open(xa_path, "wb")
+    a_cols: Optional[List[str]] = None
+    n_pairs_a = 0
+    y_parts, qg_parts, cl_parts, qrid_parts = [], [], [], []
+    rec_curves, gp_total = [], 0
+    country_rows: Dict[str, tuple] = {}   # country -> (first pair row, last pair row) in the memmaps
+    country_q: Dict[str, tuple] = {}      # country -> (q offset, n sampled S1, sample positions)
     offset = 0
     rng = np.random.default_rng(a.seed)
     for c in countries_tr:
@@ -241,28 +290,16 @@ def main() -> None:
         if n_c <= 0:
             continue
         t_c = time.time()
-        rec = load_country(meta_tr, c, cols)
-        q_all, d = split_tables(rec)
-        del rec
-        q_emb_all = None
-        if n_c < len(q_all):
-            q = q_all.sample(n_c, random_state=a.seed)
-            sel = q.index.to_numpy()
-            q = q.reset_index(drop=True)
-        else:
-            q, sel = q_all, None
-        if dense_model is not None:
-            from .dense import dense_text, encode
-            fname = "".join(ch if ch.isalnum() else "_" for ch in f"train/{c}")
-            emb = encode(dense_text(q_all), dense_model, cache_path=os.path.join(a.cache_dir, f"{fname}_s1_emb.npy"))
-            q_emb_all = np.asarray(emb) if sel is None else np.asarray(emb)[sel]
-            del emb
-        del q_all
+        q, d, sel, q_emb_all = load_train_country(meta_tr, c, cols, n_c, a.seed, dense_model, a.cache_dir)
         gt_c = gt_dict(gt_pairs, q["rid"].tolist())
         log(f"train/{c}: {len(q)} S1 sampled of {meta_tr['countries'][c]['n_s1']}, {len(d)} docs "
             f"({sum(1 for v in gt_c.values() if not v)} singletons in sample)")
         ctx = CountryContext(f"train/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
-        cand_parts, gp_c = [], 0
+        del d  # phase A never touches the doc strings again (ctx keeps d_src/d_rid); phase B reloads the table
+        ctx.d = None
+        release_memory()
+        row0 = n_pairs_a
+        gp_c = 0
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
             cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0))
             gp = gt_pairs_block(qb["rid"].values, ctx.d_rid, gt_c)
@@ -270,23 +307,96 @@ def main() -> None:
             rec_curves.append(blocking_recall(cands, gp, len(qb), ks=sorted({1, 3, 5, a.k})).assign(n=len(gp)))
             cands = cands.merge(gp.assign(y=np.int8(1)), on=["q", "c"], how="left")
             cands["y"] = cands["y"].fillna(0).astype(np.int8)
-            cands["q"] = q_idx[cands["q"].values]  # back to row indices of q
-            cand_parts.append(cands)
+            if a_cols is None:
+                a_cols = [col for col in cands.columns if col not in ("q", "c", "y")]  # original stage-A order
+                sa = set(stage_a_columns(cands.drop(columns=["y"])))
+                if sa != set(a_cols):
+                    raise RuntimeError(f"stage-A column set mismatch with cascade.stage_a_columns: {sa ^ set(a_cols)}")
+                log(f"stage-A features ({len(a_cols)}): {a_cols}")
+            elif [col for col in cands.columns if col not in ("q", "c", "y")] != a_cols:
+                raise RuntimeError("stage-A columns differ between blocks/countries")
+            n_pairs_a += write_rows(xa_fh, cands, a_cols)
+            y_parts.append(cands["y"].to_numpy().astype(np.int8))
+            qg_parts.append(offset + q_idx[cands["q"].to_numpy()].astype(np.int64))
+            cl_parts.append(cands["c"].to_numpy().astype(np.int64))
             log(f"train/{c} block {bi} ({len(qb)} S1): {len(cands)} cands, {int(cands.y.sum())}/{len(gp)} GT pairs found")
+            del cands, qb, gp
         gp_total += gp_c
-        cand_c = pd.concat(cand_parts, ignore_index=True) if len(cand_parts) > 1 else cand_parts[0]
-        del cand_parts
-        thr_c = calibrate_prune(prune_score(cand_c), cand_c["y"].values, a.keep_recall)
-        n0 = len(cand_c)
-        cand_c = cand_c[prune_score(cand_c) >= thr_c].reset_index(drop=True)
-        thr_prune[c] = thr_c
-        prune_info[c] = dict(threshold=thr_c, pairs_before=n0, pairs_after=len(cand_c),
-                             pair_recall=float(cand_c.y.sum() / max(gp_c, 1)))
-        log(f"train/{c}: prune at score>={thr_c:.3f}: {n0}->{len(cand_c)}; pair recall after pruning "
-            f"{cand_c.y.sum() / max(gp_c, 1):.4f}")
-        d_rid_c = ids_bytes(d["rid"])
-        del ctx  # doc matrices / embeddings are not needed for stage B
+        country_rows[c] = (row0, n_pairs_a)
+        country_q[c] = (offset, len(q), sel)
+        qrid_parts.append(ids_bytes(q["rid"]))
+        offset += len(q)
+        del ctx, q, gt_c, q_emb_all
         release_memory()
+        log(f"train/{c}: phase A done in {time.time() - t_c:.0f}s | peak RSS so far {peak_rss_mb()} MB")
+    xa_fh.close()
+    if a_cols is None:
+        raise RuntimeError("no training pairs produced")
+    n_q_tr = offset
+    y = np.concatenate(y_parts)
+    qg = np.concatenate(qg_parts)
+    cl = np.concatenate(cl_parts)
+    q_rid_tr = np.concatenate(qrid_parts)
+    del y_parts, qg_parts, cl_parts, qrid_parts
+    rc = pd.concat(rec_curves)
+    rc = rc.groupby("k").apply(lambda g: pd.Series(dict(pairs=g.pairs.sum(), pairs_per_s1=g.pairs.sum() / n_q_tr,
+                                                       pair_recall=(g.pair_recall * g.n).sum() / max(g.n.sum(), 1),
+                                                       entity_full_recall=(g.entity_full_recall * g.n).sum() / max(g.n.sum(), 1)))
+                               ).reset_index()
+    print(rc.to_string(index=False))
+    report["blocking_recall"] = rc.to_dict(orient="records")
+    report["peak_rss_mb"]["train_phase_a"] = peak_rss_mb()
+
+    # 3b. cascade (or score prune) on the stage-A memmap
+    Xa = np.memmap(xa_path, dtype=np.float32, mode="r", shape=(n_pairs_a, len(a_cols)))
+    before = candidate_stats(qg, n_q_tr, y, gp_total)
+    report["cands_before_cascade"] = before
+    cascade_model = None
+    thr_prune: Dict[str, float] = {}
+    if use_cascade:
+        t = time.time()
+        pa, cascade_model = fit_cascade(Xa, y, qg, 3, a.seed, n_jobs=lgb_jobs)
+        keep = cascade_keep(qg, pa, a.cascade_top, a.cascade_floor)
+        log(f"cascade fitted on {n_pairs_a} pairs x {len(a_cols)} stage-A features in {time.time() - t:.0f}s")
+        del pa
+    else:
+        keep = np.zeros(n_pairs_a, dtype=bool)
+        score_col = a_cols.index("score")
+        for c, (r0, r1) in country_rows.items():
+            sc = np.asarray(Xa[r0:r1, score_col])
+            thr_prune[c] = calibrate_prune(sc, y[r0:r1], a.keep_recall)
+            keep[r0:r1] = sc >= thr_prune[c]
+            log(f"train/{c}: prune at score>={thr_prune[c]:.3f} ({int(keep[r0:r1].sum())}/{r1 - r0} pairs kept)")
+    after = candidate_stats(qg[keep], n_q_tr, y[keep], gp_total)
+    report["cands_after_cascade"] = after
+    report["prune"] = dict(method="cascade" if use_cascade else "score", per_country=thr_prune,
+                           cascade_top=a.cascade_top, cascade_floor=a.cascade_floor,
+                           train_pairs=int(keep.sum()), train_pair_recall=after.get("pair_recall"))
+    log(f"cascade: before mean {before['mean']:.1f} / median {before['median']:.0f} per S1, "
+        f"after mean {after['mean']:.1f} / median {after['median']:.0f}, train pair recall {after.get('pair_recall', float('nan')):.4f} "
+        f"(p90 {after['p90']:.0f}, max {after['max']}, zero-cand share {after['zero_share']:.4f})")
+    report["peak_rss_mb"]["cascade"] = peak_rss_mb()
+
+    # 3c. TRAIN phase B: stage B on the kept pairs, per country -> full feature memmap
+    feat_path = os.path.join(a.out_dir, "train_X.f32")
+    feat_fh = open(feat_path, "wb")
+    feats: Optional[List[str]] = None
+    n_pairs_tr = 0
+    yb_parts, qgb_parts, cid_parts = [], [], []
+    for c in countries_tr:
+        if c not in country_rows:
+            continue
+        t_c = time.time()
+        r0, r1 = country_rows[c]
+        q_off, n_c, sel = country_q[c]
+        idx = r0 + np.flatnonzero(keep[r0:r1])
+        q, d, sel2, _ = load_train_country(meta_tr, c, cols, n_c, a.seed, None, a.cache_dir)
+        assert (sel is None and sel2 is None) or np.array_equal(sel, sel2), "train sample not reproducible"
+        cand_c = pd.DataFrame(np.asarray(Xa[idx]), columns=a_cols)
+        cand_c["q"] = qg[idx] - q_off
+        cand_c["c"] = cl[idx]
+        cand_c["y"] = y[idx]
+        d_rid_c = ids_bytes(d["rid"])
         cand_c = stage_b(cand_c, q, d, sb_jobs)
         fc = feature_columns(cand_c)
         fc = [f for f in fc if f not in ("score",)] + ["score"]
@@ -295,42 +405,29 @@ def main() -> None:
             log(f"features ({len(feats)}): {feats}")
         elif fc != feats:
             raise RuntimeError(f"feature columns differ between countries: {set(fc) ^ set(feats)}")
-        for st in range(0, len(cand_c), 1_000_000):  # float32 rows -> memmap file, 1M rows at a time
-            feat_fh.write(np.ascontiguousarray(cand_c[feats].iloc[st:st + 1_000_000].to_numpy(dtype=np.float32)).tobytes())
-        n_pairs_tr += len(cand_c)
-        y_parts.append(cand_c["y"].to_numpy().astype(np.int8))
-        qg_parts.append(offset + cand_c["q"].to_numpy().astype(np.int64))
+        n_pairs_tr += write_rows(feat_fh, cand_c, feats)
+        yb_parts.append(cand_c["y"].to_numpy().astype(np.int8))
+        qgb_parts.append(q_off + cand_c["q"].to_numpy().astype(np.int64))
         cid_parts.append(d_rid_c[cand_c["c"].to_numpy()])
-        qrid_parts.append(ids_bytes(q["rid"]))
-        offset += len(q)
-        del cand_c, q, d, d_rid_c, gt_c
+        log(f"train/{c}: stage B on {len(cand_c)} kept pairs ({len(cand_c) / max(n_c, 1):.1f} per S1) in {time.time() - t_c:.0f}s")
+        del cand_c, q, d, d_rid_c
         release_memory()
-        log(f"train/{c}: done in {time.time() - t_c:.0f}s | peak RSS so far {peak_rss_mb()} MB")
     feat_fh.close()
-    report["peak_rss_mb"]["train_candidates"] = peak_rss_mb()
+    del Xa, keep, cl
+    try:
+        os.remove(xa_path)
+    except OSError:
+        pass
     if feats is None:
-        raise RuntimeError("no training pairs produced")
-    n_q_tr = offset
-    rc = pd.concat(rec_curves)
-    rc = rc.groupby("k").apply(lambda g: pd.Series(dict(pairs=g.pairs.sum(), pairs_per_s1=g.pairs.sum() / n_q_tr,
-                                                       pair_recall=(g.pair_recall * g.n).sum() / max(g.n.sum(), 1),
-                                                       entity_full_recall=(g.entity_full_recall * g.n).sum() / max(g.n.sum(), 1)))
-                               ).reset_index()
-    print(rc.to_string(index=False))
-    report["blocking_recall"] = rc.to_dict(orient="records")
-    report["prune"] = dict(per_country=prune_info, train_pairs=n_pairs_tr,
-                           train_pair_recall=float(sum(p.sum() for p in y_parts) / max(gp_total, 1)))
-    log(f"prune thresholds per country: { {c: round(t, 4) for c, t in thr_prune.items()} }; train pairs {n_pairs_tr}; "
-        f"pair recall after pruning {report['prune']['train_pair_recall']:.4f}")
-
-    # 3b. OOF + rule sweep + final model (features read back from the memmap)
-    X = np.memmap(feat_path, dtype=np.float32, mode="r", shape=(n_pairs_tr, len(feats)))
-    y = np.concatenate(y_parts)
-    qg = np.concatenate(qg_parts)
+        raise RuntimeError("no training pairs kept")
+    y = np.concatenate(yb_parts)
+    qg = np.concatenate(qgb_parts)
     cid = np.concatenate(cid_parts)
-    q_rid_tr = np.concatenate(qrid_parts)
-    del y_parts, qg_parts, cid_parts, qrid_parts
-    lgb_jobs = a.n_jobs or -1  # shared box: LightGBM with all 20 threads spin-waits itself to a crawl under load
+    del yb_parts, qgb_parts, cid_parts
+    report["peak_rss_mb"]["train_phase_b"] = peak_rss_mb()
+
+    # 3d. OOF + rule sweep + final model (features read back from the memmap)
+    X = np.memmap(feat_path, dtype=np.float32, mode="r", shape=(n_pairs_tr, len(feats)))
     oof, kind = oof_predict(X, y, qg, a.folds, a.seed, neg_rate=a.neg_rate, n_jobs=lgb_jobs)
     from sklearn.metrics import average_precision_score, roc_auc_score
     log(f"OOF ({kind}): AUC={roc_auc_score(y, oof):.5f} AP={average_precision_score(y, oof):.5f}")
@@ -371,7 +468,9 @@ def main() -> None:
         print("  top features:", imp.head(15).round(3).to_dict())
     try:
         import joblib
-        joblib.dump(dict(model=model, feats=feats, thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
+        joblib.dump(dict(model=model, feats=feats, a_cols=a_cols, cascade_model=cascade_model,
+                         cascade=dict(top=a.cascade_top, floor=a.cascade_floor, enabled=use_cascade),
+                         thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
     except Exception as e:  # noqa: BLE001
         log(f"model not saved: {e}")
     del X, y, qg, oof, fit_idx, fit_w, q_rid_tr, q_rid_str, gt_pairs
@@ -389,13 +488,13 @@ def main() -> None:
         json.dump(report, open(os.path.join(a.out_dir, "report.json"), "w"), indent=2, default=str)
         log("skip-test: done")
         return
-    thr_min = min(thr_prune.values())
+    thr_min = min(thr_prune.values()) if thr_prune else 0.0
     countries_te = sorted(meta_te["countries"])
     fh_m = open(os.path.join(a.out_dir, "matching_results.tsv"), "w")
     fh_c = open(os.path.join(a.out_dir, "candidate_pairs.tsv"), "w")
     fh_m.write(f"{header[0]}\t{header[1]}\n")
     fh_c.write(f"{header[0]}\tcandidate_entity_ids\n")
-    per_country = []
+    per_country, count_parts, test_cands = [], [], {}
     n_s1_te = n_empty = n_pred = n_pairs_te = 0
     pred_for_gt: Dict[str, frozenset] = {}
     for c in countries_te:
@@ -408,15 +507,28 @@ def main() -> None:
         if len(q) == 0:
             del q, d
             continue
-        thr_c = thr_prune.get(c)
-        if thr_c is None:
-            thr_c = thr_min
-            log(f"test/{c}: country unseen in training -> using the smallest train prune threshold {thr_c:.3f}")
+        thr_c = None
+        if not use_cascade:
+            thr_c = thr_prune.get(c)
+            if thr_c is None:
+                thr_c = thr_min
+                log(f"test/{c}: country unseen in training -> using the smallest train prune threshold {thr_c:.3f}")
         ctx = CountryContext(f"test/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device)
         c_s1 = c_empty = c_pred = c_pairs = 0
+        c_counts = []
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
             cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0))
-            cands = cands[prune_score(cands) >= thr_c].reset_index(drop=True)
+            n_before = len(cands)
+            if use_cascade:
+                pa = predict_chunked(cascade_model, cands, a_cols)
+                keep_b = cascade_keep(cands["q"].to_numpy(), pa, a.cascade_top, a.cascade_floor)
+                del pa
+            else:
+                keep_b = prune_score(cands) >= thr_c
+            cands = cands[keep_b].reset_index(drop=True)
+            del keep_b
+            counts = np.bincount(cands["q"].to_numpy(), minlength=len(qb))
+            c_counts.append(counts)
             cands = stage_b(cands, qb, d, sb_jobs)
             cands["p"] = predict_chunked(model, cands, feats)
             qb_rid = qb["rid"].values
@@ -434,13 +546,17 @@ def main() -> None:
                     pred_for_gt[r] = m
             c_s1 += len(qb)
             c_pairs += len(cands)
-            log(f"test/{c} block {bi} ({len(qb)} S1): {len(cands)} cands after prune, "
+            log(f"test/{c} block {bi} ({len(qb)} S1): {n_before} cands -> {len(cands)} kept ({len(cands) / len(qb):.1f}/S1), "
                 f"{sum(1 for r in qb_rid if sets[r])} S1 with matches")
             del cands, sets, cand_rows, qb
         fh_m.flush()
         fh_c.flush()
+        counts_c = np.concatenate(c_counts)
+        count_parts.append(counts_c)
+        test_cands[c] = stats_from_counts(counts_c)
         per_country.append(dict(country=c, n_s1=c_s1, empty_rate=c_empty / max(c_s1, 1), mean_matches=c_pred / max(c_s1, 1),
-                                cand_pairs_per_s1=c_pairs / max(c_s1, 1), prune_threshold=thr_c))
+                                cand_mean=test_cands[c]["mean"], cand_median=test_cands[c]["median"],
+                                prune_threshold=thr_c if thr_c is not None else np.nan))
         n_s1_te += c_s1
         n_empty += c_empty
         n_pred += c_pred
@@ -453,10 +569,14 @@ def main() -> None:
     per = pd.DataFrame(per_country).set_index("country")
     print(per.to_string())
     report["test_pred_by_country"] = per.reset_index().to_dict(orient="records")
+    all_counts = np.concatenate(count_parts) if count_parts else np.zeros(0, np.int64)
+    report["test_candidates"] = dict(overall=stats_from_counts(all_counts), per_country=test_cands)
     report["test_pred"] = dict(n_s1=n_s1_te, empty_rate=n_empty / max(n_s1_te, 1), mean_matches=n_pred / max(n_s1_te, 1),
                                cand_pairs=n_pairs_te, cand_pairs_per_s1=n_pairs_te / max(n_s1_te, 1))
+    ov = report["test_candidates"]["overall"]
     log(f"test: {n_s1_te} S1 rows written | predicted-empty={n_empty / max(n_s1_te, 1):.1%} | "
-        f"mean matches={n_pred / max(n_s1_te, 1):.2f}")
+        f"mean matches={n_pred / max(n_s1_te, 1):.2f} | candidates/S1 mean {ov['mean']:.1f} median {ov['median']:.0f} "
+        f"p90 {ov['p90']:.0f} max {ov['max']}")
     if a.test_gt:
         tgt = read_matches_tsv(a.test_gt)
         tgt = {r: v for r, v in tgt.items() if r in pred_for_gt}
