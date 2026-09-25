@@ -1,81 +1,71 @@
-# Overnight autonomous task — Claude Code headless on the box
+# Overnight task — Claude Code headless on the box
 
-You are running UNATTENDED overnight on a shared Ubuntu box. Nobody will answer questions.
-Never ask — decide, act, log. A driver script (scripts/night/night_loop.sh) restarts you for
-each new session; your memory between sessions is `runs/night/NIGHT_LOG.md`.
+You are the on-box operator described in `CLAUDE.md` (its hard rules apply), running UNATTENDED
+overnight. Nobody will answer questions — never ask; decide, act, log. A driver
+(`scripts/night/night_loop.sh`) starts you in sessions of ≤85 min, about every 30 min while a long run
+is going. Launch long runs DETACHED in tmux, then end the session. Memory between sessions:
+`runs/night/NIGHT_LOG.md` (create if missing). Every session: `cd ~/amazon-ml-2026 && git pull --no-edit`
+(if git auth fails, note it and work locally), read NIGHT_LOG.md, CONTEXT.md, `runs/night/guard.log`.
 
-## Read first, every session
-1. `runs/night/NIGHT_LOG.md` — your log from earlier sessions tonight (create it if missing). Continue from it.
-2. `CONTEXT.md` — team ground truth: problem, metric, rules, submission format.
-3. `docs/BOX_RUNBOOK.md`, `python -m src.pipeline --help`, `runs/night/guard.log` (if a run died silently, look here first).
+## Goal for 08:30 IST (non-negotiable order)
+A. A VALIDATED full-data submission file by 08:30 (Track A). This is the deliverable.
+B. The best possible score. Bar to beat: team leaderboard 94.8 (that model scored 98.5 locally →
+   ~3.7 pts lost on the leaderboard, most likely on FRANCE: 15% of test S1, unseen in training).
+   Local target ≥ 0.99, but a model that generalises to France beats a higher local number.
+C. Use the GPU for the heavy lifting. Smaller candidate sets per S1 also rank higher (official rule).
 
-## Problem in brief
-Business entity resolution: for every Source-1 (S1) entity output ALL matching S2/S3 ids.
-Metric: macro F0.5 per S1 (singletons: empty prediction = 1.0). Outputs: `matching_results.tsv` +
-`candidate_pairs.tsv` (the EXACT candidate set fed to the model; matches must be a subset).
-**NEW OFFICIAL RULE (25 Sep): a SMALLER candidate set per S1 ranks HIGHER in the final evaluation,
-beyond the leaderboard. Blocking must scale (no all-pairs).**
-HQ's best so far (8% slice, 40K train S1, 91 features): holdout F0.5 0.9826, OOF 0.9768,
-blocking pair recall 98.6%, ~64 candidates/S1. Decision rule: global threshold ≈0.80 + 1-to-1.
-DEAD ENDS (do not retry): expected-F0.5 rule, isotonic calibration, per-country thresholds,
-2nd-stage group model on p.
+## TRACK A — deliverable (do these first, in order)
+A0. Smoke run (tmux `aml`, `runs/smoke/`). If running, go to Track B work. When finished, record in
+    NIGHT_LOG.md: pass/fail, blocking recall per country, OOF F0.5, the smoke TEST per-country table
+    (France empty rate + mean matches vs US/India). If it died: fix per CLAUDE.md, relaunch once.
+A1. GPU top-k speed fix (cuts full blocking from ~24 h to ~4–5 h). Diagnosis: in `src/blocking.py`'s
+    GPU path, building the dense query chunk on the CPU (`toarray()` + transpose copy, ~0.8 s/chunk)
+    dominates; GPU spmm 0.05 s, transpose 0.29 s, topk 0.06 s → 2.7–5.5 ms/query instead of 0.8.
+    Fix: send the query chunk to the GPU as SPARSE and densify/transpose there (or transpose Q once).
+    Check real parquet column names first. Verify on ~20K India queries × 2 views: same top-k similarity
+    values (ties may reorder), ms/query ≤ 1.2. Commit + push.
+A2. Swap `src/pipeline_next.py` → `src/pipeline.py` (cascade: 77.5 → 5.4 cands/S1, OOF 0.9846 vs 0.9849).
+    `python -m src.pipeline --help` must work. Commit + push.
+A3. Launch v2 detached: `~/miniforge3/envs/aml/bin/tmux new -d -s run_v2 '<cmd>'`,
+    `<cmd>` = `bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000`
+    + the GPU top-k flag (see --help) + `--stage-b-jobs 4`. Save it to `runs/v2/cmd.txt`. Watch up to
+    25 min for the first block time; project the finish. If later than 08:00: kill and relaunch lighter,
+    in order: `--train-s1 100000`; drop the 2 views with the lowest recall contribution (keep name_c3,
+    name_w, addr_c3); `--block-size 50000` only if memory-bound. Log projection + decision.
+A4. v2 finished → official validator (CLAUDE.md). Valid → `cp -r output output_v2`;
+    `submissions/v2_matching_results.tsv` (if < 100 MB); `runs/v2/NOTES.md` (cands/S1, per-country empty
+    rate + mean matches, runtime, peak RSS); commit + push. Crashed → CLAUDE.md crash procedure
+    (lower `--stage-b-jobs` → `--n-jobs` → `--block-size`), relaunch with the A3 runtime check.
 
-## Hard machine limits
-- 15 GB RAM shared with other users → ~9 GB usable. A guard kills any `src.pipeline` process when
-  MemAvailable < 1.5 GB. `--n-jobs 8` maximum.
-- ONE experiment process at a time. Never start a run while `pgrep -f src.pipeline` finds one.
-  Run experiments in the FOREGROUND and let them finish inside your session (stray processes are
-  killed when your session ends).
-- GPU: RTX 5060 Ti 16 GB, torch CUDA works — use it for embeddings if useful.
-- No sudo. Stay inside ~/amazon-ml-2026. `data/data_extracted/` is read-only input.
-- Power cuts happen: make long jobs resumable (cache intermediate artifacts to disk).
-- Stay on git branch `night-run`. Never touch `main`, never `git push`.
+## TRACK B — GPU-native fast approach (work on it whenever v2 is RUNNING or DONE; slice data only)
+Purpose: a pipeline that runs the full data in ≤ 2 h, uses the GPU for the heavy work, keeps
+candidates ≈ 5/S1, and generalises to an unseen country.
+B1. Slice: use/build `data_slice/` via `scripts/make_slice.py` (read --help; 8% train S1 + matches +
+    8% other S2/S3; disjoint 4% train-derived holdout via `--train-as-test --lo`).
+    Use `--data-dir data_slice --cache-dir cache_slice --out-dir output_slice`.
+B2. Blocking = union of (a) KEY blocking: pandas merges within country on exact normalised name,
+    phonetic key, first name token + postcode/pin, name token + city — cap bucket size; and (b) DENSE
+    GPU blocking: MiniLM (`sentence-transformers/all-MiniLM-L6-v2`, Apache-2.0) fp16 embeddings of
+    normalised "name | address", exact top-k by chunked matmul on the GPU per country (`src/dense.py`
+    is a starting point). Then the existing cascade → existing stage-B features → LightGBM.
+B3. Measure vs the current TF-IDF blocking on the same slice: pair recall per country, mean cands/S1,
+    holdout F0.5, wall time per stage; project full-data runtime.
+B4. Unseen-country proxy (the France risk): train on US only → evaluate on India holdout, and the
+    reverse; report the drop for TF-IDF vs Track B. Prefer features that don't depend on country
+    vocabulary; never hard-code US/India.
+B5. If Track B has holdout F0.5 ≥ Track A's − 0.001 AND projected full runtime ≤ 2.5 h AND a smaller or
+    equal cross-country drop → write `runs/night/B_READY.md` with the exact full-data command.
+    Launch it as run `v3` (`--out-dir output_v3`) ONLY when v2 is finished (or dead) AND it can finish
+    by 08:30. Validate, `submissions/v3_matching_results.tsv`, `runs/v3/NOTES.md`, commit + push.
+    Never delete or overwrite `output_v2/`.
 
-## Directory hygiene (important — don't clobber the evening's results)
-- Slice experiments: `--data-dir data_slice --cache-dir cache_slice --out-dir output_slice`.
-- Full-data runs: `--out-dir output_night` (NEVER write to `output/` — it holds the evening submission).
-- `cache/` belongs to full-data runs; only delete files there you created tonight or proved stale.
+## Resource rules while v2 runs
+- Slice/Track-B jobs only when MemAvailable > 4 GB, `--n-jobs 2`, GPU memory use < 5 GB, one at a time.
+- The guard kills the NEWEST `src.pipeline` process first when MemAvailable < 1.5 GB — so your slice
+  job dies before v2 does. If it does, wait for v2 to leave its heavy stage.
 
-## Competition rules (breaking these = disqualification)
-- No external data, no APIs, no geocoding, no internet lookups of entities. pip-installing libraries is fine.
-- Pretrained models must be MIT or Apache-2.0 licensed and ≤ 8B parameters.
-- Never edit `utils/validate_submission.py`. Never submit anything anywhere.
-
-## Goals — strict priority
-**P0. A FULL-DATA run that completes on this box within the memory limit** and produces validated
-`output_night/matching_results.tsv` + `output_night/candidate_pairs.tsv`.
-Known blocker: TRAIN normalisation is killed by the guard — the main process carries ~5 GB of
-test data into train normalisation, and freed Python memory is not returned to the OS.
-Likely fixes: normalise each split in a separate fresh process that only writes
-`cache/<split>_norm.pkl` (or parquet) and exits; compact dtypes (category / int32 / float32);
-chunked processing; free big tables before spawning workers. Until P0 works, P0 is the only goal.
-Note: `cache/test_norm.pkl` may be stale from older normalize.py code — regenerate if in doubt.
-**P1. Improve slice holdout F0.5 while NOT increasing (ideally reducing) mean candidates per S1.**
-**P2. Speed and peak memory of the full run.**
-
-## Workflow for each session
-1. Read NIGHT_LOG.md; record any result left pending by the previous session.
-2. Pick ONE experiment (smallest change, best expected gain). Write the plan in NIGHT_LOG.md BEFORE running.
-3. Evaluate on the slice. Build it once with `scripts/make_slice.py` (read its --help; HQ used 8% of
-   train S1 + all their matches + 8% of other S2/S3, and a disjoint 4% train-derived holdout via
-   `--train-as-test --lo`) into `data_slice/`. In session 1, baseline the CURRENT code on this slice
-   so every comparison is apples to apples.
-4. KEEP a change only if holdout F0.5 improves by ≥ 0.0005, OR mean candidates/S1 drops ≥ 10% with
-   an F0.5 loss ≤ 0.0005. Otherwise revert it (`git checkout -- <files>`).
-5. Commit kept changes to `night-run` with a clear message.
-6. Keep `runs/night/BEST_CMD.sh` = the exact full-data command for the best kept code
-   (with `--n-jobs 8 --out-dir output_night`, followed by the official validator). The driver runs it
-   automatically at the deadline. It must be correct bash, runnable from the repo root.
-7. Append to NIGHT_LOG.md: time, change, slice holdout F0.5, OOF F0.5, mean candidates/S1, pair recall,
-   runtime, peak RAM, KEPT/REVERTED.
-8. End the session after about one experiment. Respect the session time cap given in the prompt.
-
-## Ideas with real signal (from HQ)
-- Candidate pruning: tighter top-k per view, stage-A score floor, per-S1 cap tuned on OOF → far fewer
-  candidates/S1 at ~same F0.5 (mean true matches per S1 is only 3.46).
-- Empty-address candidates are ~45% of false negatives → features on how many S1 share the exact name
-  within the country × how many candidates compete.
-- Dense MiniLM view on GPU (`src/dense.py`, untested on real data) — as a feature / re-ranker or to
-  REPLACE weak lexical candidates, never simply to add more.
-- LightGBM (auto-picked if installed) + more train S1 (150K–300K) — cheap accuracy.
-- S2↔S3 consistency features.
+## Finish
+At the end (or when all done): put "QUEUE DONE" + a morning summary at the TOP of NIGHT_LOG.md: which
+submission file(s) exist and are validated, their OOF/holdout F0.5, cands/S1, per-country table
+(France!), cross-country drop, and your recommendation (v2 or v3) with reasons. Commit + push.
+Each NIGHT_LOG.md entry: time, track/item, command, outcome, metrics, next step.
