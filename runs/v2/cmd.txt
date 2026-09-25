@@ -1,1 +1,1 @@
-bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000 --views name_c3,name_w,addr_c3,full_w --topk-device cuda --stage-b-jobs 4
+bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000 --views name_c3,name_w,addr_c3,full_w --topk-device cuda --stage-b-jobs 4 --load-model output_v2_train/model.joblib

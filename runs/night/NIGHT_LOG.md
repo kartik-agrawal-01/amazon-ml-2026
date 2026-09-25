@@ -84,3 +84,32 @@
   recall 305685/310675 = 0.984 (k=10, 4 views); US passes 1.2/1.4/1.2/1.9 ms per S1 (11.5 ms per S1 for 8 passes);
   phase A 1258 s, peak RSS 6.2 GB, MemAvailable ~6.8 GB. Cascade fit now (2149 s = 00:11); test expected from ~00:45.
   Session 2 ends 00:12; v2 alive (pid 245598, tmux run_v2); memlog running (tmux memlog).
+
+## Session 3 (Claude, from 00:42)
+- 00:44 A4 prep: scripts/night/post_v2.sh (tmux post_v2) waits for the v2 pid, then runs the official validator,
+  `cp -r output output_v2`, submissions/v2_matching_results.tsv (if < 100 MB), auto-writes runs/v2/NOTES.md from
+  report.json, commits + pushes, then starts the B4 chain (`NJ=6 SKIP_WAIT=1 scripts/night/track_b_chain.sh`).
+  scripts/night/salvage_partial.py = emergency fallback (partial output/ -> valid submission, missing S1 empty).
+- 01:05 !! v2 attempt 2 STALLED in test/france block 0: the 8 top-k passes took 423 s (00:43) and then nothing for
+  25+ min: main thread 100% CPU, no stage-B workers, no I/O, RSS flat 3.9 GB. Root cause (verified with a
+  micro-benchmark on cache/test__france.parquet): pandas 3.0 stores `rid` as an Arrow-backed str column, and
+  `d["rid"].values` is an ArrowStringArray; `d_rid[grp.values]` costs 20.8 ms per call vs 0.013 ms on a numpy
+  object array. The test path calls it ~200K times per 100K block (decide() + candidate-row loop) = ~70 min per
+  block => v2 could never finish (18 blocks). The train/OOF path uses numpy str arrays (np.unique(...).astype(str)),
+  so training was unaffected (OOF macro F0.5 0.96231, thr 0.70 one2one, AUC 0.99876; see
+  runs/v2/stdout_attempt2_train_only.txt). Train/test blocks in the smoke run were 60K S1 -> would have shown the
+  same stall on its test pass (never reached; killed before).
+- 01:13 FIX (commit ea7375a): `.to_numpy(dtype=object)` for d_rid / qb_rid / gt_pairs_block ids; new
+  `--load-model PATH` skips training and reuses model.joblib (model, cascade, decision rule); the vectorisers are
+  refit from the seeded sample (deterministic). Verified on data_slice (runs/tiny): train path OK end to end
+  (4K train S1, 1.5K holdout S1, hidden F0.5 0.977), load path output byte-identical to the train path, test blocks
+  of 600-900 S1 in ~40 s including doc matrices. Killed the stalled v2 (pid 245598) at 01:13; its model saved to
+  output_v2_train/model.joblib (+ oof_pairs).
+- 01:27 A3 RELAUNCHED v2 (attempt 3, tmux run_v2, pid 301447, commit ea7375a), training skipped:
+  runs/v2/cmd.txt = bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000
+  --views name_c3,name_w,addr_c3,full_w --topk-device cuda --stage-b-jobs 4 --load-model output_v2_train/model.joblib
+  Watcher restarted (tmux post_v2, pid 301447). Projection: vecs ~3 min, France 3 blocks x ~9 min, India 8.1 x ~19 min,
+  US 6.6 x ~24 min => ~5.5-6 h => done ~07:00-07:30; then the watcher validates/pushes (~10 min) and starts B4.
+  Note: another user's 10-thread job (pid 1536) has been running all night; load ~11 on 20 threads.
+- B4 not started concurrently: v2 needs ~6.5 GB at its India/US doc-matrix spikes, the slice pipeline ~3-4 GB and
+  make_slice on full train more; the box has ~11 GB for us. The chain runs automatically after v2 (post_v2.sh).
