@@ -80,3 +80,7 @@
   (3) B4 chain (`bash scripts/night/track_b_chain.sh` in tmux trackb2) ONLY if v2 is in test blocking with
   MemAvailable > 6 GB; the guard kills the slice job first (it IS a src.pipeline process), but do not risk v2 for it.
   (4) No B_READY: Track B dense blocking fails the recall bar (see 23:34 entry); v2 is the deliverable.
+- 00:12 v2 train phase A complete: India 60031 S1 -> 3.59M cands, recall 0.933; US 89969 S1 -> 5.31M cands (59/S1),
+  recall 305685/310675 = 0.984 (k=10, 4 views); US passes 1.2/1.4/1.2/1.9 ms per S1 (11.5 ms per S1 for 8 passes);
+  phase A 1258 s, peak RSS 6.2 GB, MemAvailable ~6.8 GB. Cascade fit now (2149 s = 00:11); test expected from ~00:45.
+  Session 2 ends 00:12; v2 alive (pid 245598, tmux run_v2); memlog running (tmux memlog).

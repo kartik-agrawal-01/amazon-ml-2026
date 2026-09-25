@@ -17,3 +17,20 @@
 23:52:22 avail=3670MB v2_rss=5762MB gpu=11960MiB stage=[  902.9s] train/us: 89969 S1 sampled of 1323633, 6186873 do
 23:53:22 avail=7460MB v2_rss=3821MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
 23:54:22 avail=7462MB v2_rss=3832MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+23:55:22 avail=7380MB v2_rss=3912MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+23:56:22 avail=7450MB v2_rss=3780MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+23:57:23 avail=7377MB v2_rss=3918MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+23:58:23 avail=7421MB v2_rss=3874MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+23:59:23 avail=7414MB v2_rss=3874MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:00:23 avail=7383MB v2_rss=3874MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:01:23 avail=7265MB v2_rss=3998MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:02:23 avail=7279MB v2_rss=3998MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:03:23 avail=7308MB v2_rss=3921MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:04:23 avail=7238MB v2_rss=4034MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:05:23 avail=7210MB v2_rss=4038MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:06:24 avail=7242MB v2_rss=4038MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:07:24 avail=7219MB v2_rss=4001MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:08:24 avail=6953MB v2_rss=4331MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:09:24 avail=7017MB v2_rss=4231MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:10:24 avail=6901MB v2_rss=4354MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:11:24 avail=6791MB v2_rss=4480MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
