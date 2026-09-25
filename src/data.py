@@ -71,9 +71,9 @@ def _read_table(path: str) -> pd.DataFrame:
     return pd.read_csv(path, sep=sep, dtype=str, keep_default_na=False)
 
 
-def load_source(path: str, src: int) -> Tuple[pd.DataFrame, dict]:
-    df = _read_table(path)
-    cols = list(df.columns)
+def resolve_columns(cols, src: int, path: str = "") -> dict:
+    """Which raw columns are the id / name / address / structured fields of source `src`."""
+    cols = list(cols)
     ov = COLUMN_OVERRIDES.get(src, {})
     if ov and not all(c in cols for c in [ov["id"], ov["name"], *ov["addr"]]):
         ov = {}  # not the official schema (e.g. synthetic data) -> fall back to guessing
@@ -84,16 +84,47 @@ def load_source(path: str, src: int) -> Tuple[pd.DataFrame, dict]:
         addr_cols = [c for c in cols if c not in (idc, namec)]
     if idc not in cols or namec not in cols or any(c not in cols for c in addr_cols):
         raise ValueError(f"{path}: expected columns {idc!r}, {namec!r}, {addr_cols} but file has {cols}")
+    return dict(id=idc, name=namec, addr=addr_cols, struct=ov.get("struct", {}), all_columns=cols)
+
+
+def raw_frame(df: pd.DataFrame, src: int, spec: dict) -> pd.DataFrame:
+    """Unified record rows (rid, src, name, addr, city, zip, state, country) from a raw source table or chunk."""
+    idc, namec, addr_cols, struct, cols = spec["id"], spec["name"], spec["addr"], spec["struct"], spec["all_columns"]
     out = pd.DataFrame({"rid": df[idc].astype(str).str.strip(), "src": src, "name": df[namec].fillna("")})
     parts = df[addr_cols].fillna("").astype(str).apply(lambda s: s.str.strip())
     out["addr"] = parts.apply(lambda r: ", ".join(v for v in r if v), axis=1) if len(addr_cols) > 1 else parts.iloc[:, 0]
-    struct = ov.get("struct", {})
     for key, keys in _STRUCT.items():
         c = struct.get(key) or (_pick(addr_cols, keys) if len(addr_cols) > 1 else None)
         out[key] = df[c].fillna("").astype(str).str.strip() if c and c in cols else ""
+    return out
+
+
+def count_lines(path: str) -> int:
     with open(path, "rb") as fh:
-        n_lines = sum(1 for _ in fh) - 1  # minus header
-    schema = dict(file=path, id=idc, name=namec, addr=addr_cols, n=len(df), n_lines=n_lines, all_columns=cols)
+        return sum(1 for _ in fh) - 1  # minus header
+
+
+def read_source_chunks(path: str, chunksize: int = 500_000):
+    """Yield (chunk DataFrame, spec) of a raw source file; same parsing as load_source, bounded memory."""
+    sep = "," if path.lower().endswith(".csv") else "\t"
+    spec = None
+    for df in pd.read_csv(path, sep=sep, dtype=str, keep_default_na=False, chunksize=chunksize):
+        if spec is None:
+            spec = resolve_columns(df.columns, _src_of(path), path)
+        yield df, spec
+
+
+def _src_of(path: str) -> int:
+    m = _SRC_RE.search(os.path.basename(path))
+    return int(m.group(1)) if m else 0
+
+
+def load_source(path: str, src: int) -> Tuple[pd.DataFrame, dict]:
+    df = _read_table(path)
+    spec = resolve_columns(df.columns, src, path)
+    out = raw_frame(df, src, spec)
+    schema = dict(file=path, id=spec["id"], name=spec["name"], addr=spec["addr"], n=len(df), n_lines=count_lines(path),
+                  all_columns=spec["all_columns"])
     return out, schema
 
 

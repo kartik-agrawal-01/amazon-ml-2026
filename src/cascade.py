@@ -37,16 +37,17 @@ def make_cascade_model(seed: int = 0, n_jobs: int = -1):
 
 
 def fit_cascade(X: np.ndarray, y: np.ndarray, groups: np.ndarray, n_folds: int = 3, seed: int = 0,
-                verbose: bool = True) -> Tuple[np.ndarray, object]:
-    """OOF cascade probabilities for the training pairs + a final model fitted on all of them."""
+                verbose: bool = True, n_jobs: int = -1) -> Tuple[np.ndarray, object]:
+    """OOF cascade probabilities for the training pairs + a final model fitted on all of them.
+    n_jobs: LightGBM threads (box: pass --n-jobs; all 20 threads spin-wait under load). X may be a memmap."""
     from sklearn.model_selection import GroupKFold
     oof = np.zeros(len(X), dtype=np.float32)
     for f, (tr, va) in enumerate(GroupKFold(n_splits=n_folds).split(X, y, groups)):
-        m = make_cascade_model(seed + f)
-        m.fit(X[tr], y[tr])
-        oof[va] = m.predict_proba(X[va])[:, 1]
-    final = make_cascade_model(seed)
-    final.fit(X, y)
+        m = make_cascade_model(seed + f, n_jobs=n_jobs)
+        m.fit(np.ascontiguousarray(X[tr]), y[tr])
+        oof[va] = m.predict_proba(np.ascontiguousarray(X[va]))[:, 1]
+    final = make_cascade_model(seed, n_jobs=n_jobs)
+    final.fit(np.ascontiguousarray(X), y)
     if verbose:
         from sklearn.metrics import average_precision_score
         print(f"    cascade model: AP={average_precision_score(y, oof):.5f} on {len(y)} pairs, {X.shape[1]} features", flush=True)
