@@ -62,3 +62,12 @@
   data_xc_us (train US 8% -> test = India 4% holdout) and data_xc_in (train India -> US holdout), then 3 pipeline runs
   one at a time with --n-jobs 2: slice_mix (data_slice), xc_us, xc_in; each --train-s1 40000 --test-gt <hidden GT>,
   4 views, cascade. Reports land in runs/{slice_mix,xc_us,xc_in}/ (report.json has test_f05_hidden).
+- 23:36 !! v2 attempt 1 KILLED by the driver guard at 23:25:50 (MemAvailable 1272 MB) while it was building the US
+  train doc matrices (6.2M docs x 4 views, 8 spawned transform workers) AND my Track B eval (MiniLM encoding of the
+  slice, ~2.5 GB) ran at the same time. The eval is not a src.pipeline process, so the guard's "newest src.pipeline"
+  was v2 itself. Lesson: NO other heavy job (pipeline or not) during v2's phase-A/doc-matrix stages; the box has only
+  ~8.5 GB available for us in total. Log of the killed attempt: runs/v2/stdout_attempt1_killed.txt.
+  RELAUNCHED v2 at 23:35:40 (same cmd, pid 245598, tmux run_v2). Track B chain (trackb2) stopped before it started
+  its slices; rerun it only when v2 is in a stable low-memory stage (scripts/night/track_b_chain.sh skips done runs).
+  Memory profile logger: tmux memlog -> runs/night/mem_v2.txt (MemAvailable, v2 RSS, GPU, stage; every 60 s).
+  New projection: train done ~00:45, test ~5.5 h => v2 done ~06:15 (slack ~1.7 h to 08:00).
