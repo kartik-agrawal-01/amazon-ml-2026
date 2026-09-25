@@ -13,3 +13,7 @@ __pycache__/
 venv/
 .env
 *.log
+output/
+data_synth/
+data_small/
+*.tsv.gz

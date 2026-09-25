@@ -1,16 +1,22 @@
 pandas
 numpy
+scipy
 scikit-learn
 lightgbm
 xgboost
 catboost
 matplotlib
 tqdm
-# text / matching stack (likely needed — see README rules hint)
-sentence-transformers
-faiss-cpu          # swap to faiss-gpu-cu12 on the GPU box
+joblib
+pyarrow
+# blocking accelerators
+sparse_dot_topn        # C++ top-n sparse matmul (lexical blocking at scale)
+faiss-cpu              # optional; exact GPU top-k is done with torch instead
 rapidfuzz
-# deep learning (install torch per-machine: GPU box uses CUDA build)
+# neural (MiniLM / bge-small are Apache-2.0 / MIT, <8B params — allowed by the rules)
+sentence-transformers
 transformers
 datasets
 accelerate
+# torch: install per machine — GPU box uses the CUDA 12.8 build:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128

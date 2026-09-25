@@ -22,3 +22,20 @@ CONTEXT.md     # running team notes — ground truth for decisions/state
 ## Conventions
 - Pull before push; small commits; no notebooks with unresolved merge conflicts.
 - Every model run records: CV score, LB score (if submitted), config, git commit hash.
+
+## Pipeline (src/) — run from the repo root
+```
+python scripts/eda.py --data-dir data                                   # first look at the real data
+python -m src.pipeline --data-dir data --out-dir output --run-name v1   # block -> features -> 5-fold OOF -> predict
+bash scripts/run_pipeline.sh v1 [--k 10]                                # same on the box (conda env aml), logs to runs/v1/
+python src/metric.py data/<...>/train_ground_truth.tsv <pred.tsv>       # macro F0.5 of any prediction file
+python scripts/make_synthetic.py --out data_synth                       # fake data to smoke-test without the dataset
+```
+- `src/data.py` finds the source/GT files and guesses id/name/address columns (pin real names in `COLUMN_OVERRIDES`).
+- `src/normalize.py` folding, legal-form stripping, address abbreviations (extend the dicts after EDA).
+- `src/blocking.py` TF-IDF top-k per view (name char-3, name words, address char-3, name+address) -> candidates + recall curve.
+- `src/features.py` cosines + rank/context features (stage A), string/number/legal features (stage B, multi-core).
+- `src/model.py` LightGBM (falls back to sklearn HistGB), GroupKFold OOF by S1, decision rules (threshold / expected-F0.5, 1-to-1 filter).
+- `src/metric.py` local macro-F0.5 scorer (PS definition) + expected-F0.5 top-k selection.
+- Outputs: `output/matching_results.tsv` (upload), `output/candidate_pairs.tsv` (+ `_long`), `output/report.json`. `output/` is gitignored; `runs/<name>/` is not.
+

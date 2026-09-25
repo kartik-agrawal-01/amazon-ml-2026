@@ -1,0 +1,35 @@
+[    2.2s] test: loaded normalised cache cache_slice/test_norm.pkl (792439 rows)
+[   10.4s] train: loaded normalised cache cache_slice/train_norm.pkl (1564737 rows)
+[   11.1s] GT: S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  117.9s] vectorisers: [('name_c3', 18750), ('name_w', 102626), ('addr_c3', 21377), ('name_ph', 6357)]
+[  158.8s] train: doc matrices [('name_c3', (1388134, 18750), 10676484), ('name_w', (1388134, 102626), 3122586), ('addr_c3', (1388134, 21377), 14158844), ('name_ph', (1388134, 6357), 5534606)] (40s)
+[  201.5s] train block 0 ('india', 15970 S1): 993866 cands, 52464/55036 GT pairs found
+[  272.0s] train block 1 ('us', 24030 S1): 1496661 cands, 81797/83210 GT pairs found
+ k     pairs  pairs_per_s1  pair_recall  entity_full_recall
+ 1  221696.0      5.542400     0.666674            0.330474
+ 3  671512.0     16.787800     0.926935            0.801690
+ 5 1181544.0     29.538600     0.957518            0.883424
+[  272.5s] prune at score>=0.567: train 2490527->2059045; pair recall after pruning 0.9692
+[  428.4s] features (62): ['addr_c3_rank', 'name_c3_rank', 'name_ph_rank', 'name_w_rank', 'n_views', 'cos_name_c3', 'cos_name_w', 'cos_addr_c3', 'cos_name_ph', 'c_src', 'r_score', 'gap_score', 'r_name_c3', 'gap_name_c3', 'r_name_w', 'gap_name_w', 'r_addr_c3', 'gap_addr_c3', 'r_name_ph', 'gap_name_ph
+[  872.1s] OOF (sklearn-hgb): AUC=0.99979 AP=0.99752
+  best global threshold: {'rule': 'thr', 'one2one': True, 'thr': 0.75, 'f05': 0.9658065175082574}
+  expected-F: {'rule': 'expf', 'one2one': True, 'thr': nan, 'f05': 0.9643391375872595}
+[  944.1s] OOF macro F0.5 (chosen) = 0.96581 with {'rule': 'thr', 'one2one': True, 'thr': 0.75, 'f05': 0.9658065175082574}
+  OOF breakdown:
+macro F0.5 = 0.96581   over 40000 S1 entities
+  singletons (0 true)  n=   2251 (  5.6%)  mean F=0.9316  pred-empty=93.2%
+  1 true match         n=   2179 (  5.4%)  mean F=0.9142  pred-empty=6.4%
+  2 true matches       n=   6791 ( 17.0%)  mean F=0.9607  pred-empty=0.9%
+  3+ true matches      n=  28779 ( 71.9%)  mean F=0.9736  pred-empty=0.1%
+[ 1176.2s] test: loaded normalised cache cache_slice/test_norm.pkl (792439 rows)
+[ 1197.2s] test: doc matrices [('name_c3', (704475, 18750), 5419003), ('name_w', (704475, 102626), 1587984), ('addr_c3', (704475, 21377), 7179173), ('name_ph', (704475, 6357), 2812978)] (20s)
+[ 1266.3s] test block 0 ('india', 11953 S1): 567586 cands after prune, 11201 S1 with matches
+[ 1367.5s] test block 1 ('us', 18047 S1): 856802 cands after prune, 17053 S1 with matches
+[ 1367.6s] test: 30000 S1 rows written | predicted-empty=5.8% | mean matches=3.28
+macro F0.5 = 0.97402   over 30000 S1 entities
+  singletons (0 true)  n=   1657 (  5.5%)  mean F=0.9668  pred-empty=96.7%
+  1 true match         n=   1556 (  5.2%)  mean F=0.9263  pred-empty=5.8%
+  2 true matches       n=   5065 ( 16.9%)  mean F=0.9706  pred-empty=0.7%
+  3+ true matches      n=  21722 ( 72.4%)  mean F=0.9788  pred-empty=0.1%
+[ 1368.9s] copied report + matching_results to runs/slice_v1/ (commit this folder)
+[ 1368.9s] done
