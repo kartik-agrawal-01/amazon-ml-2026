@@ -16,7 +16,7 @@ if [ ! -f data_xc_us/test_ground_truth_HIDDEN.tsv ]; then
 fi
 NJ="${NJ:-2}"
 COMMON="--n-jobs $NJ --stage-b-jobs $NJ --topk-device cuda --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w"
-for job in "slice_mix data_slice cache_slice output_slice" "xc_us data_xc_us cache_xc_us output_xc_us" "xc_in data_xc_in cache_xc_in output_xc_in"; do
+for job in "xc_us data_xc_us cache_xc_us output_xc_us" "slice_mix data_slice cache_slice output_slice" "xc_in data_xc_in cache_xc_in output_xc_in"; do
   set -- $job; name=$1; dd=$2; cd_=$3; od=$4
   [ -f runs/$name/report.json ] && continue
   mkdir -p runs/$name

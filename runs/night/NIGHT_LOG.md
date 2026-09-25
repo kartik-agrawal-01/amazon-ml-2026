@@ -153,3 +153,21 @@
   = normal, NOT the stall of attempt 2. Stall signature was: GPU idle, RSS flat, no block line for > 2x a block time.
   (py-spy cannot attach: ptrace denied, no sudo.)
   xc_us: US train phase A 280 s, blocking recall k=10 137506/138386 = 0.9936 (40K S1, 831K docs), peak RSS 2.0 GB.
+- 02:45 B4 concurrent attempt ABANDONED: xc_us ran 18 min (US phase A 280 s, recall 0.9936 k=10; cascade fit 416 s
+  with 2 jobs: 60.1 -> 6.6 cands/S1, pair recall 0.9899) and was killed by my killswitch (MemAvailable 2273 MB)
+  when stage B spawned its workers; xc_in then died the same way in phase A (2221 MB); slice_mix at start.
+  The slice pipeline needs ~3.5 GB at stage B/OOF, v2's India blocks leave only ~4.4-5.9 GB => cannot fit under
+  the 2.3 GB switch, and v2's block 1 ran 13% slower (1178 s vs 1042 s) with the CPU competition. No further
+  concurrent B4 runs. The post-v2 chain (post_v2.sh -> track_b_chain.sh, NJ=6, cuda) does them after the push;
+  reordered to xc_us (France proxy) -> slice_mix -> xc_in; make_slice is skipped (data_xc_* exist with hidden GT)
+  and the stores are pre-seeded (cache_xc_us/cache_xc_in), so each run should take ~10-12 min => B4 done ~07:45.
+  Killed logs kept as runs/{xc_us,xc_in,slice_mix}/stdout_killswitch_*.txt. runs/v2/NOTES_training.md written
+  (OOF numbers + block-level empty rates) so HQ has them even before the watcher's auto NOTES.md.
+- 02:45 v2 test/india block 1 = 1178 s (9.2 cands/S1, 93.3% S1 with matches). Test S1 counts: France 259,452 /
+  India 809,986 / US 663,106. PROJECTION (no competition from here): India done ~04:25, US ~06:57 (6 x ~1350 s +
+  63K block), watcher validate + push ~07:10, B4 chain ~07:45. Session 4 ends 02:47; v2 alive (pid 301447).
+  SESSION 5+ TODO: (1) check block lines vs projection (India ~1050 s, US ~1350 s); no relaunch possible any more:
+  if v2 is still in US blocks at 07:45, run scripts/night/salvage_partial.py and validate/push the partial as
+  submissions/v2_partial_matching_results.tsv (write NOTES); (2) after the watcher pushes, run
+  `python scripts/night/b4_table.py` when runs/{xc_us,slice_mix,xc_in}/report.json exist and put the table +
+  cross-country drop into the morning summary; (3) morning summary at the TOP of NIGHT_LOG.md ("QUEUE DONE").

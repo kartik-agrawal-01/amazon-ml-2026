@@ -1,0 +1,1 @@
+python -m src.pipeline --data-dir data_slice --cache-dir cache_slice_mix --out-dir output_slice_mix --run-name slice_mix --test-gt data_slice/test_ground_truth_HIDDEN.tsv --n-jobs 2 --stage-b-jobs 2 --topk-device cpu --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w
