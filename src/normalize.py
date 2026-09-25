@@ -36,6 +36,9 @@ LEGAL_CANON = {
     # India extras (incl. transliterated forms: प्राइवेट लिमिटेड -> praivet limited)
     "pvtltd": "pvt ltd", "pvt.ltd": "pvt ltd", "opcpvt": "opc pvt", "ltd.": "ltd",
     "praivet": "pvt", "praiveta": "pvt", "praivete": "pvt", "privet": "pvt", "praiveet": "pvt",
+    "praibhet": "pvt", "praibheta": "pvt", "praibhete": "pvt", "praiwet": "pvt", "praiweta": "pvt", "praivat": "pvt",
+    "elelpi": "llp", "elelsi": "llc", "inka": "inc", "ink": "inc", "korp": "corp", "korporeshan": "corp",
+    "limiteda": "ltd", "limitad": "ltd", "limitet": "ltd", "limiteet": "ltd", "limitedu": "ltd", "limiteda": "ltd",
     "limiteda": "ltd", "limitad": "ltd", "limitet": "ltd", "limiteet": "ltd", "lim": "ltd", "li": "ltd", "pra": "pvt",
     "prai": "pvt", "limitid": "ltd", "limtd": "ltd", "limted": "ltd", "privat": "pvt", "priv": "pvt",
     "de": None, "and": None, "et": None,  # None = drop only when trailing after a legal token
@@ -205,25 +208,17 @@ def _normalize_frame(rec: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-_NR = {"rec": None}
-
-
-def _norm_chunk(bounds):
-    a, b = bounds
-    return _normalize_frame(_NR["rec"].iloc[a:b])
-
-
 def add_normalized(rec: pd.DataFrame, n_jobs: int = 0, chunk: int = 100_000) -> pd.DataFrame:
-    """Add normalised columns. Parallel over row chunks (fork) when the table is large."""
+    """Add normalised columns. Parallel over row chunks (spawned workers, explicit payloads) when large."""
     import multiprocessing as mp
     import os
     n_jobs = n_jobs or (os.cpu_count() or 1)
     bounds = [(a, min(a + chunk, len(rec))) for a in range(0, len(rec), chunk)]
-    if n_jobs > 1 and len(bounds) > 1 and "fork" in mp.get_all_start_methods():
-        _NR["rec"] = rec
-        with mp.get_context("fork").Pool(min(n_jobs, len(bounds))) as pool:
-            parts = pool.map(_norm_chunk, bounds)
-        _NR["rec"] = None
+    if n_jobs > 1 and len(bounds) > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        cols = [c for c in ("name", "addr", "city", "zip", "state", "country") if c in rec]
+        with ProcessPoolExecutor(min(n_jobs, len(bounds)), mp_context=mp.get_context("spawn")) as ex:
+            parts = list(ex.map(_normalize_frame, (rec.iloc[a:b][cols] for a, b in bounds)))
         extra = pd.concat(parts)
     else:
         extra = _normalize_frame(rec)

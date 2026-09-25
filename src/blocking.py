@@ -32,6 +32,9 @@ VIEWS = {
     "addr_c3": dict(col="n_addr", analyzer="char_wb", ngram_range=(3, 3)),
     "full_c3": dict(col="n_full", analyzer="char_wb", ngram_range=(3, 3)),
     "name_ph": dict(col="n_ph", analyzer="char_wb", ngram_range=(3, 3)),   # phonetic key: cross-script + typos
+    "full_w": dict(col="n_full", analyzer="word", ngram_range=(1, 1), token_pattern=r"(?u)\b\w+\b"),  # name+addr words (cheap)
+    "addr_w": dict(col="n_addr", analyzer="word", ngram_range=(1, 1), token_pattern=r"(?u)\b\w+\b"),
+    "nums_w": dict(col="a_nums", analyzer="word", ngram_range=(1, 1), token_pattern=r"(?u)\b\w+\b"),  # house/pin numbers
 }
 DEFAULT_VIEWS = list(VIEWS)
 
@@ -71,24 +74,20 @@ def fit_vectorizers(rec: pd.DataFrame, views: Iterable[str] = DEFAULT_VIEWS, max
     return vecs
 
 
-_XF = {"vec": None, "texts": None}
-
-
-def _xf_chunk(bounds):
-    a, b = bounds
-    return _XF["vec"].transform(_XF["texts"][a:b]).astype(np.float32)
+def _xf_chunk(args):
+    vec, texts = args
+    return vec.transform(texts).astype(np.float32)
 
 
 def transform(vec: TfidfVectorizer, texts: np.ndarray, n_jobs: int = 0, chunk: int = 200_000) -> sp.csr_matrix:
-    """vec.transform in parallel chunks (fork). Row order preserved."""
+    """vec.transform in parallel chunks (spawned workers, explicit payloads). Row order preserved."""
     n = len(texts)
     n_jobs = n_jobs or (os.cpu_count() or 1)
     bounds = [(a, min(a + chunk, n)) for a in range(0, n, chunk)]
-    if n_jobs > 1 and len(bounds) > 1 and "fork" in mp.get_all_start_methods():
-        _XF["vec"], _XF["texts"] = vec, texts
-        with mp.get_context("fork").Pool(min(n_jobs, len(bounds))) as pool:
-            parts = pool.map(_xf_chunk, bounds)
-        _XF["vec"] = _XF["texts"] = None
+    if n_jobs > 1 and len(bounds) > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(min(n_jobs, len(bounds)), mp_context=mp.get_context("spawn")) as ex:
+            parts = list(ex.map(_xf_chunk, ((vec, texts[a:b]) for a, b in bounds)))
         return sp.vstack(parts).tocsr()
     return vec.transform(texts).astype(np.float32).tocsr()
 

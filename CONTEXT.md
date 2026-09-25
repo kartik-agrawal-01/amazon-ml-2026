@@ -37,8 +37,12 @@
   leader pulls + validates + uploads -> leader reports LB score -> fill LOG.md.
 
 ## Current state
-- Best local CV: **0.9658 OOF macro-F0.5** (40K-S1 train slice, 3-fold, sklearn HistGB, rule thr=0.75 + 1-to-1);
-  **0.9740 on a disjoint 30K-S1 train-derived holdout** (runs/slice_v1). Full-data run not done yet.
+- Best local CV: **0.9768 OOF macro-F0.5** (40K-S1 train slice, 3-fold, sklearn HistGB, thr=0.80 + 1-to-1);
+  **0.9826 on a disjoint 30K-S1 train-derived holdout** (runs/slice_v3; v1 was 0.966/0.974, v2 0.970/0.977).
+  Gains came from: word views over name+address (blocking recall 97.1% -> 98.6%), global name/address
+  uniqueness counts (how many S1 share a candidate's name -> resolves empty-address / trade-name records),
+  extra-token and house-number-detail features. Post-hoc rules (calibration, 2nd-stage group model,
+  per-country thresholds) gave NOTHING (tried, see scripts/tune_rules.py). Full-data box run pending.
 - Best public LB:  — (nothing yet)
 - Submissions used: Day1 0/5 · Day2 0/5 · Day3 0/5
 

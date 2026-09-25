@@ -24,17 +24,33 @@ def make_model(seed: int = 0, n_jobs: int = -1):
                                               early_stopping=False, random_state=seed), "sklearn-hgb"
 
 
-def oof_predict(X: pd.DataFrame, y: np.ndarray, groups: np.ndarray, n_folds: int = 5, seed: int = 0,
-                verbose: bool = True) -> Tuple[np.ndarray, str]:
+def subsample_negatives(y: np.ndarray, neg_rate: float, seed: int = 0):
+    """Row indices keeping all positives and a `neg_rate` share of negatives, with weights 1/neg_rate on
+    the kept negatives so probabilities stay calibrated to the full pair distribution."""
+    if neg_rate >= 1.0:
+        return np.arange(len(y)), None
+    rng = np.random.default_rng(seed)
+    keep = (y == 1) | (rng.random(len(y)) < neg_rate)
+    idx = np.flatnonzero(keep)
+    w = np.where(y[idx] == 1, 1.0, 1.0 / neg_rate).astype(np.float32)
+    return idx, w
+
+
+def oof_predict(X, y: np.ndarray, groups: np.ndarray, n_folds: int = 5, seed: int = 0,
+                verbose: bool = True, neg_rate: float = 1.0) -> Tuple[np.ndarray, str]:
+    """GroupKFold OOF probabilities for ALL rows; each fold model is fitted on (optionally negative-subsampled,
+    weighted) training rows. X may be a DataFrame or a float32 ndarray."""
     from sklearn.model_selection import GroupKFold
-    oof = np.zeros(len(X), dtype=np.float32)
+    Xv = X.to_numpy(dtype=np.float32) if hasattr(X, "to_numpy") else X
+    oof = np.zeros(len(Xv), dtype=np.float32)
     kind = ""
-    for f, (tr, va) in enumerate(GroupKFold(n_splits=n_folds).split(X, y, groups)):
+    for f, (tr, va) in enumerate(GroupKFold(n_splits=n_folds).split(Xv, y, groups)):
         m, kind = make_model(seed + f)
-        m.fit(X.iloc[tr], y[tr])
-        oof[va] = m.predict_proba(X.iloc[va])[:, 1]
+        sub, w = subsample_negatives(y[tr], neg_rate, seed + f)
+        m.fit(Xv[tr][sub], y[tr][sub], sample_weight=w)
+        oof[va] = m.predict_proba(Xv[va])[:, 1]
         if verbose:
-            print(f"    fold {f}: train={len(tr)} valid={len(va)} pos_rate={y[va].mean():.4f}")
+            print(f"    fold {f}: fit={len(sub)} valid={len(va)} pos_rate={y[va].mean():.4f}", flush=True)
     return oof, kind
 
 

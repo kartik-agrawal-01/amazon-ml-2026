@@ -33,7 +33,7 @@ from .blocking import (DEFAULT_VIEWS, blocking_recall, fit_vectorizers, gt_pairs
 from .data import describe, load_split
 from .features import calibrate_prune, feature_columns, prune_score, stage_a, stage_b
 from .metric import macro_f05, read_matches_tsv
-from .model import check_one_to_one, decide, feature_importance, make_model, oof_predict, sweep_rules
+from .model import check_one_to_one, decide, feature_importance, make_model, oof_predict, subsample_negatives, sweep_rules
 from .normalize import add_normalized
 
 T0 = time.time()
@@ -44,17 +44,38 @@ def log(msg: str) -> None:
 
 
 # ------------------------------------------------------------------ loading
+def add_uniqueness(rec: pd.DataFrame) -> pd.DataFrame:
+    """Global (per split, per country) duplicate counts: how many S1 records share this core name / phonetic
+    key / no-space name, and how many records of any source share this address. Resolves empty-address and
+    trade-name candidates: a name that matches exactly ONE S1 entity is a near-certain match."""
+    key_ctry = rec["country"].fillna("") if "country" in rec else pd.Series("", index=rec.index)
+    s1 = rec["src"] == 1
+    for col, name in (("n_core", "core"), ("n_ph", "ph"), ("n_nospace", "nsp")):
+        k = key_ctry + "|" + rec[col].fillna("")
+        cnt_s1 = k[s1].value_counts()
+        rec[f"cnt_{name}_s1"] = k.map(cnt_s1).fillna(0).astype(np.int32)
+        rec[f"cnt_{name}_all"] = k.map(k.value_counts()).astype(np.int32)
+    ka = key_ctry + "|" + rec["n_addr"].fillna("")
+    rec["cnt_addr_all"] = ka.map(ka.value_counts()).astype(np.int32)
+    rec.loc[rec["n_addr"].fillna("") == "", "cnt_addr_all"] = 0
+    rec["cnt_addr_s1"] = ka.map(ka[s1].value_counts()).fillna(0).astype(np.int32)
+    return rec
+
+
 def load_norm(data_dir: str, split: str, cache_dir: str, n_jobs: int):
     path = os.path.join(cache_dir, f"{split}_norm.pkl")
     if os.path.exists(path):
         with open(path, "rb") as fh:
             rec, gt, info = pickle.load(fh)
         log(f"{split}: loaded normalised cache {path} ({len(rec)} rows)")
+        if "cnt_core_s1" not in rec:
+            rec = add_uniqueness(rec)
         return rec, gt, info
     rec, gt, info = load_split(data_dir, split)
     describe(rec, gt, info, split)
     rec = add_normalized(rec, n_jobs=n_jobs)
     rec["n_full"] = (rec["n_core"] + " " + rec["n_addr"]).str.strip()
+    rec = add_uniqueness(rec)
     os.makedirs(cache_dir, exist_ok=True)
     with open(path, "wb") as fh:
         pickle.dump((rec, gt, info), fh, protocol=pickle.HIGHEST_PROTOCOL)
@@ -152,14 +173,16 @@ def main() -> None:
     ap.add_argument("--out-dir", default="output")
     ap.add_argument("--cache-dir", default="cache")
     ap.add_argument("--k", type=int, default=10, help="top-k per view per source")
-    ap.add_argument("--views", default="name_c3,name_w,addr_c3,name_ph",
-                    help="comma list of lexical views (full_c3 is the costliest; the dense view covers it)")
+    ap.add_argument("--views", default="name_c3,name_w,addr_c3,name_ph,full_w,addr_w",
+                    help="comma list of lexical views (full_w = name+address words is the strongest single view; "
+                         "full_c3 is the costliest and off by default)")
     ap.add_argument("--max-df", type=float, default=0.05, help="drop n-grams present in more than this share of records")
     ap.add_argument("--dense", action="store_true", help="add bi-encoder dense view (needs sentence-transformers)")
     ap.add_argument("--dense-model", default="sentence-transformers/all-MiniLM-L6-v2")
     ap.add_argument("--partition-col", default="auto", help="none | auto | <column>; auto -> country when present")
     ap.add_argument("--block-size", type=int, default=100_000, help="S1 queries per block (train and test)")
-    ap.add_argument("--train-s1", type=int, default=300_000, help="S1 entities used for training (0 = all)")
+    ap.add_argument("--train-s1", type=int, default=150_000, help="S1 entities used for training (0 = all)")
+    ap.add_argument("--neg-rate", type=float, default=0.5, help="keep this share of negative pairs when FITTING (weighted 1/rate); OOF/rules use all pairs")
     ap.add_argument("--test-limit", type=int, default=0, help="only predict the first N test S1 (dev)")
     ap.add_argument("--keep-recall", type=float, default=0.998)
     ap.add_argument("--folds", type=int, default=5)
@@ -234,20 +257,26 @@ def main() -> None:
     log(f"prune at score>={thr_prune:.3f}: train {n0}->{len(cand_tr)}; pair recall after pruning "
         f"{cand_tr.y.sum() / max(gp_total, 1):.4f}")
     report["prune"] = dict(threshold=thr_prune, train_pairs=len(cand_tr), train_pair_recall=float(cand_tr.y.sum() / max(gp_total, 1)))
+    q_rid_tr, d_rid_tr = ctx.q_rid, ctx.d_rid
+    del ctx  # free doc matrices / embeddings before the memory-heavy training stage
+    gc.collect()
     cand_tr = stage_b(cand_tr, q_tr, d_tr, a.n_jobs)
     feats = feature_columns(cand_tr)
     feats = [f for f in feats if f not in ("score",)] + ["score"]
     log(f"features ({len(feats)}): {feats}")
 
-    X, y = cand_tr[feats].astype(np.float32), cand_tr["y"].values
-    oof, kind = oof_predict(X, y, cand_tr["q"].values, a.folds, a.seed)
+    X = np.ascontiguousarray(cand_tr[feats].to_numpy(dtype=np.float32))
+    y = cand_tr["y"].values
+    cand_tr = cand_tr[["q", "c", "y"]].copy()  # drop feature columns (X holds them)
+    gc.collect()
+    oof, kind = oof_predict(X, y, cand_tr["q"].values, a.folds, a.seed, neg_rate=a.neg_rate)
     cand_tr["p"] = oof
     from sklearn.metrics import average_precision_score, roc_auc_score
     log(f"OOF ({kind}): AUC={roc_auc_score(y, oof):.5f} AP={average_precision_score(y, oof):.5f}")
-    sweep_n = min(len(ctx.q_rid), 100_000)
-    sw_q = np.sort(np.random.default_rng(a.seed).choice(len(ctx.q_rid), sweep_n, replace=False))
+    sweep_n = min(len(q_rid_tr), 100_000)
+    sw_q = np.sort(np.random.default_rng(a.seed).choice(len(q_rid_tr), sweep_n, replace=False))
     sw_mask = np.isin(cand_tr["q"].values, sw_q)
-    tab, best = sweep_rules(cand_tr[sw_mask], ctx.q_rid, ctx.d_rid, gt, one2one_ok=one2one, q_subset=sw_q)
+    tab, best = sweep_rules(cand_tr[sw_mask], q_rid_tr, d_rid_tr, gt, one2one_ok=one2one, q_subset=sw_q)
     print(tab.head(10).to_string(index=False))
     for lbl, sub in [("best global threshold", tab[tab.rule == "thr"]), ("expected-F", tab[tab.rule == "expf"])]:
         if len(sub):
@@ -260,13 +289,14 @@ def main() -> None:
     thr_best = best["thr"] if best["rule"] == "thr" else 0.0
     log(f"OOF macro F0.5 (chosen) = {best['f05']:.5f} with {best}")
     report["oof"] = dict(model=kind, auc=float(roc_auc_score(y, oof)), rules=tab.to_dict(orient="records"), chosen=best)
-    gt_sub = {r: gt.get(r, frozenset()) for r in ctx.q_rid}
+    gt_sub = {r: gt.get(r, frozenset()) for r in q_rid_tr}
     print("  OOF breakdown:")
-    macro_f05(gt_sub, decide(cand_tr, ctx.q_rid, ctx.d_rid, best["rule"], thr_best, bool(best["one2one"])), verbose=True)
-    pd.DataFrame({"s1": ctx.q_rid[cand_tr.q], "cand": ctx.d_rid[cand_tr.c], "y": y, "p": oof}).to_csv(
+    macro_f05(gt_sub, decide(cand_tr, q_rid_tr, d_rid_tr, best["rule"], thr_best, bool(best["one2one"])), verbose=True)
+    pd.DataFrame({"s1": q_rid_tr[cand_tr.q], "cand": d_rid_tr[cand_tr.c], "y": y, "p": oof}).to_csv(
         os.path.join(a.out_dir, "oof_pairs.tsv.gz"), sep="\t", index=False)
     model, _ = make_model(a.seed)
-    model.fit(X, y)
+    fit_idx, fit_w = subsample_negatives(y, a.neg_rate, a.seed)
+    model.fit(X[fit_idx], y[fit_idx], sample_weight=fit_w)
     imp = feature_importance(model, feats)
     if len(imp):
         report["importance_top25"] = imp.head(25).round(4).to_dict()
@@ -276,7 +306,7 @@ def main() -> None:
         joblib.dump(dict(model=model, feats=feats, thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
     except Exception as e:  # noqa: BLE001
         log(f"model not saved: {e}")
-    del ctx, cand_tr, X, d_tr
+    del cand_tr, X, d_tr
     gc.collect()
 
     # 4. TEST pass (streamed)
@@ -302,7 +332,7 @@ def main() -> None:
         cands, qb, _ = ctx.block(q_idx, key, a.k)
         cands = cands[prune_score(cands) >= thr_prune].reset_index(drop=True)
         cands = stage_b(cands, qb, d_te, a.n_jobs)
-        cands["p"] = model.predict_proba(cands[feats].astype(np.float32))[:, 1]
+        cands["p"] = model.predict_proba(cands[feats].to_numpy(dtype=np.float32))[:, 1]
         sets = decide(cands, qb["rid"].values, ctx.d_rid, best["rule"], thr_best, bool(best["one2one"]))
         for qi, r in zip(q_idx, qb["rid"].values):
             pred_rows[qi] = ",".join(sorted(sets[r]))
@@ -325,6 +355,12 @@ def main() -> None:
     empty = float(np.mean([not m for m in pred_rows]))
     report["test_pred"] = dict(n_s1=len(q_rid), empty_rate=empty, mean_matches=n_pred / max(len(q_rid), 1),
                                cand_pairs=n_pairs, cand_pairs_per_s1=n_pairs / max(len(q_rid), 1))
+    if "country" in q_te:  # sanity per country (France is unseen in train: watch its empty rate / mean matches)
+        n_m = np.array([m.count(",") + 1 if m else 0 for m in pred_rows])
+        per = pd.DataFrame({"country": q_te["country"].values, "n": n_m}).groupby("country")["n"].agg(
+            n_s1="size", empty_rate=lambda x: float((x == 0).mean()), mean_matches="mean")
+        print(per.to_string())
+        report["test_pred_by_country"] = per.reset_index().to_dict(orient="records")
     log(f"test: {len(q_rid)} S1 rows written | predicted-empty={empty:.1%} | mean matches={n_pred / max(len(q_rid), 1):.2f}")
     if a.test_gt:
         tgt = read_matches_tsv(a.test_gt)

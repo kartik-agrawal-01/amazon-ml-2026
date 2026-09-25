@@ -119,7 +119,8 @@ def calibrate_prune(score: np.ndarray, y: np.ndarray, keep_recall: float = 0.998
 _Q: dict = {}  # query-block column arrays shared with forked workers
 _D: dict = {}  # doc-table column arrays
 _COLS = ("n_core", "n_name", "legal", "a_nums", "a_zip", "vague", "n_addr", "city", "zip", "state", "country",
-         "n_ph", "n_nospace", "indic")
+         "n_ph", "n_nospace", "indic", "cnt_core_s1", "cnt_core_all", "cnt_ph_s1", "cnt_ph_all", "cnt_nsp_s1",
+         "cnt_nsp_all", "cnt_addr_all", "cnt_addr_s1")
 
 
 def _set_rec(q_rec: pd.DataFrame, d_rec: pd.DataFrame) -> None:
@@ -165,6 +166,28 @@ def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
     f["nospace_eq"] = (sq == sc).astype(np.int8)
     f["jw_nospace"] = np.fromiter((jaro_winkler(a, b) for a, b in zip(sq, sc)), np.float32, n)
     f["indic_q"], f["indic_c"] = _Q["indic"][qi].astype(np.int8), _D["indic"][ci].astype(np.int8)
+    # global uniqueness (per split+country): how many S1 share this name / how many records share this address
+    for c in ("cnt_core_s1", "cnt_ph_s1", "cnt_nsp_s1", "cnt_addr_all", "cnt_addr_s1"):
+        if c in _Q and c in _D:
+            f[f"q_{c}"] = np.log1p(_Q[c][qi].astype(np.float32))
+            f[f"c_{c}"] = np.log1p(_D[c][ci].astype(np.float32))
+    if "cnt_core_all" in _D:
+        f["c_cnt_core_all"] = np.log1p(_D["cnt_core_all"][ci].astype(np.float32))
+    # name-empty / address-empty flags and lengths
+    f["addr_empty_c"] = (_D["n_addr"][ci] == "").astype(np.int8)
+    f["addr_len_c"] = np.fromiter((len(x) for x in _D["n_addr"][ci]), np.int16, n)
+    f["addr_len_q"] = np.fromiter((len(x) for x in _Q["n_addr"][qi]), np.int16, n)
+    # extra tokens (name words present on one side only) and how "generic" they are
+    generic = {"co", "company", "inc", "llc", "ltd", "limited", "pvt", "private", "corp", "corporation", "group",
+               "holdings", "center", "centre", "services", "service", "the", "and", "of", "international", "enterprises",
+               "solutions", "partners", "associates", "llp", "pc", "pllc", "lp", "trust", "foundation", "india"}
+    tq_ = [set(a.split()) for a in cq]
+    tc_ = [set(b.split()) for b in cc]
+    f["extra_c"] = np.fromiter((len(b - a) for a, b in zip(tq_, tc_)), np.int8, n)
+    f["extra_q"] = np.fromiter((len(a - b) for a, b in zip(tq_, tc_)), np.int8, n)
+    f["extra_c_content"] = np.fromiter((len((b - a) - generic) for a, b in zip(tq_, tc_)), np.int8, n)
+    f["extra_q_content"] = np.fromiter((len((a - b) - generic) for a, b in zip(tq_, tc_)), np.int8, n)
+
     lq_, lc_ = _Q["legal"][qi], _D["legal"][ci]
     f["legal_eq"] = ((lq_ == lc_) & (lq_ != "")).astype(np.int8)
     f["legal_conflict"] = ((lq_ != lc_) & (lq_ != "") & (lc_ != "")).astype(np.int8)
@@ -179,6 +202,12 @@ def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
     f["num_both"] = np.fromiter((bool(a) and bool(b) for a, b in zip(nq, nc)), np.int8, n)
     f["num_first_eq"] = np.fromiter(((a.split()[:1] == b.split()[:1]) if a and b else False
                                      for a, b in zip(nums_q, nums_c)), np.int8, n)
+    # house-number agreement in detail: first numeric tokens (JW) + numbers on one side only
+    nq_first = [a.split()[0] if a else "" for a in nums_q]
+    nc_first = [b.split()[0] if b else "" for b in nums_c]
+    f["num_first_jw"] = np.fromiter((jaro_winkler(a, b) if a and b else -1.0 for a, b in zip(nq_first, nc_first)), np.float32, n)
+    f["num_only_q"] = np.fromiter((len(a - b) for a, b in zip(nq, nc)), np.int8, n)
+    f["num_only_c"] = np.fromiter((len(b - a) for a, b in zip(nq, nc)), np.int8, n)
     zq, zc = _Q["a_zip"][qi], _D["a_zip"][ci]
     zeq = np.fromiter((bool(set(a.split()) & set(b.split())) if a and b else False for a, b in zip(zq, zc)), np.int8, n)
     f["zip_eq"] = zeq
@@ -218,9 +247,11 @@ def stage_b(cands: pd.DataFrame, q_rec: pd.DataFrame, d_rec: pd.DataFrame, n_job
     qi, ci = cands["q"].values, cands["c"].values
     n_jobs = n_jobs or (os.cpu_count() or 1)
     chunks = [np.arange(a, min(a + chunk, len(qi))) for a in range(0, len(qi), chunk)]
-    if n_jobs > 1 and len(chunks) > 1 and "fork" in mp.get_all_start_methods():
-        with mp.get_context("fork").Pool(min(n_jobs, len(chunks))) as pool:
-            parts = list(pool.imap(_worker, (_payload(qi[ix], ci[ix]) for ix in chunks)))
+    if n_jobs > 1 and len(chunks) > 1:
+        # spawned workers (fresh interpreters): nothing inherited from the parent, so memory = payload only.
+        from concurrent.futures import ProcessPoolExecutor  # raises BrokenProcessPool if a worker is OOM-killed
+        with ProcessPoolExecutor(min(n_jobs, len(chunks)), mp_context=mp.get_context("spawn")) as ex:
+            parts = list(ex.map(_worker, (_payload(qi[ix], ci[ix]) for ix in chunks)))
         feats = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
     else:
         feats = _stage_b_block(qi, ci)

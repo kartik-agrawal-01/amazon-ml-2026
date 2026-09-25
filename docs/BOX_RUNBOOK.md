@@ -23,12 +23,14 @@ bash scripts/run_pipeline.sh smoke --max-df 0.01 --train-s1 60000 --test-limit 6
 Read `runs/smoke/stdout.txt`: blocking recall table, OOF AUC, `OOF macro F0.5 (chosen)`, breakdown.
 Push it: `git add runs/smoke && git commit -m "run smoke" && git push` → HQ reads it.
 
-## 2. Full run v1 (est. 1.5–3 h on 20 threads; GPU makes the dense view cheap)
+## 2. Full run (est. 1.5–3 h; GPU makes the dense view cheap)
 ```bash
-bash scripts/run_pipeline.sh v1 --dense --max-df 0.01 --train-s1 300000 --block-size 100000
+bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000
 ```
-Without a working GPU: `bash scripts/run_pipeline.sh v1 --max-df 0.01 --train-s1 300000 --block-size 100000`.
-`--max-df 0.01` matters: with 0.05 the address n-gram products are ~10x bigger (hours, GBs).
+Add `--dense` when `gpu_check.sh` shows CUDA working. `--n-jobs 8` (not 20): the box has ~10 GB free and
+other users. `--max-df 0.01` matters: with 0.05 the address n-gram products are ~10x bigger (hours, GBs).
+Workers are now spawned processes with explicit payloads (no copy-on-write blow-up), so RSS per worker is small.
+Reference for this code version (slice_v3, 40K train S1, sklearn model, 2 CPUs): OOF 0.9768 / holdout 0.9826.
 Outputs: `output/matching_results.tsv`, `output/candidate_pairs.tsv`, `output/report.json`,
 `output/model.joblib`; copies of report + results in `runs/v1/`.
 
@@ -37,11 +39,12 @@ Outputs: `output/matching_results.tsv`, `output/candidate_pairs.tsv`, `output/re
 python data/data_extracted/student_resource/utils/validate_submission.py \
     --matching output/matching_results.tsv --candidate output/candidate_pairs.tsv \
     --test-dir data/data_extracted/student_resource/dataset/test
-cp output/matching_results.tsv submissions/v1_matching_results.tsv
-git add runs/v1 submissions/v1_matching_results.tsv && git commit -m "v1 submission" && git push
+cp output/matching_results.tsv submissions/v2_matching_results.tsv
+git add runs/v2 submissions/v2_matching_results.tsv && git commit -m "v2 submission" && git push
 ```
 Then: fill the row in `submissions/LOG.md` (BEFORE upload) → leader pulls → uploads
-`submissions/v1_matching_results.tsv` → reports the LB score → fill it in.
+`submissions/<run>_matching_results.tsv` → reports the LB score → fill it in.
+Post-hoc rule check (seconds): `python scripts/tune_rules.py --oof output/oof_pairs.tsv.gz --gt data/.../train_ground_truth.tsv --records cache/train_norm.pkl`
 
 ## 4. Later layers (only after v1 is on the LB)
 ```bash
