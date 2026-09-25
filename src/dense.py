@@ -62,14 +62,21 @@ def encode(texts: np.ndarray, model, batch_size: int = 1024, cache_path: Optiona
 
 
 def topk_dense(Q: np.ndarray, D: np.ndarray, k: int, min_sim: float = 0.3, device: Optional[str] = None,
-               q_chunk: int = 2048) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Exact top-k inner product of each Q row against all D rows. Returns (row, col, sim, rank)."""
+               q_chunk: int = 0, sim_budget_bytes: float = 1.5e9) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Exact top-k inner product of each Q row against all D rows. Returns (row, col, sim, rank).
+
+    q_chunk is sized so the (q_chunk x m) similarity matrix stays under `sim_budget_bytes`
+    (1.5 GB by default: 5.5M docs -> ~136 queries per chunk; a fixed 2048 would need 22 GB and OOM a 16 GB GPU).
+    """
     n, m = len(Q), len(D)
     if n == 0 or m == 0:
         z = np.zeros(0, np.int64)
         return z, z, np.zeros(0, np.float32), np.zeros(0, np.int16)
     k = min(k, m)
     device = device or get_device()
+    if not q_chunk:
+        bytes_per = 2 if device == "cuda" else 4
+        q_chunk = int(max(16, min(4096, sim_budget_bytes // (m * bytes_per))))
     out_c = np.empty((n, k), dtype=np.int64)
     out_s = np.empty((n, k), dtype=np.float32)
     if device == "cuda":

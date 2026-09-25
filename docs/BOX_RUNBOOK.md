@@ -1,5 +1,9 @@
 # Box runbook — from `git pull` to a validated submission file
 
+> Crashes seen on 25 Sep were **system-RAM** (CPU) exhaustion, not GPU: the old code forked 20 workers
+> that each inherited the parent's ~3.8 GB heap. Current code spawns lean workers; still use `--n-jobs 8`.
+> The GPU (16 GB) is only used with `--dense`; its chunk sizes are now derived from memory (src/dense.py).
+
 Everything below runs on the Ubuntu box in `~/amazon-ml-2026` inside the conda env `aml`.
 Start long jobs inside **tmux** (`tmux new -s aml`, detach `Ctrl-b d`, re-attach `tmux a -t aml`).
 
