@@ -1,0 +1,7 @@
+[   15.8s] test: loaded normalised cache cache/test_norm.pkl (11702133 rows)
+== train
+  S1:  2206821 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:  5034616 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:  5285603 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+  GT rows=2206821 | singletons=5.6% | matches/S1: mean=3.46 max=11 | dist={0: 123247, 1: 119157, 2: 375212, 3: 530841, 4: 1058364}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
