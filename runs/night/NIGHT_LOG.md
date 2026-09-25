@@ -38,3 +38,27 @@
   bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000 --views name_c3,name_w,addr_c3,full_w --topk-device cuda --stage-b-jobs 4
   Pre-launch projection: test blocking US 663K x ~11.8 ms + India 810K x ~8.6 ms + France ~0.4 h = ~4.5 h, + stage A/B
   per block + train (~1 h) => ~6.5-7 h => ~06:00. Will re-project from the first train block and first test block.
+- 23:13 B1/B2: slice store building (tmux slice, cache_slice/, runs/night/slice_store.txt, n_jobs 2). New code:
+  src/blocking_b.py (KEY blocking: k_core/k_nsp/k_ph/k_tok_zip/k_tok_city with bucket cap; DENSE MiniLM parts) and
+  scripts/track_b_block_eval.py (recall/cands/time of keys, dense, tfidf-4-views and unions on 20K S1 per country).
+  Eval chained after the store (tmux trackb -> runs/night/track_b_block_eval.txt).
+- 23:30 A3 CHECK v2: train/india block 0 (60031 S1, 4.13M docs): passes name_c3 50s, name_w 63s, addr_c3 50s, full_w 96-108s
+  per source => 8.6 ms/S1 for 8 passes; block 3.59M cands (59.8/S1), GT pairs found 193942/207851 = 0.933 (k=10);
+  phase A 704s, peak RSS 4.7 GB. US phase A started at 940s (23:25), expected ~23 min.
+  PROJECTION: train ~1.1 h total -> test starts ~00:15; test India 8.1 blocks x ~1100s (2.5 h) + US 6.6 x ~1430s (2.6 h)
+  + France ~0.4 h = ~5.5 h => v2 done ~05:45 (deadline 08:00, slack ~2 h). DECISION: keep 4 views, no relaunch.
+  Re-check after the first TEST block (India, 100K S1: expect ~1100 s; if > 1700 s => projection past 08:00 => relaunch lighter).
+- 23:34 B2/B3 RESULT (runs/night/track_b_block_eval.txt; slice train, 20K S1/country, docs India 557K / US 831K):
+    India: KEYS 0.522 (8.9/S1) | DENSE MiniLM k=10 0.787 (20/S1) | KEYS+DENSE 0.855 (26/S1) | TFIDF 4 views 0.9655 (61/S1)
+           TFIDF+KEYS 0.9757 (65/S1) | TFIDF+DENSE 0.9678 | TFIDF+KEYS+DENSE 0.9772 (79/S1)
+    US:    KEYS 0.583 | DENSE 0.9355 | KEYS+DENSE 0.948 | TFIDF 0.9944 (62/S1) | TFIDF+KEYS 0.9956 | TFIDF+KEYS+DENSE 0.9966
+    Encoder throughput 3.0K (India) / 4.8K (US) rec/s fp16 => 24M records = ~1.7-2.2 h of encoding alone.
+    Dense top-k itself is cheap (0.08-0.09 ms/S1 vs 1.5-2.1 ms/S1 for 4 TF-IDF views); key blocking ~1-1.4 ms/S1.
+  CONCLUSION: key+dense blocking CANNOT replace TF-IDF (India recall 0.855 vs 0.966; US 0.948 vs 0.994) and the
+  encoder alone busts the 2 h budget => B5 criteria not met, no B_READY. Cheap gain for HQ: exact-key views add
+  +1.0 pt (India) / +0.1 pt (US) pair recall at +4 cands/S1 (modelling change -> not applied to v2).
+  India zip/city fields are ~empty in the store (a_zip non-empty 0.4%, city 0%) so k_tok_zip/k_tok_city are dead there.
+- 23:35 B4 launched (tmux trackb2, scripts/night/track_b_chain.sh, log runs/night/xc_slices.txt): cross-country slices
+  data_xc_us (train US 8% -> test = India 4% holdout) and data_xc_in (train India -> US holdout), then 3 pipeline runs
+  one at a time with --n-jobs 2: slice_mix (data_slice), xc_us, xc_in; each --train-s1 40000 --test-gt <hidden GT>,
+  4 views, cascade. Reports land in runs/{slice_mix,xc_us,xc_in}/ (report.json has test_f05_hidden).
