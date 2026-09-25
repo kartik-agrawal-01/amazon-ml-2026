@@ -1,0 +1,41 @@
+3304464 blocking pairs for 40000 S1 | true pairs 138246 | blocking recall 0.9866 | cands/S1 mean 82.6 median 83
+F0.5 with the full v3 set (prune 0.51): 0.97655
+A. global score threshold
+  score >= 0.0                       cands/S1 mean  82.6 median   83 p90   98 | pair recall 0.9866 | F0.5 0.97655
+  score >= 0.51                      cands/S1 mean  65.9 median   66 p90   86 | pair recall 0.9849 | F0.5 0.97652
+  score >= 0.6                       cands/S1 mean  54.4 median   54 p90   76 | pair recall 0.9818 | F0.5 0.97585
+  score >= 0.7                       cands/S1 mean  42.1 median   43 p90   64 | pair recall 0.9738 | F0.5 0.97354
+  score >= 0.8                       cands/S1 mean  29.5 median   29 p90   55 | pair recall 0.9519 | F0.5 0.96703
+  score >= 0.9                       cands/S1 mean  20.9 median   15 p90   49 | pair recall 0.8962 | F0.5 0.94887
+B. per-S1 top-N by score
+  top-60 per S1                      cands/S1 mean  59.9 median   60 p90   60 | pair recall 0.9745 | F0.5 0.97248
+  top-40 per S1                      cands/S1 mean  40.0 median   40 p90   40 | pair recall 0.9196 | F0.5 0.94858
+  top-30 per S1                      cands/S1 mean  30.0 median   30 p90   30 | pair recall 0.8640 | F0.5 0.92129
+  top-20 per S1                      cands/S1 mean  20.0 median   20 p90   20 | pair recall 0.7792 | F0.5 0.87161
+  top-15 per S1                      cands/S1 mean  15.0 median   15 p90   15 | pair recall 0.7281 | F0.5 0.83323
+  top-10 per S1                      cands/S1 mean  10.0 median   10 p90   10 | pair recall 0.6629 | F0.5 0.77740
+C. cascade: stage-A-only model (OOF by S1)
+  stage-A model AP 0.97683 (36 features)
+  p_a >= 0.005                       cands/S1 mean   7.1 median    6 p90   12 | pair recall 0.9792 | F0.5 0.97611
+  p_a >= 0.01                        cands/S1 mean   5.7 median    5 p90    9 | pair recall 0.9759 | F0.5 0.97586
+  p_a >= 0.02                        cands/S1 mean   4.9 median    5 p90    8 | pair recall 0.9717 | F0.5 0.97547
+  p_a >= 0.05                        cands/S1 mean   4.2 median    4 p90    7 | pair recall 0.9650 | F0.5 0.97460
+  p_a >= 0.1                         cands/S1 mean   3.9 median    4 p90    6 | pair recall 0.9580 | F0.5 0.97356
+  p_a >= 0.2                         cands/S1 mean   3.6 median    4 p90    6 | pair recall 0.9486 | F0.5 0.97177
+  top-30 per S1 by p_a               cands/S1 mean  30.0 median   30 p90   30 | pair recall 0.9855 | F0.5 0.97650
+  top-20 per S1 by p_a               cands/S1 mean  20.0 median   20 p90   20 | pair recall 0.9845 | F0.5 0.97642
+  top-15 per S1 by p_a               cands/S1 mean  15.0 median   15 p90   15 | pair recall 0.9836 | F0.5 0.97634
+  top-12 per S1 by p_a               cands/S1 mean  12.0 median   12 p90   12 | pair recall 0.9824 | F0.5 0.97630
+  top-10 per S1 by p_a               cands/S1 mean  10.0 median   10 p90   10 | pair recall 0.9809 | F0.5 0.97624
+  top-8 per S1 by p_a                cands/S1 mean   8.0 median    8 p90    8 | pair recall 0.9779 | F0.5 0.97613
+  p_a >= 0.01 & top-20               cands/S1 mean   5.7 median    5 p90    9 | pair recall 0.9759 | F0.5 0.97586
+  p_a >= 0.02 & top-15               cands/S1 mean   4.8 median    5 p90    8 | pair recall 0.9717 | F0.5 0.97547
+  p_a >= 0.05 & top-12               cands/S1 mean   4.2 median    4 p90    7 | pair recall 0.9650 | F0.5 0.97460
+  p_a >= 0.02 & top-10               cands/S1 mean   4.8 median    5 p90    8 | pair recall 0.9715 | F0.5 0.97547
+
+module test (src/cascade.py, HistGB cascade, 3-fold OOF):
+top10 floor0.005: mean 6.4 median 6 p90 10 zero 0.003 recall 0.9780 F0.5 0.97600
+top10 floor0.002: mean 8.0 median 9 p90 10 zero 0.000 recall 0.9802 F0.5 0.97620   <- chosen default
+top12 floor0.005: mean 6.6 median 6 p90 12 zero 0.003 recall 0.9787 F0.5 0.97601
+top8  floor0.005: mean 5.9 median 6 p90 8  zero 0.003 recall 0.9759 F0.5 0.97587
+top15 floor0.003: mean 8.0 median 7 p90 15 zero 0.001 recall 0.9807 F0.5 0.97617

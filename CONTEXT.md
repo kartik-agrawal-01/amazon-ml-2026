@@ -32,7 +32,11 @@
   `unzip -o <zip> -d ~/amazon-ml-2026/data/`. Files >400 MB are split with
   `scripts/split_tsv.py` only for the laptop->Claude transfer.
 - Only the TEAM LEADER's Unstop account can open the round: dataset + every upload go through
-  the leader. Leader: ___ (TBD).
+  the leader. **Leader: Soha Chand** (has dataset + upload access). Box account: Kartik Agrawal.
+- **Official update (25 Sep evening):** `candidate_pairs.tsv` is reviewed in the final evaluation —
+  a SMALLER candidate set per S1 ranks higher (beyond the public/private LB); blocking must scale
+  (no all-pairs); the code that produces it is reviewed. Every run report must show mean/median
+  candidates per S1; the dense view must re-rank/replace candidates, never add to them.
 - Submission flow: log row in `submissions/LOG.md` -> push file to `submissions/` ->
   leader pulls + validates + uploads -> leader reports LB score -> fill LOG.md.
 
