@@ -147,3 +147,9 @@
   tmux xc_chain then runs xc_in and slice_mix (cache_slice_mix -> symlink to cache_slice) one at a time, hard stop
   04:05 (before v2's US doc-matrix spike ~04:20). Reports: runs/{xc_us,xc_in,slice_mix}/report.json (test_f05_hidden).
   The post-v2 chain (NJ=6, cuda) skips runs that already have report.json.
+- 02:33 NOTE for later sessions: in the test loop the per-pass "S1->S2 view ... pairs (Ns)" lines print ONLY for
+  block 0 of each country (`verbose=(bi == 0)` in src/pipeline.py); later blocks are silent for ~1050 s (India) /
+  ~1350 s (US) and then print just their "test/<c> block N (...)" line. Silence + main thread 100% CPU + GPU 100%
+  = normal, NOT the stall of attempt 2. Stall signature was: GPU idle, RSS flat, no block line for > 2x a block time.
+  (py-spy cannot attach: ptrace denied, no sudo.)
+  xc_us: US train phase A 280 s, blocking recall k=10 137506/138386 = 0.9936 (40K S1, 831K docs), peak RSS 2.0 GB.
