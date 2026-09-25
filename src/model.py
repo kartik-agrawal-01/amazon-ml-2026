@@ -1,6 +1,7 @@
 """Pairwise match model + decision rules (probabilities -> per-S1 match sets)."""
 from __future__ import annotations
 
+import time
 from typing import Dict, FrozenSet, List, Tuple
 
 import numpy as np
@@ -37,7 +38,7 @@ def subsample_negatives(y: np.ndarray, neg_rate: float, seed: int = 0):
 
 
 def oof_predict(X, y: np.ndarray, groups: np.ndarray, n_folds: int = 5, seed: int = 0,
-                verbose: bool = True, neg_rate: float = 1.0) -> Tuple[np.ndarray, str]:
+                verbose: bool = True, neg_rate: float = 1.0, n_jobs: int = -1) -> Tuple[np.ndarray, str]:
     """GroupKFold OOF probabilities for ALL rows; each fold model is fitted on (optionally negative-subsampled,
     weighted) training rows. X may be a DataFrame or a float32 ndarray."""
     from sklearn.model_selection import GroupKFold
@@ -45,12 +46,14 @@ def oof_predict(X, y: np.ndarray, groups: np.ndarray, n_folds: int = 5, seed: in
     oof = np.zeros(len(Xv), dtype=np.float32)
     kind = ""
     for f, (tr, va) in enumerate(GroupKFold(n_splits=n_folds).split(Xv, y, groups)):
-        m, kind = make_model(seed + f)
+        m, kind = make_model(seed + f, n_jobs=n_jobs)
         sub, w = subsample_negatives(y[tr], neg_rate, seed + f)
-        m.fit(Xv[tr][sub], y[tr][sub], sample_weight=w)
+        idx = tr[sub]  # index once: Xv[tr][sub] would materialise a second full-fold copy (X may be a memmap)
+        t = time.time()
+        m.fit(np.ascontiguousarray(Xv[idx]), y[idx], sample_weight=w)
         oof[va] = m.predict_proba(Xv[va])[:, 1]
         if verbose:
-            print(f"    fold {f}: fit={len(sub)} valid={len(va)} pos_rate={y[va].mean():.4f}", flush=True)
+            print(f"    fold {f}: fit={len(sub)} valid={len(va)} pos_rate={y[va].mean():.4f} ({time.time() - t:.0f}s)", flush=True)
     return oof, kind
 
 

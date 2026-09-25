@@ -252,7 +252,9 @@ def stage_b(cands: pd.DataFrame, q_rec: pd.DataFrame, d_rec: pd.DataFrame, n_job
         from concurrent.futures import ProcessPoolExecutor  # raises BrokenProcessPool if a worker is OOM-killed
         with ProcessPoolExecutor(min(n_jobs, len(chunks)), mp_context=mp.get_context("spawn")) as ex:
             parts = list(ex.map(_worker, (_payload(qi[ix], ci[ix]) for ix in chunks)))
-        feats = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+        feats = {}
+        for k in list(parts[0]):  # assemble one feature at a time and free the chunk pieces as we go
+            feats[k] = np.concatenate([p.pop(k) for p in parts])
     else:
         feats = _stage_b_block(qi, ci)
     for k, v in feats.items():
