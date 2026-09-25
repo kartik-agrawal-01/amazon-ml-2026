@@ -11,6 +11,8 @@ while true; do
   if [ "$AV" -lt "$MIN" ] && pgrep -f "src.pipeline" > /dev/null; then
     echo "$(date) KILLED run: MemAvailable=${AV}MB (peak used ${PEAK}MB)" >> "$LOG"
     pkill -f "src.pipeline"; sleep 5; pkill -9 -f "src.pipeline"
+    # spawned worker processes survive their parent's death and keep RAM + the tee pipe open -> kill them too
+    sleep 2; pkill -u "$USER" -f "spawn_mai[n]"; sleep 3; pkill -9 -u "$USER" -f "spawn_mai[n]"
   fi
   sleep 3
 done

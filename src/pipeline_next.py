@@ -155,7 +155,8 @@ class CountryContext:
         """Candidates + stage A for one query block. Returns (cands, q_block, q_emb)."""
         qb = self.q.iloc[q_idx].reset_index(drop=True)
         q_mats = {v: transform(self.vecs[v], view_text(qb, v), self.n_jobs) for v in self.views}
-        parts = lexical_candidates(q_mats, self.d_mats, self.d_src, k, self.views, verbose=verbose)
+        parts = lexical_candidates(q_mats, self.d_mats, self.d_src, k, self.views, verbose=verbose,
+                                   n_threads=self.n_jobs)  # shared box: 20 OpenMP threads under load only add contention
         q_emb = None
         views = list(self.views)
         if self.d_emb is not None:
@@ -221,6 +222,9 @@ def main() -> None:
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--n-jobs", type=int, default=0)
+    ap.add_argument("--topk-device", default="auto", help="auto | cuda | cpu: where the sparse TF-IDF top-k runs "
+                    "(cuda: exact same cosines via cuSPARSE, ~4x faster than 8 CPU threads on this box)")
+    ap.add_argument("--stage-b-jobs", type=int, default=0, help="workers for stage B (default: n_jobs // 2; each worker ~400 MB)")
     ap.add_argument("--rule", default="auto", help="auto | thr | expf")
     ap.add_argument("--thr", type=float, default=0.5)
     ap.add_argument("--no-one2one", action="store_true")
@@ -229,6 +233,10 @@ def main() -> None:
     ap.add_argument("--skip-test", action="store_true")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
+    from . import blocking as _blocking
+    _blocking.TOPK_DEVICE["device"] = a.topk_device
+    sb_jobs = a.stage_b_jobs or max(1, (a.n_jobs or (os.cpu_count() or 1)) // 2)
+    log(f"top-k device: {a.topk_device} (cuda available: {_blocking._cuda_ok()}) | stage-B workers: {sb_jobs}")
     views = [v for v in a.views.split(",") if v]
     use_cascade = not a.no_cascade
     lgb_jobs = a.n_jobs or -1  # shared box: LightGBM with all 20 threads spin-waits itself to a crawl under load
@@ -287,6 +295,9 @@ def main() -> None:
         log(f"train/{c}: {len(q)} S1 sampled of {meta_tr['countries'][c]['n_s1']}, {len(d)} docs "
             f"({sum(1 for v in gt_c.values() if not v)} singletons in sample)")
         ctx = CountryContext(f"train/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
+        del d  # phase A never touches the doc strings again (ctx keeps d_src/d_rid); phase B reloads the table
+        ctx.d = None
+        release_memory()
         row0 = n_pairs_a
         gp_c = 0
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
@@ -315,7 +326,7 @@ def main() -> None:
         country_q[c] = (offset, len(q), sel)
         qrid_parts.append(ids_bytes(q["rid"]))
         offset += len(q)
-        del ctx, q, d, gt_c, q_emb_all
+        del ctx, q, gt_c, q_emb_all
         release_memory()
         log(f"train/{c}: phase A done in {time.time() - t_c:.0f}s | peak RSS so far {peak_rss_mb()} MB")
     xa_fh.close()
@@ -386,7 +397,7 @@ def main() -> None:
         cand_c["c"] = cl[idx]
         cand_c["y"] = y[idx]
         d_rid_c = ids_bytes(d["rid"])
-        cand_c = stage_b(cand_c, q, d, a.n_jobs)
+        cand_c = stage_b(cand_c, q, d, sb_jobs)
         fc = feature_columns(cand_c)
         fc = [f for f in fc if f not in ("score",)] + ["score"]
         if feats is None:
@@ -518,7 +529,7 @@ def main() -> None:
             del keep_b
             counts = np.bincount(cands["q"].to_numpy(), minlength=len(qb))
             c_counts.append(counts)
-            cands = stage_b(cands, qb, d, a.n_jobs)
+            cands = stage_b(cands, qb, d, sb_jobs)
             cands["p"] = predict_chunked(model, cands, feats)
             qb_rid = qb["rid"].values
             sets = decide(cands, qb_rid, ctx.d_rid, best["rule"], thr_best, bool(best["one2one"]))

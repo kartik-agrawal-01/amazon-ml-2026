@@ -113,6 +113,48 @@ def _topk_fallback(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float, c
     return out_c, out_s
 
 
+TOPK_DEVICE = {"device": "auto"}  # 'auto' (cuda when available), 'cuda' or 'cpu' — set by the pipeline (--topk-device)
+
+
+def _cuda_ok() -> bool:
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def topk_sparse_gpu(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float = 0.05,
+                    budget_bytes: float = 4e9) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Exact top-k of Q @ D.T on the GPU: D (docs x features, CSR) stays on the card as a sparse tensor and each
+    chunk of queries is multiplied as a dense (features x m) block -> (docs x m) scores -> torch.topk over docs.
+    Same scores as the CPU path (fp32 cosines of L2-normalised TF-IDF rows); only the order of float summation
+    differs. The chunk is sized so the score block stays under budget_bytes (16 GB card: 4 GB -> m ~ 300-1000)."""
+    import torch
+    n, m_docs = Q.shape[0], D.shape[0]
+    D = D.tocsr()
+    Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+                                 torch.from_numpy(D.data.astype(np.float32)), size=D.shape).cuda()
+    chunk = int(max(8, min(1024, budget_bytes // (m_docs * 4))))
+    out_c = np.empty((n, k), dtype=np.int64)
+    out_s = np.empty((n, k), dtype=np.float32)
+    Q = Q.tocsr()
+    for st in range(0, n, chunk):
+        en = min(st + chunk, n)
+        qd = torch.from_numpy(np.ascontiguousarray(Q[st:en].toarray().T)).cuda()      # (features x m) dense
+        scores = torch.sparse.mm(Dt, qd)                                              # (docs x m)
+        s_, i_ = torch.topk(scores, k, dim=0)                                          # (k x m)
+        out_s[st:en] = s_.T.cpu().numpy()
+        out_c[st:en] = i_.T.cpu().numpy()
+        del qd, scores, s_, i_
+    del Dt
+    torch.cuda.empty_cache()
+    rank = np.broadcast_to(np.arange(k, dtype=np.int16), (n, k))
+    row = np.broadcast_to(np.arange(n)[:, None], (n, k))
+    keep = out_s >= min_sim
+    return row[keep].astype(np.int64), out_c[keep], out_s[keep], rank[keep]
+
+
 def topk_sparse(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float = 0.05, chunk: int = 0,
                 n_threads: int = 0) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Top-k columns of Q @ D.T per row. Returns (row, col, sim, rank) with rank 0 = best."""
@@ -121,6 +163,9 @@ def topk_sparse(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float = 0.0
         z = np.zeros(0, np.int64)
         return z, z, np.zeros(0, np.float32), np.zeros(0, np.int16)
     k = min(k, D.shape[0])
+    dev = TOPK_DEVICE["device"]
+    if dev == "cuda" or (dev == "auto" and _cuda_ok()):
+        return topk_sparse_gpu(Q, D, k, min_sim)
     n_threads = n_threads or (os.cpu_count() or 1)
     if _sdt_new is not None or _sdt_old is not None:
         DT = D.T.tocsr()
@@ -164,7 +209,7 @@ def union_candidates(parts: List[pd.DataFrame], views: List[str]) -> pd.DataFram
 
 def lexical_candidates(q_mats: Dict[str, sp.csr_matrix], d_mats: Dict[str, sp.csr_matrix], d_src: np.ndarray,
                        k: int, views: List[str], q_sel: Optional[np.ndarray] = None,
-                       d_sel: Optional[np.ndarray] = None, verbose: bool = False) -> List[pd.DataFrame]:
+                       d_sel: Optional[np.ndarray] = None, verbose: bool = False, n_threads: int = 0) -> List[pd.DataFrame]:
     """Per-view top-k S2 and S3 docs for the query rows q_sel (default all) among doc rows d_sel.
 
     Returns long-format parts (q, c, view, rank) with q/c as ROW indices of the query block / doc table.
@@ -182,7 +227,7 @@ def lexical_candidates(q_mats: Dict[str, sp.csr_matrix], d_mats: Dict[str, sp.cs
             t = time.time()
             Q = q_mats[v] if q_sel is None else q_mats[v][q_idx]
             D = d_mats[v][c_idx]
-            r, c, s, rk = topk_sparse(Q, D, k)
+            r, c, s, rk = topk_sparse(Q, D, k, n_threads=n_threads)
             parts.append(pd.DataFrame({"q": q_idx[r], "c": c_idx[c], "view": v, "rank": rk}))
             if verbose:
                 print(f"      S1->S{tgt} {v:<8} {len(r):>9} pairs ({time.time() - t:.1f}s)", flush=True)
