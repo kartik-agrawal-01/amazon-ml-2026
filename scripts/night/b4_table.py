@@ -30,7 +30,7 @@ for run, dd, od in RUNS:
             f = macro_f05(g, pred); row[f"{c.lower()}_f05"] = round(f, 4); per_cc[(run, c.lower())] = f
     rows.append(row)
 df = pd.DataFrame(rows)
-print(df.to_markdown(index=False) if hasattr(df, "to_markdown") else df.to_string(index=False))
+print(df.to_string(index=False))
 for run, c in (("xc_us", "india"), ("xc_in", "us")):
     if (run, c) in per_cc and ("slice_mix", c) in per_cc:
         print(f"cross-country drop on {c} holdout: {run} {per_cc[(run, c)]:.4f} vs slice_mix {per_cc[('slice_mix', c)]:.4f} "
