@@ -17,3 +17,9 @@ output/
 data_synth/
 data_small/
 *.tsv.gz
+cache*/
+data_slice/
+data_xc_*/
+output_*/
+runs/*/matching_results.tsv
+runs/night/end_at

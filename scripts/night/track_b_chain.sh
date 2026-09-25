@@ -5,7 +5,7 @@
 set -u
 cd ~/amazon-ml-2026 || exit 1
 source ~/miniforge3/etc/profile.d/conda.sh && conda activate aml
-until grep -q TB_EXIT runs/night/track_b_block_eval.txt 2>/dev/null; do sleep 20; done
+if [ "${SKIP_WAIT:-0}" != 1 ]; then until grep -q TB_EXIT runs/night/track_b_block_eval.txt 2>/dev/null; do sleep 20; done; fi
 L=runs/night/xc_slices.txt
 if [ ! -f data_xc_us/test_ground_truth_HIDDEN.tsv ]; then
   python scripts/make_slice.py --data-dir data --out data_xc_us --frac 0.08 --country US > $L 2>&1
@@ -14,7 +14,8 @@ if [ ! -f data_xc_us/test_ground_truth_HIDDEN.tsv ]; then
   python scripts/make_slice.py --data-dir data --out data_xc_in --frac 0.04 --lo 0.5 --country US --train-as-test >> $L 2>&1
   echo SLICES_OK >> $L
 fi
-COMMON="--n-jobs 2 --stage-b-jobs 2 --topk-device cuda --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w"
+NJ="${NJ:-2}"
+COMMON="--n-jobs $NJ --stage-b-jobs $NJ --topk-device cuda --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w"
 for job in "slice_mix data_slice cache_slice output_slice" "xc_us data_xc_us cache_xc_us output_xc_us" "xc_in data_xc_in cache_xc_in output_xc_in"; do
   set -- $job; name=$1; dd=$2; cd_=$3; od=$4
   [ -f runs/$name/report.json ] && continue
