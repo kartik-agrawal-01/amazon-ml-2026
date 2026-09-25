@@ -25,7 +25,7 @@ from typing import Dict, Iterable, List, Optional
 import numpy as np
 import pandas as pd
 
-from .data import describe, find_files, load_source
+from .data import count_lines, find_files, raw_frame, read_source_chunks
 from .normalize import add_normalized, fold
 
 try:
@@ -136,27 +136,62 @@ def load_meta(cache_dir: str, split: str) -> Optional[dict]:
     return meta
 
 
+RAW_SCHEMA_COLS = ["rid", "src", "name", "addr", "city", "zip", "state", "country", "pos"]
+
+
+def _raw_schema():
+    return pa.schema([(c, pa.int8() if c == "src" else pa.int64() if c == "pos" else pa.string()) for c in RAW_SCHEMA_COLS])
+
+
+def _stage_raw_by_country(files: dict, cache_dir: str, split: str, chunksize: int = 500_000):
+    """Stream the three source TSVs in chunks and append every row to cache/<split>__raw__<country>.parquet.
+    Only one chunk is in RAM at a time. Returns (paths by country, schema info, n_rows)."""
+    writers, paths, schema_info = {}, {}, {}
+    offset = 0
+    for s in (1, 2, 3):
+        path = files[s]
+        n = 0
+        for chunk, spec in read_source_chunks(path, chunksize):
+            out = raw_frame(chunk, s, spec)
+            out["pos"] = offset + n + np.arange(len(out), dtype=np.int64)
+            key = _country_key(out).to_numpy()
+            for c in np.unique(key):
+                sub = out[key == c]
+                if c not in writers:
+                    fname = "".join(ch if ch.isalnum() else "_" for ch in (c or "none"))
+                    paths[c] = os.path.join(cache_dir, f"{split}__raw__{fname}.parquet")
+                    writers[c] = pq.ParquetWriter(paths[c], _raw_schema(), compression="zstd")
+                writers[c].write_table(pa.Table.from_pandas(sub[RAW_SCHEMA_COLS], schema=_raw_schema(), preserve_index=False))
+            n += len(out)
+            del out, chunk
+            if spec is not None and s not in schema_info:
+                schema_info[s] = dict(file=path, id=spec["id"], name=spec["name"], addr=spec["addr"], all_columns=spec["all_columns"])
+        schema_info[s]["n"] = n
+        schema_info[s]["n_lines"] = count_lines(path)
+        flag = "" if n == schema_info[s]["n_lines"] else f"  !! parsed {n} rows but file has {schema_info[s]['n_lines']} lines (quoting?)"
+        print(f"  S{s}: {n:>8} rows | id={spec['id']!r} name={spec['name']!r} addr={spec['addr']} | {os.path.basename(path)}{flag}", flush=True)
+        offset += n
+    for w in writers.values():
+        w.close()
+    return paths, schema_info, offset
+
+
 def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw: bool = False) -> dict:
-    """Load a split, split it by country, normalise + count each country separately, write one parquet per
-    country and the meta json. Returns meta. Peak RAM ~ raw split + one normalised country."""
+    """Stream the split into per-country RAW parquet files (one chunk in RAM at a time), then normalise + count
+    one country at a time and write the final per-country parquet + meta json. Returns meta.
+    Peak RAM ~ one raw country + its normalised columns (the largest country, not the whole split)."""
+    if pq is None:
+        raise ImportError("pyarrow is required for the per-country store (pip install pyarrow)")
     t0 = time.time()
     os.makedirs(cache_dir, exist_ok=True)
     files = find_files(data_dir)[split]
     missing = [s for s in (1, 2, 3) if s not in files]
     if missing:
         raise FileNotFoundError(f"[{split}] could not find source files {missing} under {data_dir}")
-    recs, info = [], {"files": files, "schema": {}}
-    for s in (1, 2, 3):
-        df, sch = load_source(files[s], s)
-        recs.append(df)
-        info["schema"][s] = sch
-    rec = pd.concat(recs, ignore_index=True)
-    del recs
-    dup = rec["rid"].duplicated()
-    if dup.any():
-        raise ValueError(f"[{split}] {dup.sum()} record ids repeat across/within sources, e.g. {rec.rid[dup].head(3).tolist()}")
-    describe(rec, None, info, split)
-    meta = {"split": split, "n_rows": int(len(rec)), "files": files, "schema": info["schema"], "countries": {},
+    print(f"== {split}", flush=True)
+    raw_paths, schema_info, n_rows = _stage_raw_by_country(files, cache_dir, split)
+    _log(f"{split}: staged {n_rows} raw rows into {len(raw_paths)} country files ({time.time() - t0:.0f}s)")
+    meta = {"split": split, "n_rows": int(n_rows), "files": files, "schema": schema_info, "countries": {},
             "cols": KEEP_COLS + (RAW_COLS if keep_raw else []), "keep_raw": keep_raw}
     if "gt" in files:
         pairs = read_gt_pairs(files["gt"])
@@ -164,32 +199,28 @@ def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw
         n_s1 = pairs.attrs["n_s1"]
         dist = n_true.clip(upper=4).value_counts().sort_index().to_dict()
         dist[0] = n_s1 - len(n_true)
-        s1_ids = set(rec.rid[rec.src == 1])
+        s1_ids = set()
+        for c, rp in raw_paths.items():
+            t = pq.read_table(rp, columns=["rid", "src"], filters=[("src", "==", 1)])
+            s1_ids |= set(t.column("rid").to_pylist())
+            del t
         gt_ids = set(pd.read_csv(files["gt"], sep="\t", dtype=str, keep_default_na=False, usecols=[0]).iloc[:, 0].str.strip())
         print(f"  GT rows={n_s1} | singletons={(n_s1 - len(n_true)) / max(n_s1, 1):.1%} | matches/S1: "
               f"mean={len(pairs) / max(n_s1, 1):.2f} max={int(n_true.max()) if len(n_true) else 0} | dist={dict(sorted(dist.items()))}")
-        print(f"  GT S1 ids not in source1: {len(gt_ids - s1_ids)} | source1 ids not in GT: {len(s1_ids - gt_ids)}")
+        print(f"  GT S1 ids not in source1: {len(gt_ids - s1_ids)} | source1 ids not in GT: {len(s1_ids - gt_ids)}", flush=True)
         gp = _write_table(pairs, os.path.join(cache_dir, f"{split}_gt_pairs.parquet"))
         meta["gt"] = {"path": gp, "n_s1": n_s1, "n_pairs": int(len(pairs)), "header": pairs.attrs["header"],
                       "n_multi": int((pairs["m"].value_counts() > 1).sum()),
                       "singleton_rate": float((n_s1 - len(n_true)) / max(n_s1, 1))}
         del pairs, s1_ids, gt_ids, n_true
-    # split the RAW table by country first, then free it, so peak = raw split + one normalised country
-    key = _country_key(rec)
-    pos = np.arange(len(rec))
-    parts: Dict[str, pd.DataFrame] = {}
-    for c in sorted(key.unique()):
-        mask = (key == c).to_numpy()
-        sub = rec[mask].reset_index(drop=True)
-        sub["pos"] = pos[mask]
-        parts[c] = sub
-    del rec, key, pos, mask
     import gc
-    gc.collect()
-    _log(f"{split}: {len(parts)} countries {[(c, len(p)) for c, p in parts.items()]} ({time.time() - t0:.0f}s)")
-    for c in list(parts):
+    for c in sorted(raw_paths):
         t = time.time()
-        sub = parts.pop(c)
+        sub = pq.read_table(raw_paths[c]).to_pandas(self_destruct=True)
+        dup = sub["rid"].duplicated()
+        if dup.any():
+            raise ValueError(f"[{split}/{c}] {int(dup.sum())} record ids repeat, e.g. {sub.rid[dup].head(3).tolist()}")
+        sub = sub.sort_values("pos", kind="stable").reset_index(drop=True)  # S1 rows first, then S2, S3 (file order)
         sub = add_normalized(sub, n_jobs=n_jobs)
         sub["n_full"] = (sub["n_core"] + " " + sub["n_addr"]).str.strip()
         sub = add_uniqueness(sub)
@@ -206,8 +237,9 @@ def build_store(data_dir: str, split: str, cache_dir: str, n_jobs: int, keep_raw
                                 "n_s2": int((src == 2).sum()), "n_s3": int((src == 3).sum())}
         _log(f"{split}/{c!r}: normalised {len(sub)} rows -> {os.path.basename(path)} "
              f"({os.path.getsize(path) / 1e6:.0f} MB, {time.time() - t:.0f}s)")
-        del sub
+        del sub, src
         gc.collect()
+        os.remove(raw_paths[c])
     with open(meta_path(cache_dir, split), "w") as fh:
         json.dump(meta, fh, indent=1, default=str)
     _log(f"{split}: store complete in {time.time() - t0:.0f}s")
