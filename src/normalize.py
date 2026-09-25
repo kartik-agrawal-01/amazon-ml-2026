@@ -193,8 +193,10 @@ def _normalize_frame(rec: pd.DataFrame) -> pd.DataFrame:
     out["indic"] = rec["name"].map(is_indic).astype("int8")
     out["n_name"] = rec["name"].map(fold).map(unleet)
     core_legal = out["n_name"].map(split_legal)
-    out["n_core"] = core_legal.str[0]
-    out["legal"] = core_legal.str[1]
+    # build as string arrays (not object tuples): same values, ~3x less RAM on 12M rows (pandas 3 -> pyarrow str)
+    out["n_core"] = pd.Series([t[0] for t in core_legal], index=rec.index, dtype="str")
+    out["legal"] = pd.Series([t[1] for t in core_legal], index=rec.index, dtype="str")
+    del core_legal
     out["n_ph"] = out["n_core"].map(phonetic_key)
     out["n_nospace"] = out["n_core"].str.replace(" ", "", regex=False)
     out["n_addr"] = rec["addr"].map(norm_addr)
@@ -219,11 +221,19 @@ def add_normalized(rec: pd.DataFrame, n_jobs: int = 0, chunk: int = 100_000) -> 
         cols = [c for c in ("name", "addr", "city", "zip", "state", "country") if c in rec]
         with ProcessPoolExecutor(min(n_jobs, len(bounds)), mp_context=mp.get_context("spawn")) as ex:
             parts = list(ex.map(_normalize_frame, (rec.iloc[a:b][cols] for a, b in bounds)))
-        extra = pd.concat(parts)
     else:
-        extra = _normalize_frame(rec)
-    rec = rec.drop(columns=[c for c in extra.columns if c in rec.columns])
-    return pd.concat([rec, extra], axis=1)
+        parts = [_normalize_frame(rec)]
+    # Assemble column by column (freeing each chunk column as we go) instead of two wide concats:
+    # same result, but peak RAM ~ rec + parts instead of rec + parts + extra + concat copy (box has ~10 GB).
+    new_cols = list(parts[0].columns)
+    rec = rec.drop(columns=[c for c in new_cols if c in rec.columns])
+    for c in new_cols:
+        col = pd.concat([p[c] for p in parts]) if len(parts) > 1 else parts[0][c]
+        assert len(col) == len(rec)
+        rec[c] = col
+        for p in parts:
+            del p[c]
+    return rec
 
 
 if __name__ == "__main__":

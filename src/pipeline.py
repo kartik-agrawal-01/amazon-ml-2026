@@ -83,9 +83,32 @@ def load_norm(data_dir: str, split: str, cache_dir: str, n_jobs: int):
     return rec, gt, info
 
 
+def release_memory() -> None:
+    """Hand freed heap back to the OS after dropping a big table (glibc keeps fragmented arenas otherwise;
+    the box only has ~10 GB for us, shared with other users)."""
+    gc.collect()
+    try:
+        import pyarrow as pa
+        pa.default_memory_pool().release_unused()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def split_tables(rec: pd.DataFrame):
-    q = rec[rec.src == 1].reset_index(drop=True)
-    d = rec[rec.src != 1].reset_index(drop=True)
+    src = rec["src"].to_numpy()
+    n1 = int((src == 1).sum())
+    if n1 and np.all(src[:n1] == 1) and (n1 == len(src) or np.all(src[n1:] != 1)):
+        # sources are stacked S1,S2,S3 -> positional slices (zero-copy for arrow columns; boolean masks copy ~5 GB)
+        q = rec.iloc[:n1].reset_index(drop=True)
+        d = rec.iloc[n1:].reset_index(drop=True)
+    else:
+        q = rec[rec.src == 1].reset_index(drop=True)
+        d = rec[rec.src != 1].reset_index(drop=True)
     return q, d
 
 
@@ -210,7 +233,7 @@ def main() -> None:
     te, _, info_te = load_norm(a.data_dir, "test", a.cache_dir, a.n_jobs)
     te_sample = te.sample(min(len(te), 1_000_000), random_state=a.seed)[["n_core", "n_addr", "n_full", "n_ph"]]
     del te
-    gc.collect()
+    release_memory()
     tr, gt, info_tr = load_norm(a.data_dir, "train", a.cache_dir, a.n_jobs)
     n_multi = check_one_to_one(gt)
     one2one = (not a.no_one2one) and n_multi == 0
@@ -226,7 +249,7 @@ def main() -> None:
     # 3. TRAIN pass
     q_tr, d_tr = split_tables(tr)
     del tr
-    gc.collect()
+    release_memory()
     if a.train_s1 and a.train_s1 < len(q_tr):
         q_tr = q_tr.sample(a.train_s1, random_state=a.seed).reset_index(drop=True)
     ctx = SplitContext("train", q_tr, d_tr, vecs, views, dense_model, a.cache_dir, a.partition_col, a.n_jobs, device)
@@ -259,7 +282,7 @@ def main() -> None:
     report["prune"] = dict(threshold=thr_prune, train_pairs=len(cand_tr), train_pair_recall=float(cand_tr.y.sum() / max(gp_total, 1)))
     q_rid_tr, d_rid_tr = ctx.q_rid, ctx.d_rid
     del ctx  # free doc matrices / embeddings before the memory-heavy training stage
-    gc.collect()
+    release_memory()
     cand_tr = stage_b(cand_tr, q_tr, d_tr, a.n_jobs)
     feats = feature_columns(cand_tr)
     feats = [f for f in feats if f not in ("score",)] + ["score"]
@@ -306,8 +329,8 @@ def main() -> None:
         joblib.dump(dict(model=model, feats=feats, thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
     except Exception as e:  # noqa: BLE001
         log(f"model not saved: {e}")
-    del cand_tr, X, d_tr
-    gc.collect()
+    del cand_tr, X, d_tr, q_tr
+    release_memory()
 
     # 4. TEST pass (streamed)
     header = ("source1_id", "matched_ids")
@@ -321,7 +344,7 @@ def main() -> None:
     te, _, _ = load_norm(a.data_dir, "test", a.cache_dir, a.n_jobs)
     q_te, d_te = split_tables(te)
     del te
-    gc.collect()
+    release_memory()
     if a.test_limit:
         q_te = q_te.iloc[:a.test_limit].reset_index(drop=True)
     ctx = SplitContext("test", q_te, d_te, vecs, views, dense_model, a.cache_dir, a.partition_col, a.n_jobs, device)
