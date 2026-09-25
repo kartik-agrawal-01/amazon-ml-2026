@@ -1,0 +1,80 @@
+[store] test: using store cache/test_meta.json (11702133 rows, countries ['france', 'india', 'us'])
+[store] train: using store cache/train_meta.json (12527040 rows, countries ['india', 'us'])
+[    88s] vectorisers fitted on 600000 rows: [('name_c3', 15428), ('name_w', 55374), ('addr_c3', 17763), ('name_ph', 5564), ('full_w', 136762), ('addr_w', 99514)]
+[   208s] india: 5000 S1, 4133346 docs; doc matrices in 117s
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3      48860 pairs (8.1s)
+      S1->S2 name_w       49395 pairs (4.7s)
+      S1->S2 addr_c3      49950 pairs (4.5s)
+      S1->S2 name_ph      44980 pairs (4.0s)
+      S1->S2 full_w       50000 pairs (6.1s)
+      S1->S2 addr_w       49980 pairs (5.4s)
+      S1->S3 name_c3      48860 pairs (4.4s)
+      S1->S3 name_w       49409 pairs (4.8s)
+      S1->S3 addr_c3      49950 pairs (4.7s)
+      S1->S3 name_ph      44980 pairs (4.1s)
+      S1->S3 full_w       50000 pairs (6.2s)
+      S1->S3 addr_w       49980 pairs (5.5s)
+
+=== india: 5000 S1, 17403 GT pairs, blocking 63s for 6 views x 2 sources (1.04 ms/query/pass)
+                     subset  recall  cands_per_s1
+               only name_c3  0.4014       19.5440
+                only name_w  0.4535       19.7608
+               only addr_c3  0.7774       19.9800
+               only name_ph  0.2831       17.9920
+                only full_w  0.8955       20.0000
+                only addr_w  0.8012       19.9920
+                        ALL  0.9386       80.6762
+              ALL - name_c3  0.9360       70.8440
+               ALL - name_w  0.9337       69.8610
+              ALL - addr_c3  0.9324       70.8282
+              ALL - name_ph  0.9366       68.0024
+               ALL - full_w  0.9146       72.8650
+               ALL - addr_w  0.9341       73.7516
+base name_c3+name_w+addr_c3  0.8847       49.7862
+             base + name_ph  0.8886       62.4940
+              base + full_w  0.9322       61.0776
+              base + addr_w  0.9116       60.1608
+    base + name_ph + full_w  0.9341       73.7516
+    base + name_ph + addr_w  0.9146       72.8650
+     base + full_w + addr_w  0.9366       68.0024
+[   423s] us: 5000 S1, 6186873 docs; doc matrices in 135s
+      S1->S2 name_c3      49700 pairs (6.5s)
+      S1->S2 name_w       49535 pairs (6.6s)
+      S1->S2 addr_c3      50000 pairs (6.4s)
+      S1->S2 name_ph      48810 pairs (6.0s)
+      S1->S2 full_w       50000 pairs (8.0s)
+      S1->S2 addr_w       50000 pairs (7.3s)
+      S1->S3 name_c3      49700 pairs (6.9s)
+      S1->S3 name_w       49535 pairs (6.9s)
+      S1->S3 addr_c3      50000 pairs (6.9s)
+      S1->S3 name_ph      48810 pairs (6.4s)
+      S1->S3 full_w       50000 pairs (8.3s)
+      S1->S3 addr_w       50000 pairs (7.7s)
+
+=== us: 5000 S1, 17207 GT pairs, blocking 84s for 6 views x 2 sources (1.40 ms/query/pass)
+                     subset  recall  cands_per_s1
+               only name_c3  0.5656       19.8800
+                only name_w  0.5862       19.8140
+               only addr_c3  0.8290       20.0000
+               only name_ph  0.4438       19.5240
+                only full_w  0.9695       20.0000
+                only addr_w  0.8188       20.0000
+                        ALL  0.9863       81.1910
+              ALL - name_c3  0.9845       72.6588
+               ALL - name_w  0.9853       72.4274
+              ALL - addr_c3  0.9826       69.6378
+              ALL - name_ph  0.9861       70.0082
+               ALL - full_w  0.9679       71.4142
+               ALL - addr_w  0.9861       71.0284
+base name_c3+name_w+addr_c3  0.9478       48.0814
+             base + name_ph  0.9497       59.3230
+              base + full_w  0.9858       59.8456
+              base + addr_w  0.9667       60.1768
+    base + name_ph + full_w  0.9861       71.0284
+    base + name_ph + addr_w  0.9679       71.4142
+     base + full_w + addr_w  0.9861       70.0082
+[   524s] done

@@ -1,0 +1,84 @@
+[store] train: using store cache_slice/train_meta.json (1564737 rows, countries ['india', 'us'])
+[    30s] vectorisers fitted on 300000 rows
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 4379.48it/s]
+[    48s] encoder sentence-transformers/all-MiniLM-L6-v2 on cuda
+[    52s] train/india: 20000 of 70783 S1, 556641 docs, 68970 GT pairs
+      key k_core          88391 pairs (2.8s)
+      key k_nsp           94516 pairs (2.9s)
+      key k_ph           170277 pairs (2.6s)
+      key k_tok_zip         102 pairs (0.2s)
+      key k_tok_city          0 pairs (0.1s)
+    encoded 556641 texts in 189s (2946/s)
+    encoded 70783 texts in 18s (3915/s)
+      S1->S2 dense       200000 pairs (1.0s)
+      S1->S3 dense       200000 pairs (0.6s)
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3     196419 pairs (2.3s)
+      S1->S2 name_w      195044 pairs (3.3s)
+      S1->S2 addr_c3     199880 pairs (2.4s)
+      S1->S2 full_w      200000 pairs (6.3s)
+      S1->S3 name_c3     196420 pairs (2.3s)
+      S1->S3 name_w      195106 pairs (3.5s)
+      S1->S3 addr_c3     199880 pairs (2.5s)
+      S1->S3 full_w      200000 pairs (6.5s)
+[   383s] india: tfidf doc matrices 50s (4 views, 2 jobs)
+
+=== train/india: 20000 S1 vs 556641 docs, 68970 GT pairs | encoder 3012 rec/s (docs 190s, S1 18s; 0 = cached)
+              subset  recall  cands_per_s1    secs  ms_per_s1
+          key k_core  0.4147        4.4196     NaN        NaN
+           key k_nsp  0.4447        4.7258     NaN        NaN
+            key k_ph  0.4910        8.5138     NaN        NaN
+       key k_tok_zip  0.0015        0.0051     NaN        NaN
+      key k_tok_city  0.0000        0.0000     NaN        NaN
+          KEYS (all)  0.5220        8.8580 21.5836     1.0792
+          DENSE k=10  0.7871       20.0000  1.5617     0.0781
+           dense k=3  0.7173        6.0000     NaN        NaN
+           dense k=5  0.7630       10.0000     NaN        NaN
+        KEYS + DENSE  0.8549       26.3577 23.1453     1.1573
+    KEYS + dense k=5  0.8400       16.6929     NaN        NaN
+  TFIDF 4 views k=10  0.9655       60.7357 29.1898     1.4595
+       TFIDF + DENSE  0.9678       75.1615 30.7515     1.5376
+        TFIDF + KEYS  0.9757       65.0619 50.7735     2.5387
+TFIDF + KEYS + DENSE  0.9772       79.4085 52.3352     2.6168
+
+[   396s] train/us: 20000 of 105820 S1, 831493 docs, 69110 GT pairs
+      key k_core         148196 pairs (3.8s)
+      key k_nsp          153654 pairs (3.7s)
+      key k_ph           163177 pairs (3.4s)
+      key k_tok_zip        4546 pairs (0.4s)
+      key k_tok_city          0 pairs (0.1s)
+    encoded 831493 texts in 175s (4758/s)
+    encoded 105820 texts in 19s (5612/s)
+      S1->S2 dense       200000 pairs (0.8s)
+      S1->S3 dense       200000 pairs (1.0s)
+      S1->S2 name_c3     198190 pairs (3.8s)
+      S1->S2 name_w      197675 pairs (4.9s)
+      S1->S2 addr_c3     199980 pairs (3.9s)
+      S1->S2 full_w      200000 pairs (7.8s)
+      S1->S3 name_c3     198190 pairs (3.9s)
+      S1->S3 name_w      197789 pairs (5.1s)
+      S1->S3 addr_c3     199980 pairs (4.0s)
+      S1->S3 full_w      200000 pairs (8.0s)
+[   739s] us: tfidf doc matrices 54s (4 views, 2 jobs)
+
+=== train/us: 20000 S1 vs 831493 docs, 69110 GT pairs | encoder 4807 rec/s (docs 176s, S1 19s; 0 = cached)
+              subset  recall  cands_per_s1    secs  ms_per_s1
+          key k_core  0.5129        7.4098     NaN        NaN
+           key k_nsp  0.5418        7.6827     NaN        NaN
+            key k_ph  0.5264        8.1588     NaN        NaN
+       key k_tok_zip  0.0656        0.2273     NaN        NaN
+      key k_tok_city  0.0000        0.0000     NaN        NaN
+          KEYS (all)  0.5828        8.8110 28.8444     1.4422
+          DENSE k=10  0.9355       20.0000  1.8387     0.0919
+           dense k=3  0.8643        6.0000     NaN        NaN
+           dense k=5  0.9187       10.0000     NaN        NaN
+        KEYS + DENSE  0.9484       25.4866 30.6831     1.5342
+    KEYS + dense k=5  0.9366       16.1056     NaN        NaN
+  TFIDF 4 views k=10  0.9944       61.5553 41.3776     2.0689
+       TFIDF + DENSE  0.9959       75.2184 43.2163     2.1608
+        TFIDF + KEYS  0.9956       66.0743 70.2220     3.5111
+TFIDF + KEYS + DENSE  0.9966       79.2532 72.0607     3.6030
+
+[   747s] done

@@ -71,3 +71,12 @@
   its slices; rerun it only when v2 is in a stable low-memory stage (scripts/night/track_b_chain.sh skips done runs).
   Memory profile logger: tmux memlog -> runs/night/mem_v2.txt (MemAvailable, v2 RSS, GPU, stage; every 60 s).
   New projection: train done ~00:45, test ~5.5 h => v2 done ~06:15 (slack ~1.7 h to 08:00).
+- 23:55 v2 attempt 2 passed the US doc-matrix stage alone: MemAvailable dipped to ~3.7 GB (60 s samples; v2 RSS 5.8 GB)
+  => the box has NO room for a concurrent slice pipeline (~3 GB) during v2's doc-matrix/stage-A spikes. India phase A
+  675 s; US blocking started at 1005 s (23:52), US block expected ~00:12, then cascade/phase B/OOF, test from ~00:45.
+  SESSION 3 TODO: (1) check v2 (runs/v2/stdout.txt, runs/night/mem_v2.txt, guard.log); on the first TEST block
+  (India, 100K S1) re-project: ~1100 s/block => done ~06:15; > 1700 s/block => past 08:00 => relaunch lighter per A3.
+  (2) If v2 died: crash procedure (--stage-b-jobs 2 -> --n-jobs 4 -> --block-size 50000) and relaunch at once.
+  (3) B4 chain (`bash scripts/night/track_b_chain.sh` in tmux trackb2) ONLY if v2 is in test blocking with
+  MemAvailable > 6 GB; the guard kills the slice job first (it IS a src.pipeline process), but do not risk v2 for it.
+  (4) No B_READY: Track B dense blocking fails the recall bar (see 23:34 entry); v2 is the deliverable.
