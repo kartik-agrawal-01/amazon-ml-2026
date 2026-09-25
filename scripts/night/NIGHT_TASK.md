@@ -7,6 +7,11 @@ is going. Launch long runs DETACHED in tmux, then end the session. Memory betwee
 `runs/night/NIGHT_LOG.md` (create if missing). Every session: `cd ~/amazon-ml-2026 && git pull --no-edit`
 (if git auth fails, note it and work locally), read NIGHT_LOG.md, CONTEXT.md, `runs/night/guard.log`.
 
+## Detecting running pipelines (important)
+Use ONLY `pgrep -af '^python[0-9.]* -m src[.]pipeline'` to see whether a pipeline run is active. A plain
+`pgrep -f src.pipeline` also matches YOUR OWN claude process (this prompt contains that text) — never use it,
+and never kill a process that is not a `python -m src.pipeline` run you or the operator started.
+
 ## Goal for 08:30 IST (non-negotiable order)
 A. A VALIDATED full-data submission file by 08:30 (Track A). This is the deliverable.
 B. The best possible score. Bar to beat: team leaderboard 94.8 (that model scored 98.5 locally →

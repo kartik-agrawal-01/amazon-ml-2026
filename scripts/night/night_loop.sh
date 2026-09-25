@@ -23,7 +23,7 @@ say "driver start; stops at $(date -d @"$END" '+%F %T'); max sessions $MAX_SESSI
 ( while true; do
     a=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
     if [ "$a" -lt 1500 ]; then
-      p=$(pgrep -n -u "$USER" -f src.pipeline)
+      p=$(pgrep -n -u "$USER" -f '^python[0-9.]* -m src[.]pipeline')
       if [ -n "$p" ]; then kill "$p"; pkill -u "$USER" -P "$p" 2>/dev/null
         echo "$(date '+%F %T') GUARD killed newest src.pipeline pid $p ($(tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | cut -c1-120)), MemAvailable=${a}MB" >> "$LOG/guard.log"; sleep 10; fi
     fi; sleep 3; done ) &
@@ -33,7 +33,7 @@ n=$(ls "$LOG"/session_*.log 2>/dev/null | wc -l)
 while [ "$(date +%s)" -lt "$END" ] && [ "$n" -lt "$MAX_SESSIONS" ]; do
   grep -q "QUEUE DONE" "$LOG/NIGHT_LOG.md" 2>/dev/null && { say "queue done - stopping"; break; }
   n=$((n+1)); ts=$(date +%m%d-%H%M)
-  say "session $n start (pipelines running: $(pgrep -u "$USER" -fc src.pipeline))"
+  say "session $n start (pipelines running: $(pgrep -u "$USER" -fc '^python[0-9.]* -m src[.]pipeline'))"
   timeout --kill-after=60 5400 "$CLAUDE_BIN" -p "$(cat scripts/night/NIGHT_TASK.md)
 
 ---
