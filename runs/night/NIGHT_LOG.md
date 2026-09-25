@@ -27,3 +27,14 @@
   BUILT (train 176,603 S1 / 675K S2 / 713K S3; holdout-as-test 87,964 S1 with data_slice/test_ground_truth_HIDDEN.tsv,
   frac 0.04 lo 0.5; log runs/night/make_slice.txt) -> B1 done, use --data-dir data_slice --cache-dir cache_slice.
   Smoke killed at 23:04 by session 1 (after the OOF line); memguard/rss_watch for smoke stopped. Only ONE driver should run.
+- 23:10 VIEW ABLATION (runs/night/view_ablation.txt, 5K S1/country, k=10): 6-view pair recall India 0.9386 / US 0.9863.
+  full_w is by far the strongest single view (India 0.896, US 0.970); the 3 "base" views alone give only 0.885 / 0.948.
+  base+full_w = 0.9322 / 0.9858 = 99.3% / 99.9% of the 6-view recall (>=98% rule) at ~61 cands/S1 before cascade.
+  base+name_ph 0.889/0.950, base+addr_w 0.912/0.967 -> dropped name_ph and addr_w.
+  DEVIATION from Gaurav's "keep base + drop 2": the >=98% criterion cannot be met without full_w. If 3 views are ever
+  needed: full_w + addr_c3 + name_w (not measured; "only full_w" alone = 95.4% / 98.3% of ALL).
+  Per-pass cost (ms/query): India ~1.0, US ~1.4 (full_w the costliest pass).
+- 23:09 A3 LAUNCHED v2 (tmux run_v2, pid 230743, commit c6c969d): runs/v2/cmd.txt =
+  bash scripts/run_pipeline.sh v2 --n-jobs 8 --max-df 0.01 --train-s1 150000 --block-size 100000 --views name_c3,name_w,addr_c3,full_w --topk-device cuda --stage-b-jobs 4
+  Pre-launch projection: test blocking US 663K x ~11.8 ms + India 810K x ~8.6 ms + France ~0.4 h = ~4.5 h, + stage A/B
+  per block + train (~1 h) => ~6.5-7 h => ~06:00. Will re-project from the first train block and first test block.
