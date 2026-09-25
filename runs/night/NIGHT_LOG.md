@@ -113,3 +113,19 @@
   Note: another user's 10-thread job (pid 1536) has been running all night; load ~11 on 20 threads.
 - B4 not started concurrently: v2 needs ~6.5 GB at its India/US doc-matrix spikes, the slice pipeline ~3-4 GB and
   make_slice on full train more; the box has ~11 GB for us. The chain runs automatically after v2 (post_v2.sh).
+- 01:41 A3 CHECK v2 attempt 3: vectoriser vocab identical to the trained run (19294/106274/22727/287718);
+  test/france block 0 (100K S1) = 606 s total: passes 423 s + stage A/cascade/stage B/decide/write ~180 s
+  (was > 70 min before the fix). 6.15M cands -> 979K kept (9.8/S1); 94668/100000 S1 with matches => France
+  predicted-empty 5.3% in block 0 (US/India train-set OOF empty rate ~5.6%) -> no France anomaly so far.
+  GPU memory 14.4 GB of 16.3 (torch cache; was 11.9 GB in attempt 2) - watch for CUDA OOM.
+  PROJECTION: France done ~01:57; India 8.1 blocks x ~1060 s = 2.4 h -> ~04:20; US 6.6 x ~1350 s = 2.5 h -> ~06:50;
+  watcher validate + push ~07:00; B4 chain ~07:00-08:15. DECISION: keep running (fits 08:00 with ~1 h slack).
+  SESSION 4+ TODO: (1) check runs/v2/stdout.txt block times vs projection (India block ~1060 s, US ~1350 s; if a
+  block is > 1.5x that, re-project; relaunch is NOT an option any more - use salvage_partial.py at 07:45 at the
+  latest if v2 is still running, then validate + push the salvage as submissions/v2_partial_matching_results.tsv);
+  (2) runs/night/post_v2.log + guard.log for kills; (3) if v2 died: relaunch the SAME cmd (runs/v2/cmd.txt,
+  training is skipped so a restart costs only the blocks done so far - no resume; consider `--test-limit`? no:
+  it caps per-country pos, not a resume); (4) when the watcher has pushed runs/v2/NOTES.md, add the OOF numbers
+  from runs/v2/stdout_attempt2_train_only.txt to NOTES.md (report.json of the load-model run has no OOF block);
+  (5) B4 results land in runs/{slice_mix,xc_us,xc_in}/report.json (test_f05_hidden) -> morning summary.
+- 01:42 session 3 ends; v2 alive (pid 301447, tmux run_v2), watcher alive (tmux post_v2), memlog alive.
