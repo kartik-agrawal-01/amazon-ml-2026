@@ -141,14 +141,15 @@ def topk_sparse_gpu(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float =
     Q = Q.tocsr()
     for st in range(0, n, chunk):
         en = min(st + chunk, n)
-        qd = torch.from_numpy(np.ascontiguousarray(Q[st:en].toarray().T)).cuda()      # (features x m) dense
+        # (features x m) dense block built directly in that layout: toarray(order="F") of the (m x features)
+        # slice IS the C-contiguous transpose (a numpy .T copy of a 400 MB block costs ~0.8 s per chunk)
+        qd = torch.from_numpy(Q[st:en].toarray(order="F").T).cuda()
         scores = torch.sparse.mm(Dt, qd)                                              # (docs x m)
-        s_, i_ = torch.topk(scores, k, dim=0)                                          # (k x m)
-        out_s[st:en] = s_.T.cpu().numpy()
-        out_c[st:en] = i_.T.cpu().numpy()
+        s_, i_ = torch.topk(scores.t().contiguous(), k, dim=1)                        # topk along the last dim is ~10x faster
+        out_s[st:en] = s_.cpu().numpy()
+        out_c[st:en] = i_.cpu().numpy()
         del qd, scores, s_, i_
-    del Dt
-    torch.cuda.empty_cache()
+    del Dt  # the caching allocator keeps the blocks for the next call (no empty_cache: re-allocating 8 GB per call is slow)
     rank = np.broadcast_to(np.arange(k, dtype=np.int16), (n, k))
     row = np.broadcast_to(np.arange(n)[:, None], (n, k))
     keep = out_s >= min_sim
