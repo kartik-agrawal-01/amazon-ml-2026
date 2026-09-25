@@ -21,3 +21,29 @@ Mem:            15Gi       5.2Gi       883Mi       139Mi       9.6Gi        10Gi
 Swap:          4.0Gi       908Ki       4.0Gi
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/nvme0n1p2  915G   48G  821G   6% /
+=== Fri Sep 25 04:02:28 PM IST 2026 gpu_check
+Fri Sep 25 16:02:28 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.91.07              Driver Version: 595.91.07      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 5060 Ti     On  |   00000000:65:00.0 Off |                  N/A |
+|  0%   36C    P8              4W /  180W |     108MiB /  16311MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+torch 2.11.0+cu128 cuda: True
+device: NVIDIA GeForce RTX 5060 Ti mem GB: 16.6
+fp16 matmul TFLOPs: 5.9
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 1862.87it/s]
+MiniLM encode: 4883 texts/s -> 24M texts ~ 82 min
+sparse_dot_topn 1.2.0 pyarrow 25.0.1
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       5.3Gi       6.5Gi        65Mi       3.8Gi         9Gi
+20
