@@ -135,7 +135,7 @@ class CountryContext:
     def __init__(self, tag, q, d, vecs, views, dense_model, cache_dir, n_jobs, device, q_emb_all=None):
         self.tag, self.q, self.d, self.views = tag, q, d, views
         self.d_src = d["src"].to_numpy().astype(np.int8)
-        self.d_rid = d["rid"].values
+        self.d_rid = d["rid"].to_numpy(dtype=object)  # numpy: 1600x faster than ArrowStringArray in per-S1 loops
         self.vecs, self.n_jobs, self.device = vecs, n_jobs, device
         t = time.time()
         self.d_mats = {v: transform(vecs[v], view_text(d, v), n_jobs) for v in views}
@@ -230,6 +230,7 @@ def main() -> None:
     ap.add_argument("--no-one2one", action="store_true")
     ap.add_argument("--test-gt", default="", help="hidden test GT to score (synthetic runs only)")
     ap.add_argument("--run-name", default="")
+    ap.add_argument("--load-model", default=None, help="path of a model.joblib from a previous run with the same --views/--seed/--vec-sample: skip training and go straight to the test pass")
     ap.add_argument("--skip-test", action="store_true")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -271,216 +272,238 @@ def main() -> None:
     del sample
     release_memory()
 
-    # 3a. TRAIN phase A: blocking + stage A per country -> stage-A memmap + labels
-    countries_tr = sorted(meta_tr["countries"])
-    alloc = allocate({c: meta_tr["countries"][c]["n_s1"] for c in countries_tr}, a.train_s1)
-    log(f"train S1 sample per country: {alloc}")
-    xa_path = os.path.join(a.out_dir, "train_Xa.f32")
-    xa_fh = open(xa_path, "wb")
-    a_cols: Optional[List[str]] = None
-    n_pairs_a = 0
-    y_parts, qg_parts, cl_parts, qrid_parts = [], [], [], []
-    rec_curves, gp_total = [], 0
-    country_rows: Dict[str, tuple] = {}   # country -> (first pair row, last pair row) in the memmaps
-    country_q: Dict[str, tuple] = {}      # country -> (q offset, n sampled S1, sample positions)
-    offset = 0
-    rng = np.random.default_rng(a.seed)
-    for c in countries_tr:
-        n_c = alloc.get(c, 0)
-        if n_c <= 0:
-            continue
-        t_c = time.time()
-        q, d, sel, q_emb_all = load_train_country(meta_tr, c, cols, n_c, a.seed, dense_model, a.cache_dir)
-        gt_c = gt_dict(gt_pairs, q["rid"].tolist())
-        log(f"train/{c}: {len(q)} S1 sampled of {meta_tr['countries'][c]['n_s1']}, {len(d)} docs "
-            f"({sum(1 for v in gt_c.values() if not v)} singletons in sample)")
-        ctx = CountryContext(f"train/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
-        del d  # phase A never touches the doc strings again (ctx keeps d_src/d_rid); phase B reloads the table
-        ctx.d = None
-        release_memory()
-        row0 = n_pairs_a
-        gp_c = 0
-        for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
-            cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0))
-            gp = gt_pairs_block(qb["rid"].values, ctx.d_rid, gt_c)
-            gp_c += len(gp)
-            rec_curves.append(blocking_recall(cands, gp, len(qb), ks=sorted({1, 3, 5, a.k})).assign(n=len(gp)))
-            cands = cands.merge(gp.assign(y=np.int8(1)), on=["q", "c"], how="left")
-            cands["y"] = cands["y"].fillna(0).astype(np.int8)
-            if a_cols is None:
-                a_cols = [col for col in cands.columns if col not in ("q", "c", "y")]  # original stage-A order
-                sa = set(stage_a_columns(cands.drop(columns=["y"])))
-                if sa != set(a_cols):
-                    raise RuntimeError(f"stage-A column set mismatch with cascade.stage_a_columns: {sa ^ set(a_cols)}")
-                log(f"stage-A features ({len(a_cols)}): {a_cols}")
-            elif [col for col in cands.columns if col not in ("q", "c", "y")] != a_cols:
-                raise RuntimeError("stage-A columns differ between blocks/countries")
-            n_pairs_a += write_rows(xa_fh, cands, a_cols)
-            y_parts.append(cands["y"].to_numpy().astype(np.int8))
-            qg_parts.append(offset + q_idx[cands["q"].to_numpy()].astype(np.int64))
-            cl_parts.append(cands["c"].to_numpy().astype(np.int64))
-            log(f"train/{c} block {bi} ({len(qb)} S1): {len(cands)} cands, {int(cands.y.sum())}/{len(gp)} GT pairs found")
-            del cands, qb, gp
-        gp_total += gp_c
-        country_rows[c] = (row0, n_pairs_a)
-        country_q[c] = (offset, len(q), sel)
-        qrid_parts.append(ids_bytes(q["rid"]))
-        offset += len(q)
-        del ctx, q, gt_c, q_emb_all
-        release_memory()
-        log(f"train/{c}: phase A done in {time.time() - t_c:.0f}s | peak RSS so far {peak_rss_mb()} MB")
-    xa_fh.close()
-    if a_cols is None:
-        raise RuntimeError("no training pairs produced")
-    n_q_tr = offset
-    y = np.concatenate(y_parts)
-    qg = np.concatenate(qg_parts)
-    cl = np.concatenate(cl_parts)
-    q_rid_tr = np.concatenate(qrid_parts)
-    del y_parts, qg_parts, cl_parts, qrid_parts
-    rc = pd.concat(rec_curves)
-    rc = rc.groupby("k").apply(lambda g: pd.Series(dict(pairs=g.pairs.sum(), pairs_per_s1=g.pairs.sum() / n_q_tr,
-                                                       pair_recall=(g.pair_recall * g.n).sum() / max(g.n.sum(), 1),
-                                                       entity_full_recall=(g.entity_full_recall * g.n).sum() / max(g.n.sum(), 1)))
-                               ).reset_index()
-    print(rc.to_string(index=False))
-    report["blocking_recall"] = rc.to_dict(orient="records")
-    report["peak_rss_mb"]["train_phase_a"] = peak_rss_mb()
+    def _train():
+        nonlocal gt_pairs
+        # 3a. TRAIN phase A: blocking + stage A per country -> stage-A memmap + labels
+        countries_tr = sorted(meta_tr["countries"])
+        alloc = allocate({c: meta_tr["countries"][c]["n_s1"] for c in countries_tr}, a.train_s1)
+        log(f"train S1 sample per country: {alloc}")
+        xa_path = os.path.join(a.out_dir, "train_Xa.f32")
+        xa_fh = open(xa_path, "wb")
+        a_cols: Optional[List[str]] = None
+        n_pairs_a = 0
+        y_parts, qg_parts, cl_parts, qrid_parts = [], [], [], []
+        rec_curves, gp_total = [], 0
+        country_rows: Dict[str, tuple] = {}   # country -> (first pair row, last pair row) in the memmaps
+        country_q: Dict[str, tuple] = {}      # country -> (q offset, n sampled S1, sample positions)
+        offset = 0
+        rng = np.random.default_rng(a.seed)
+        for c in countries_tr:
+            n_c = alloc.get(c, 0)
+            if n_c <= 0:
+                continue
+            t_c = time.time()
+            q, d, sel, q_emb_all = load_train_country(meta_tr, c, cols, n_c, a.seed, dense_model, a.cache_dir)
+            gt_c = gt_dict(gt_pairs, q["rid"].tolist())
+            log(f"train/{c}: {len(q)} S1 sampled of {meta_tr['countries'][c]['n_s1']}, {len(d)} docs "
+                f"({sum(1 for v in gt_c.values() if not v)} singletons in sample)")
+            ctx = CountryContext(f"train/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
+            del d  # phase A never touches the doc strings again (ctx keeps d_src/d_rid); phase B reloads the table
+            ctx.d = None
+            release_memory()
+            row0 = n_pairs_a
+            gp_c = 0
+            for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
+                cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0))
+                gp = gt_pairs_block(qb["rid"].to_numpy(dtype=object), ctx.d_rid, gt_c)
+                gp_c += len(gp)
+                rec_curves.append(blocking_recall(cands, gp, len(qb), ks=sorted({1, 3, 5, a.k})).assign(n=len(gp)))
+                cands = cands.merge(gp.assign(y=np.int8(1)), on=["q", "c"], how="left")
+                cands["y"] = cands["y"].fillna(0).astype(np.int8)
+                if a_cols is None:
+                    a_cols = [col for col in cands.columns if col not in ("q", "c", "y")]  # original stage-A order
+                    sa = set(stage_a_columns(cands.drop(columns=["y"])))
+                    if sa != set(a_cols):
+                        raise RuntimeError(f"stage-A column set mismatch with cascade.stage_a_columns: {sa ^ set(a_cols)}")
+                    log(f"stage-A features ({len(a_cols)}): {a_cols}")
+                elif [col for col in cands.columns if col not in ("q", "c", "y")] != a_cols:
+                    raise RuntimeError("stage-A columns differ between blocks/countries")
+                n_pairs_a += write_rows(xa_fh, cands, a_cols)
+                y_parts.append(cands["y"].to_numpy().astype(np.int8))
+                qg_parts.append(offset + q_idx[cands["q"].to_numpy()].astype(np.int64))
+                cl_parts.append(cands["c"].to_numpy().astype(np.int64))
+                log(f"train/{c} block {bi} ({len(qb)} S1): {len(cands)} cands, {int(cands.y.sum())}/{len(gp)} GT pairs found")
+                del cands, qb, gp
+            gp_total += gp_c
+            country_rows[c] = (row0, n_pairs_a)
+            country_q[c] = (offset, len(q), sel)
+            qrid_parts.append(ids_bytes(q["rid"]))
+            offset += len(q)
+            del ctx, q, gt_c, q_emb_all
+            release_memory()
+            log(f"train/{c}: phase A done in {time.time() - t_c:.0f}s | peak RSS so far {peak_rss_mb()} MB")
+        xa_fh.close()
+        if a_cols is None:
+            raise RuntimeError("no training pairs produced")
+        n_q_tr = offset
+        y = np.concatenate(y_parts)
+        qg = np.concatenate(qg_parts)
+        cl = np.concatenate(cl_parts)
+        q_rid_tr = np.concatenate(qrid_parts)
+        del y_parts, qg_parts, cl_parts, qrid_parts
+        rc = pd.concat(rec_curves)
+        rc = rc.groupby("k").apply(lambda g: pd.Series(dict(pairs=g.pairs.sum(), pairs_per_s1=g.pairs.sum() / n_q_tr,
+                                                           pair_recall=(g.pair_recall * g.n).sum() / max(g.n.sum(), 1),
+                                                           entity_full_recall=(g.entity_full_recall * g.n).sum() / max(g.n.sum(), 1)))
+                                   ).reset_index()
+        print(rc.to_string(index=False))
+        report["blocking_recall"] = rc.to_dict(orient="records")
+        report["peak_rss_mb"]["train_phase_a"] = peak_rss_mb()
 
-    # 3b. cascade (or score prune) on the stage-A memmap
-    Xa = np.memmap(xa_path, dtype=np.float32, mode="r", shape=(n_pairs_a, len(a_cols)))
-    before = candidate_stats(qg, n_q_tr, y, gp_total)
-    report["cands_before_cascade"] = before
-    cascade_model = None
-    thr_prune: Dict[str, float] = {}
-    if use_cascade:
-        t = time.time()
-        pa, cascade_model = fit_cascade(Xa, y, qg, 3, a.seed, n_jobs=lgb_jobs)
-        keep = cascade_keep(qg, pa, a.cascade_top, a.cascade_floor)
-        log(f"cascade fitted on {n_pairs_a} pairs x {len(a_cols)} stage-A features in {time.time() - t:.0f}s")
-        del pa
-    else:
-        keep = np.zeros(n_pairs_a, dtype=bool)
-        score_col = a_cols.index("score")
-        for c, (r0, r1) in country_rows.items():
-            sc = np.asarray(Xa[r0:r1, score_col])
-            thr_prune[c] = calibrate_prune(sc, y[r0:r1], a.keep_recall)
-            keep[r0:r1] = sc >= thr_prune[c]
-            log(f"train/{c}: prune at score>={thr_prune[c]:.3f} ({int(keep[r0:r1].sum())}/{r1 - r0} pairs kept)")
-    after = candidate_stats(qg[keep], n_q_tr, y[keep], gp_total)
-    report["cands_after_cascade"] = after
-    report["prune"] = dict(method="cascade" if use_cascade else "score", per_country=thr_prune,
-                           cascade_top=a.cascade_top, cascade_floor=a.cascade_floor,
-                           train_pairs=int(keep.sum()), train_pair_recall=after.get("pair_recall"))
-    log(f"cascade: before mean {before['mean']:.1f} / median {before['median']:.0f} per S1, "
-        f"after mean {after['mean']:.1f} / median {after['median']:.0f}, train pair recall {after.get('pair_recall', float('nan')):.4f} "
-        f"(p90 {after['p90']:.0f}, max {after['max']}, zero-cand share {after['zero_share']:.4f})")
-    report["peak_rss_mb"]["cascade"] = peak_rss_mb()
+        # 3b. cascade (or score prune) on the stage-A memmap
+        Xa = np.memmap(xa_path, dtype=np.float32, mode="r", shape=(n_pairs_a, len(a_cols)))
+        before = candidate_stats(qg, n_q_tr, y, gp_total)
+        report["cands_before_cascade"] = before
+        cascade_model = None
+        thr_prune: Dict[str, float] = {}
+        if use_cascade:
+            t = time.time()
+            pa, cascade_model = fit_cascade(Xa, y, qg, 3, a.seed, n_jobs=lgb_jobs)
+            keep = cascade_keep(qg, pa, a.cascade_top, a.cascade_floor)
+            log(f"cascade fitted on {n_pairs_a} pairs x {len(a_cols)} stage-A features in {time.time() - t:.0f}s")
+            del pa
+        else:
+            keep = np.zeros(n_pairs_a, dtype=bool)
+            score_col = a_cols.index("score")
+            for c, (r0, r1) in country_rows.items():
+                sc = np.asarray(Xa[r0:r1, score_col])
+                thr_prune[c] = calibrate_prune(sc, y[r0:r1], a.keep_recall)
+                keep[r0:r1] = sc >= thr_prune[c]
+                log(f"train/{c}: prune at score>={thr_prune[c]:.3f} ({int(keep[r0:r1].sum())}/{r1 - r0} pairs kept)")
+        after = candidate_stats(qg[keep], n_q_tr, y[keep], gp_total)
+        report["cands_after_cascade"] = after
+        report["prune"] = dict(method="cascade" if use_cascade else "score", per_country=thr_prune,
+                               cascade_top=a.cascade_top, cascade_floor=a.cascade_floor,
+                               train_pairs=int(keep.sum()), train_pair_recall=after.get("pair_recall"))
+        log(f"cascade: before mean {before['mean']:.1f} / median {before['median']:.0f} per S1, "
+            f"after mean {after['mean']:.1f} / median {after['median']:.0f}, train pair recall {after.get('pair_recall', float('nan')):.4f} "
+            f"(p90 {after['p90']:.0f}, max {after['max']}, zero-cand share {after['zero_share']:.4f})")
+        report["peak_rss_mb"]["cascade"] = peak_rss_mb()
 
-    # 3c. TRAIN phase B: stage B on the kept pairs, per country -> full feature memmap
-    feat_path = os.path.join(a.out_dir, "train_X.f32")
-    feat_fh = open(feat_path, "wb")
-    feats: Optional[List[str]] = None
-    n_pairs_tr = 0
-    yb_parts, qgb_parts, cid_parts = [], [], []
-    for c in countries_tr:
-        if c not in country_rows:
-            continue
-        t_c = time.time()
-        r0, r1 = country_rows[c]
-        q_off, n_c, sel = country_q[c]
-        idx = r0 + np.flatnonzero(keep[r0:r1])
-        q, d, sel2, _ = load_train_country(meta_tr, c, cols, n_c, a.seed, None, a.cache_dir)
-        assert (sel is None and sel2 is None) or np.array_equal(sel, sel2), "train sample not reproducible"
-        cand_c = pd.DataFrame(np.asarray(Xa[idx]), columns=a_cols)
-        cand_c["q"] = qg[idx] - q_off
-        cand_c["c"] = cl[idx]
-        cand_c["y"] = y[idx]
-        d_rid_c = ids_bytes(d["rid"])
-        cand_c = stage_b(cand_c, q, d, sb_jobs)
-        fc = feature_columns(cand_c)
-        fc = [f for f in fc if f not in ("score",)] + ["score"]
+        # 3c. TRAIN phase B: stage B on the kept pairs, per country -> full feature memmap
+        feat_path = os.path.join(a.out_dir, "train_X.f32")
+        feat_fh = open(feat_path, "wb")
+        feats: Optional[List[str]] = None
+        n_pairs_tr = 0
+        yb_parts, qgb_parts, cid_parts = [], [], []
+        for c in countries_tr:
+            if c not in country_rows:
+                continue
+            t_c = time.time()
+            r0, r1 = country_rows[c]
+            q_off, n_c, sel = country_q[c]
+            idx = r0 + np.flatnonzero(keep[r0:r1])
+            q, d, sel2, _ = load_train_country(meta_tr, c, cols, n_c, a.seed, None, a.cache_dir)
+            assert (sel is None and sel2 is None) or np.array_equal(sel, sel2), "train sample not reproducible"
+            cand_c = pd.DataFrame(np.asarray(Xa[idx]), columns=a_cols)
+            cand_c["q"] = qg[idx] - q_off
+            cand_c["c"] = cl[idx]
+            cand_c["y"] = y[idx]
+            d_rid_c = ids_bytes(d["rid"])
+            cand_c = stage_b(cand_c, q, d, sb_jobs)
+            fc = feature_columns(cand_c)
+            fc = [f for f in fc if f not in ("score",)] + ["score"]
+            if feats is None:
+                feats = fc
+                log(f"features ({len(feats)}): {feats}")
+            elif fc != feats:
+                raise RuntimeError(f"feature columns differ between countries: {set(fc) ^ set(feats)}")
+            n_pairs_tr += write_rows(feat_fh, cand_c, feats)
+            yb_parts.append(cand_c["y"].to_numpy().astype(np.int8))
+            qgb_parts.append(q_off + cand_c["q"].to_numpy().astype(np.int64))
+            cid_parts.append(d_rid_c[cand_c["c"].to_numpy()])
+            log(f"train/{c}: stage B on {len(cand_c)} kept pairs ({len(cand_c) / max(n_c, 1):.1f} per S1) in {time.time() - t_c:.0f}s")
+            del cand_c, q, d, d_rid_c
+            release_memory()
+        feat_fh.close()
+        del Xa, keep, cl
+        try:
+            os.remove(xa_path)
+        except OSError:
+            pass
         if feats is None:
-            feats = fc
-            log(f"features ({len(feats)}): {feats}")
-        elif fc != feats:
-            raise RuntimeError(f"feature columns differ between countries: {set(fc) ^ set(feats)}")
-        n_pairs_tr += write_rows(feat_fh, cand_c, feats)
-        yb_parts.append(cand_c["y"].to_numpy().astype(np.int8))
-        qgb_parts.append(q_off + cand_c["q"].to_numpy().astype(np.int64))
-        cid_parts.append(d_rid_c[cand_c["c"].to_numpy()])
-        log(f"train/{c}: stage B on {len(cand_c)} kept pairs ({len(cand_c) / max(n_c, 1):.1f} per S1) in {time.time() - t_c:.0f}s")
-        del cand_c, q, d, d_rid_c
-        release_memory()
-    feat_fh.close()
-    del Xa, keep, cl
-    try:
-        os.remove(xa_path)
-    except OSError:
-        pass
-    if feats is None:
-        raise RuntimeError("no training pairs kept")
-    y = np.concatenate(yb_parts)
-    qg = np.concatenate(qgb_parts)
-    cid = np.concatenate(cid_parts)
-    del yb_parts, qgb_parts, cid_parts
-    report["peak_rss_mb"]["train_phase_b"] = peak_rss_mb()
+            raise RuntimeError("no training pairs kept")
+        y = np.concatenate(yb_parts)
+        qg = np.concatenate(qgb_parts)
+        cid = np.concatenate(cid_parts)
+        del yb_parts, qgb_parts, cid_parts
+        report["peak_rss_mb"]["train_phase_b"] = peak_rss_mb()
 
-    # 3d. OOF + rule sweep + final model (features read back from the memmap)
-    X = np.memmap(feat_path, dtype=np.float32, mode="r", shape=(n_pairs_tr, len(feats)))
-    oof, kind = oof_predict(X, y, qg, a.folds, a.seed, neg_rate=a.neg_rate, n_jobs=lgb_jobs)
-    from sklearn.metrics import average_precision_score, roc_auc_score
-    log(f"OOF ({kind}): AUC={roc_auc_score(y, oof):.5f} AP={average_precision_score(y, oof):.5f}")
-    report["peak_rss_mb"]["oof"] = peak_rss_mb()
-    q_rid_str = q_rid_tr.astype(str)
-    d_uniq, c_codes = np.unique(cid, return_inverse=True)
-    d_rid_str = d_uniq.astype(str)
-    pairs = pd.DataFrame({"q": qg, "c": c_codes.astype(np.int64), "p": oof})
-    gt_tr = gt_dict(gt_pairs, q_rid_str.tolist())
-    sweep_n = min(n_q_tr, 100_000)
-    sw_q = np.sort(rng.choice(n_q_tr, sweep_n, replace=False))
-    sw_mask = np.isin(pairs["q"].values, sw_q)
-    tab, best = sweep_rules(pairs[sw_mask], q_rid_str, d_rid_str, gt_tr, one2one_ok=one2one, q_subset=sw_q)
-    print(tab.head(10).to_string(index=False))
-    for lbl, sub in [("best global threshold", tab[tab.rule == "thr"]), ("expected-F", tab[tab.rule == "expf"])]:
-        if len(sub):
-            print(f"  {lbl}: {sub.iloc[0].to_dict()}")
-    if a.rule != "auto":
-        cfg = tab[(tab.rule == a.rule) & (tab.one2one == one2one)]
-        if a.rule == "thr":
-            cfg = cfg.iloc[(cfg.thr - a.thr).abs().argsort()[:1]]
-        best = cfg.iloc[0].to_dict()
-    thr_best = best["thr"] if best["rule"] == "thr" else 0.0
-    log(f"OOF macro F0.5 (chosen) = {best['f05']:.5f} with {best}")
-    report["oof"] = dict(model=kind, auc=float(roc_auc_score(y, oof)), rules=tab.to_dict(orient="records"), chosen=best)
-    print("  OOF breakdown:")
-    macro_f05(gt_tr, decide(pairs, q_rid_str, d_rid_str, best["rule"], thr_best, bool(best["one2one"])), verbose=True)
-    pd.DataFrame({"s1": q_rid_str[qg], "cand": d_rid_str[c_codes], "y": y, "p": oof}).to_csv(
-        os.path.join(a.out_dir, "oof_pairs.tsv.gz"), sep="\t", index=False)
-    del pairs, gt_tr, d_uniq, c_codes, d_rid_str, cid, sw_mask
-    release_memory()
-    model, _ = make_model(a.seed, n_jobs=lgb_jobs)
-    fit_idx, fit_w = subsample_negatives(y, a.neg_rate, a.seed)
-    model.fit(np.ascontiguousarray(X[fit_idx]), y[fit_idx], sample_weight=fit_w)
-    imp = feature_importance(model, feats)
-    if len(imp):
-        report["importance_top25"] = imp.head(25).round(4).to_dict()
-        print("  top features:", imp.head(15).round(3).to_dict())
-    try:
+        # 3d. OOF + rule sweep + final model (features read back from the memmap)
+        X = np.memmap(feat_path, dtype=np.float32, mode="r", shape=(n_pairs_tr, len(feats)))
+        oof, kind = oof_predict(X, y, qg, a.folds, a.seed, neg_rate=a.neg_rate, n_jobs=lgb_jobs)
+        from sklearn.metrics import average_precision_score, roc_auc_score
+        log(f"OOF ({kind}): AUC={roc_auc_score(y, oof):.5f} AP={average_precision_score(y, oof):.5f}")
+        report["peak_rss_mb"]["oof"] = peak_rss_mb()
+        q_rid_str = q_rid_tr.astype(str)
+        d_uniq, c_codes = np.unique(cid, return_inverse=True)
+        d_rid_str = d_uniq.astype(str)
+        pairs = pd.DataFrame({"q": qg, "c": c_codes.astype(np.int64), "p": oof})
+        gt_tr = gt_dict(gt_pairs, q_rid_str.tolist())
+        sweep_n = min(n_q_tr, 100_000)
+        sw_q = np.sort(rng.choice(n_q_tr, sweep_n, replace=False))
+        sw_mask = np.isin(pairs["q"].values, sw_q)
+        tab, best = sweep_rules(pairs[sw_mask], q_rid_str, d_rid_str, gt_tr, one2one_ok=one2one, q_subset=sw_q)
+        print(tab.head(10).to_string(index=False))
+        for lbl, sub in [("best global threshold", tab[tab.rule == "thr"]), ("expected-F", tab[tab.rule == "expf"])]:
+            if len(sub):
+                print(f"  {lbl}: {sub.iloc[0].to_dict()}")
+        if a.rule != "auto":
+            cfg = tab[(tab.rule == a.rule) & (tab.one2one == one2one)]
+            if a.rule == "thr":
+                cfg = cfg.iloc[(cfg.thr - a.thr).abs().argsort()[:1]]
+            best = cfg.iloc[0].to_dict()
+        thr_best = best["thr"] if best["rule"] == "thr" else 0.0
+        log(f"OOF macro F0.5 (chosen) = {best['f05']:.5f} with {best}")
+        report["oof"] = dict(model=kind, auc=float(roc_auc_score(y, oof)), rules=tab.to_dict(orient="records"), chosen=best)
+        print("  OOF breakdown:")
+        macro_f05(gt_tr, decide(pairs, q_rid_str, d_rid_str, best["rule"], thr_best, bool(best["one2one"])), verbose=True)
+        pd.DataFrame({"s1": q_rid_str[qg], "cand": d_rid_str[c_codes], "y": y, "p": oof}).to_csv(
+            os.path.join(a.out_dir, "oof_pairs.tsv.gz"), sep="\t", index=False)
+        del pairs, gt_tr, d_uniq, c_codes, d_rid_str, cid, sw_mask
+        release_memory()
+        model, _ = make_model(a.seed, n_jobs=lgb_jobs)
+        fit_idx, fit_w = subsample_negatives(y, a.neg_rate, a.seed)
+        model.fit(np.ascontiguousarray(X[fit_idx]), y[fit_idx], sample_weight=fit_w)
+        imp = feature_importance(model, feats)
+        if len(imp):
+            report["importance_top25"] = imp.head(25).round(4).to_dict()
+            print("  top features:", imp.head(15).round(3).to_dict())
+        try:
+            import joblib
+            joblib.dump(dict(model=model, feats=feats, a_cols=a_cols, cascade_model=cascade_model,
+                             cascade=dict(top=a.cascade_top, floor=a.cascade_floor, enabled=use_cascade),
+                             thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
+        except Exception as e:  # noqa: BLE001
+            log(f"model not saved: {e}")
+        del X, y, qg, oof, fit_idx, fit_w, q_rid_tr, q_rid_str, gt_pairs
+        release_memory()
+        try:
+            os.remove(feat_path)
+        except OSError:
+            pass
+        report["peak_rss_mb"]["model"] = peak_rss_mb()
+        log(f"model fitted | peak RSS so far {peak_rss_mb()} MB")
+        return model, feats, a_cols, cascade_model, thr_prune, best, thr_best
+
+    if a.load_model:
         import joblib
-        joblib.dump(dict(model=model, feats=feats, a_cols=a_cols, cascade_model=cascade_model,
-                         cascade=dict(top=a.cascade_top, floor=a.cascade_floor, enabled=use_cascade),
-                         thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
-    except Exception as e:  # noqa: BLE001
-        log(f"model not saved: {e}")
-    del X, y, qg, oof, fit_idx, fit_w, q_rid_tr, q_rid_str, gt_pairs
-    release_memory()
-    try:
-        os.remove(feat_path)
-    except OSError:
-        pass
-    report["peak_rss_mb"]["model"] = peak_rss_mb()
-    log(f"model fitted | peak RSS so far {peak_rss_mb()} MB")
+        mdl = joblib.load(a.load_model)
+        if list(mdl['views']) != list(views):
+            raise SystemExit(f"--load-model views {mdl['views']} != --views {views}")
+        model, feats, a_cols, cascade_model = mdl['model'], mdl['feats'], mdl['a_cols'], mdl['cascade_model']
+        thr_prune, best = mdl['thr_prune'], mdl['best']
+        use_cascade = bool(mdl['cascade']['enabled'])
+        a.cascade_top, a.cascade_floor = mdl['cascade']['top'], mdl['cascade']['floor']
+        thr_best = best['thr'] if best['rule'] == 'thr' else 0.0
+        report['oof'] = dict(chosen=best, loaded_from=a.load_model)
+        report['loaded_model'] = a.load_model
+        del gt_pairs
+        release_memory()
+        log(f"model loaded from {a.load_model}: {len(feats)} features, cascade={'on' if use_cascade else 'off'} "
+            f"(top {a.cascade_top}, floor {a.cascade_floor}), rule {best} | training skipped")
+    else:
+        model, feats, a_cols, cascade_model, thr_prune, best, thr_best = _train()
 
     # 4. TEST pass, one country at a time, rows written as they are produced
     if a.skip_test:
@@ -531,7 +554,7 @@ def main() -> None:
             c_counts.append(counts)
             cands = stage_b(cands, qb, d, sb_jobs)
             cands["p"] = predict_chunked(model, cands, feats)
-            qb_rid = qb["rid"].values
+            qb_rid = qb["rid"].to_numpy(dtype=object)
             sets = decide(cands, qb_rid, ctx.d_rid, best["rule"], thr_best, bool(best["one2one"]))
             cand_rows = [""] * len(qb)
             for qq, grp in cands.groupby("q")["c"]:
