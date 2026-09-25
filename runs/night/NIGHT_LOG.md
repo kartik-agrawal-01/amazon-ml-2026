@@ -129,3 +129,21 @@
   from runs/v2/stdout_attempt2_train_only.txt to NOTES.md (report.json of the load-model run has no OOF block);
   (5) B4 results land in runs/{slice_mix,xc_us,xc_in}/report.json (test_f05_hidden) -> morning summary.
 - 01:42 session 3 ends; v2 alive (pid 301447, tmux run_v2), watcher alive (tmux post_v2), memlog alive.
+
+## Session 4 (Claude, from 02:12)
+- 02:12 v2 alive (pid 301447, attempt 3), France test done in 1618 s (3 blocks, 9.8 cands/S1, empty 5.3%/5.0%/5.2%);
+  India test started 01:59. mem: v2 RSS 5.6-6.4 GB, MemAvailable ~5.2 GB, GPU 10.8 GB. Swap 1.35 GB used (other users).
+- 02:19 A3 CHECK: test/india block 0 = 1138 s incl. 96 s doc matrices (~1042 s/block; projection was 1060) ->
+  5.9M cands -> 918K kept (9.2/S1), 93406/100000 S1 with matches (India empty 6.6%). PROJECTION unchanged:
+  India done ~04:20, US (6.6 blocks x ~1350 s) ~06:55, watcher validate+push ~07:05. Keep running.
+- 02:15 B4 (cheap version): scripts/night/make_xc_from_slice.py builds data_xc_us (train = data_slice US 105,820 S1 /
+  404K S2 / 427K S3 -> test = India 4% holdout 35,060 S1) and data_xc_in (train India 70,783 S1 -> test US holdout
+  52,904 S1) by country-filtering data_slice (no full-data pass). First xc_us attempt was killed by my own
+  killswitch (scripts/night/xc_guarded.sh: MemAvailable < 2.3 GB) at the train-store normalisation (2 spawn
+  workers spiked > 3 GB). Fix: seeded cache_xc_us / cache_xc_in from cache_slice's per-country parquets +
+  .done.json markers (the store builder resumes from them; rows identical since the xc files are country filters
+  of data_slice) -> store step 16 s, no spike. xc_us relaunched 02:18 (tmux xc_us, CPU top-k, --n-jobs 2,
+  --train-s1 40000 --block-size 50000 --folds 3, 4 views, same as track_b_chain.sh) RSS 1.6 GB, avail 4.8 GB.
+  tmux xc_chain then runs xc_in and slice_mix (cache_slice_mix -> symlink to cache_slice) one at a time, hard stop
+  04:05 (before v2's US doc-matrix spike ~04:20). Reports: runs/{xc_us,xc_in,slice_mix}/report.json (test_f05_hidden).
+  The post-v2 chain (NJ=6, cuda) skips runs that already have report.json.
