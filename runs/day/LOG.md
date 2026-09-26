@@ -457,3 +457,25 @@ Plan (QUEUE 1, P0 fast lane):
   relaunched tmux chain4 (steps before gateA skip via .done) and chain8 (re-stopped chain5, waits for chain4).
   Old log: runs/day/gate_run1_duty03.log. If the box reboots during gate A now: relaunch with `GATE_DUTY=0.3` in the
   tmux command (cached blocks are skipped) - one reboot at 0.6 costs ~1 block, still far less than 0.3's 8 h.
+- 19:43 measured at DUTY 0.6: test/france name_c3 51.7 s (101.6 s at 0.3), name_w 88.3 s (179.7 s) -> 2.0x. GPU 36-41 W.
+  New ETA: gate A ≈ 04:00-05:00 Sun, gate B ≈ +1.5 h, v3 (chain8, DUTY 0.3 in v3.sh but no top-k: cands cached) ≈ 08:00-09:00 Sun.
+- Session 13 ends ~19:45. Running: chain4 (gate A at DUTY 0.6, test/france block 0), chain8 (waits -> gate B pass -> v3),
+  chain5 (stopped), chain7 (waits), sysmon, gpulog.
+### NEXT (session 14+) — supersedes the list above
+1. Reboot? relaunch sysmon, gpulog, then `GATE_DUTY=0.3 bash scripts/day/chain4.sh` in tmux chain4 if the reboot hit
+   during gate A at 0.6 (else keep 0.6), then chain8 (BEFORE chain5), chain5, chain7 (see session 11 for the commands).
+2. Gate A crashes twice -> NOTES + stop. After gate B: check runs/day/chain8.log. PASS -> QUEUE 1 DONE with the numbers
+   from gateB.log. FAIL -> debug the fast lane (compare_matches by country); v3 not started.
+3. v3 done (chain/v3.done): runs/v3/NOTES.md (cmd, runtime by stage, OOF per country, thr-adapt t per country,
+   `grep "cascade cap check" runs/v3/stdout.txt`, and `PYTHONPATH=. python scripts/day/country_table.py
+   output_v3/matching_results.tsv --store-dir cache_n3 --keys france --rules-from runs/v3/stdout.txt > runs/v3/country_table.md`
+   with MemAvailable >= 5 GB), SCOREBOARD row SUBMIT-READY (blend partner / fallback), git add runs/v3
+   submissions/v3_matching_results.tsv; tell HQ where output_v3/test_probs_*.parquet are.
+4. Then, BEFORE chain5/chain7 slices if time allows (SIGSTOP chain5 bash right after chain8 exits, or placeholders):
+   (a) rescore sanity: `python -m src.rescore --feat-cache feats_v3 --cache-dir cache_n3 --out-dir output_v3_rs
+       --load-model output_v3/model.joblib --thr-adapt --thr-adapt-floor 0.30` == output_v3 (compare_matches.py);
+   (b) `python scripts/day/model_capacity.py feats_v3 --variants base,big,deep,seed3` (tmux, heavy);
+   (c) winner (≥ +0.0015 OOF on both countries) -> `python -m src.rescore ... --variant <w> --thr-adapt
+       --thr-adapt-floor 0.30 --save-probs --out-dir output_v4` -> validator -> submissions/v4 SUBMIT-READY;
+   (d) cascade cap check top8 ≥ top10 − 0.001 per country -> note in cascade_cap.md (a --cascade-top 8 file needs a
+       pipeline run from cands_v2, ~v3's runtime; only if time before the freeze).
