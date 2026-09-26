@@ -317,9 +317,13 @@ def main() -> None:
                     "(filled on the first run, top-k skipped on later runs with the same views/k/block size/train sample)")
     ap.add_argument("--cands-only", action="store_true", help="only build the --cand-cache (train sample + test), then stop")
     ap.add_argument("--vec-cache", default="", help="joblib file of the fitted vectorisers (loaded if present, else fitted + saved)")
+    ap.add_argument("--feat-cache", default="", help="keep the final pair features: train_X.f32 + train_meta.npz/json and "
+                    "one parquet per test block (s1, cand, features, p) -> model/rule changes without stage A/B")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
+    if a.feat_cache:
+        os.makedirs(a.feat_cache, exist_ok=True)
     from . import blocking as _blocking
     _blocking.TOPK_DEVICE["device"] = a.topk_device
     sb_jobs = a.stage_b_jobs or max(1, (a.n_jobs or (os.cpu_count() or 1)) // 2)
@@ -515,7 +519,9 @@ def main() -> None:
         report["peak_rss_mb"]["cascade"] = peak_rss_mb()
 
         # 3c. TRAIN phase B: stage B on the kept pairs, per country -> full feature memmap
-        feat_path = os.path.join(a.out_dir, "train_X.f32")
+        feat_path = os.path.join(a.feat_cache or a.out_dir, "train_X.f32")
+        if a.feat_cache:
+            os.makedirs(a.feat_cache, exist_ok=True)
         feat_fh = open(feat_path, "wb")
         feats: Optional[List[str]] = None
         n_pairs_tr = 0
@@ -561,6 +567,10 @@ def main() -> None:
         qg = np.concatenate(qgb_parts)
         cid = np.concatenate(cid_parts)
         del yb_parts, qgb_parts, cid_parts
+        if a.feat_cache:
+            np.savez(os.path.join(a.feat_cache, "train_meta.npz"), y=y, qg=qg, cid=cid, q_rid=q_rid_tr)
+            with open(os.path.join(a.feat_cache, "train_feats.json"), "w") as fh:
+                json.dump(dict(feats=feats, a_cols=a_cols, n_rows=int(n_pairs_tr), n_q=int(n_q_tr), views=views), fh)
         report["peak_rss_mb"]["train_phase_b"] = peak_rss_mb()
 
         # 3d. OOF + rule sweep + final model (features read back from the memmap)
@@ -612,10 +622,11 @@ def main() -> None:
             log(f"model not saved: {e}")
         del X, y, qg, oof, fit_idx, fit_w, q_rid_tr, q_rid_str, gt_pairs
         release_memory()
-        try:
-            os.remove(feat_path)
-        except OSError:
-            pass
+        if not a.feat_cache:
+            try:
+                os.remove(feat_path)
+            except OSError:
+                pass
         report["peak_rss_mb"]["model"] = peak_rss_mb()
         log(f"model fitted | peak RSS so far {peak_rss_mb()} MB")
         return model, feats, a_cols, cascade_model, thr_prune, best, thr_best
@@ -692,6 +703,14 @@ def main() -> None:
             cands = stage_b(cands, qb, d, sb_jobs)
             cands["p"] = predict_chunked(model, cands, feats)
             qb_rid = qb["rid"].to_numpy(dtype=object)
+            if a.feat_cache:
+                fb = os.path.join(a.feat_cache, f"test__{c}__b{bi:03d}")
+                fdf = cands[feats + ["p"]].astype(np.float32)
+                fdf.insert(0, "cand", ctx.d_rid[cands["c"].to_numpy()].astype(str))
+                fdf.insert(0, "s1", qb_rid[cands["q"].to_numpy()].astype(str))
+                fdf.to_parquet(fb + ".parquet", index=False)
+                np.save(fb + "_qrid.npy", np.asarray(qb_rid, dtype=ID_DTYPE))
+                del fdf
             if a.save_probs:
                 prob_parts.append(pd.DataFrame({"s1": qb_rid[cands["q"].to_numpy()], "cand": ctx.d_rid[cands["c"].to_numpy()],
                                                 "p": cands["p"].to_numpy(), "score": cands["score"].to_numpy()}))
