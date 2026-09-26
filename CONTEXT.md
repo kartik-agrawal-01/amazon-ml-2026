@@ -40,11 +40,19 @@
 - Submission flow: log row in `submissions/LOG.md` -> push file to `submissions/` ->
   leader pulls + validates + uploads -> leader reports LB score -> fill LOG.md.
 
-## Current state (26 Sep ~16:30 IST)
-- **Public LB: v2 = 0.947** (09:45) · ens1 consensus v2∩Soha = **0.9449** (11:07) · Atharv's own pipeline = **0.944**
-  (LOG #3) · Soha's own pipeline 0.948. Target 98.4+. Uploads used: **Day2 3/5** (2 left, they expire at midnight).
-  **Upload bar (Gaurav 12:30): only files expected to beat the best LB by ≥ 1 pt.** ens2c (v2 + global one-to-one +
-  exact-key pairs, expected +0.3 to +0.5) is HELD for that reason.
+## Current state (26 Sep ~16:20 IST)
+- **Public LB: Soha's new model (soha_matching_results_2.tsv) = 0.980795 — NEW BEST (+3.4 vs v2)** (LOG #4, ~16:00).
+  Earlier: v2 = 0.947 · ens1 consensus v2∩Soha = 0.9449 · Atharv = 0.944 · Soha's first pipeline 0.948. Target 98.4+.
+  Uploads: **Day2 4/5** (1 left, expires at midnight; to be confirmed). HQ proposes `soha2k2` for it: Soha-2 + 34.9K French
+  exact-key pairs she misses (worst case +0.14, likely +0.2 to +0.3; LOG proposed row). The ≥ +1 pt bar was set when the
+  best was 0.947; jv1 (our pipeline) can no longer beat the best on its own — its value is now as a blend partner.
+- **Soha-2 vs v2 (label-free, scripts/hq_ens/dissect.py):** India +0.22 matches/S1 (3.34 vs 3.12), almost all fuzzy
+  non-key pairs; its per-source counts match the train GT (S2=0 14.0% vs GT 13.0%, v2 17.9%). Stricter on same name +
+  same street + different house number. France: 3.21 matches/S1, empty 6.1%, and still only 30% coverage of the
+  different-trade-name / same-exact-address pairs (v2 34%) → soha2k2. Asked Soha for: method summary, per-pair test
+  probabilities, train OOF probabilities (for measured blends, a France threshold, and packaging).
+- Test has ~2x the unmatched S2/S3 records per S1 of train (S2/S1 2.8 vs 2.3 in every country): more decoys at test
+  time, one reason for OOF → LB gaps; exact-key rule rates are discounted for it (augment_keys --false-mult 2).
 - v2 = commit 48bc4e7: 4 TF-IDF views, GPU top-k, cascade top-10 (9.2 cands/S1), LightGBM on 150K train S1 (6.8% of
   train S1), thr 0.70 + one-to-one; OOF 0.9623 overall (60% US / 40% India; no per-country split logged) -> LB gap
   -1.5. Test: empty 6.0% (FR 5.2 / IN 6.7 / US 5.5), matches/S1 US 3.35 / IN 3.12 / FR 3.30 vs train GT 3.46.
@@ -98,16 +106,14 @@
   label-free; model changes need the OOF.
 
 ## Open / next up
-1. ~17:30–18:00: jv1 train pass → Jarvis QUEUE 1 (a)–(e) (density-matched OOF per country, recall, cands/S1, counts,
-   per-country OOF thresholds). Test pass starts at once if (b) ≥ 0.9623.
-2. ~21:30: box 2d (unseen-country threshold rule) → France threshold for jv1 (Jarvis 1b: redecide.py → jv1t).
-3. ~22:00–22:30: jv1 test file → HQ: score_sub sanity (0 records under 2+ S1, counts, France key coverage ≥ 85%),
-   augment_keys, threshold variant. Upload tonight only if expected ≥ +1 pt:
-   E[dLB] ≈ +0.13 (global one-to-one, test-only) + 0.38·dOOF_US + 0.47·dOOF_IN (density-matched, vs v2) + 0.15·dF_FR
-   (France: fixes + keys + threshold, not measurable; assume small).
-4. Day 3: jv2 (cross-encoder features) if it KEEPs; final choice by robustness (private LB = rest of test);
-   Documentation_template.md numbers; scripts/make_package.py (candidate_pairs.tsv = exactly the pairs fed to the
-   model, keep cands/S1 low); final upload before the 27 Sep 20:00 freeze.
+1. Tonight: soha2k2 in the last Day-2 slot (Gaurav/Soha decide) → its LB tells whether the France key pairs help on top
+   of Soha-2 (then they go into the final).
+2. Soha's method + probabilities → re-plan both lanes around her model (blend with jv1 / the cross-encoder measured on
+   train OOF; France threshold via box 2d; key pairs inside her pipeline for the package).
+3. jv1 runs on automatically (train gate → test pass, file ~21:00–22:00): blend partner, not an upload on its own.
+4. Day 3: final choice by robustness (private LB = rest of test); Documentation_template.md; scripts/make_package.py
+   (candidate_pairs.tsv = exactly the pairs fed to the model incl. any rule-added pairs; keep cands/S1 low); final upload
+   before the 27 Sep 20:00 freeze.
 - Real-data facts: ~24% of Indian S2 names in Indic scripts (rule-based transliteration + phonetic key); ALL-CAPS,
   "null" tokens, leet typos, domain names, @handles, DBA names, state names vs codes, house-number labels, zero-padded
   numbers, 3.8% empty addresses in S2/S3. All GT matches are same-country; GT strictly one-to-one. France: 13
