@@ -197,3 +197,26 @@ Plan (QUEUE 1, P0 fast lane):
   full density) -> n3ph (name_ph view) is the right screen. Without a country in training (xc_us, the France
   situation) the model rejects 19% of that country's script-variant pairs. Empty-address candidates are the other
   big hole (37% lost, mostly model rejections): candidate for a per-feature look later (QUEUE 6-ish).
+- 14:55 n3 slice_mix DONE: 0.9812 (base 0.9808), OOF 0.97644 (base 0.97653) -> n3 Q=0.9650 (xc_in not run). SCOREBOARD
+  row 2 = HOLD. runs/day/n3_NOTES.md written for HQ.
+- 15:13 n3f xc_us DONE: 0.9205, WORSE than n3 (0.9273) and base (0.9344), although its US OOF is the best of the three
+  (0.98406 vs 0.98395 / 0.98365). So the generic set does not explain the n3 drop. xc_us swings by ±0.007 under small
+  feature changes that leave OOF flat. Part of the cause: the threshold is picked on the US OOF, and n3f picked
+  thr 0.90 where base/n3 picked 0.85. A US-trained model is less confident on India, so a higher threshold costs recall
+  there. This is the France situation, and it suggests the decision rule matters more for unseen countries than the
+  features do.
+  -> qeval.sh now passes --save-probs (from chain4's n3xin step on; the file was replaced atomically, so the qeval
+  process already running is unaffected). New scripts/day/thr_sweep.py computes hidden F0.5 at each threshold offline.
+### NEXT (session 7+), replaces the session-6 list item 2
+2. When n3xin/n3k/... finish, run `PYTHONPATH=. python scripts/day/thr_sweep.py data_xc_us output_day_n3k_xc_us` (and
+   on slice_mix and xc_in) to get the F-vs-threshold curve for xc_us and slice_mix. If xc_us peaks well below the
+   OOF-chosen threshold while mix is flat, candidate change = "cap the OOF-chosen threshold" or "choose the lower
+   threshold within 0.0005 OOF of the best" (a robustness tie-break). That is cheap and France-relevant. First check
+   that thr_sweep at the chosen threshold reproduces report.json's test_f05_hidden (±0.001; key rules off).
+3. n3 vs base is not settled: the xc_us noise (±0.007) is larger than the n3 effect. Consider 2 seeds (or bagging) for
+   the xc_us screens before any KEEP/REVERT that hinges on xc_us.
+4. AML_GENERIC=v2fr mode exists (v2 set + French words) but has NOT been run. Low priority now.
+- 15:36 n3f slice_mix DONE: 0.9810, OOF 0.97637 -> n3f Q=0.9629: REVERT (AML_GENERIC=v2 stays an opt-in env switch
+  only; default behaviour = HEAD). chain4 continues: n3xin (first run with --save-probs) -> n3k -> n3ph -> n3r -> gateA
+  -> gateB. Champion unchanged (cycle 0/base). n3 status: HOLD, pending xc_in and the threshold sweep (NEXT 2).
+- Session 6 ends ~15:37. Running: chain4 (tmux `chain4`), sysmon, gpulog. chain3 has exited.

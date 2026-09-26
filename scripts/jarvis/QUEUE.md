@@ -1,5 +1,5 @@
 # Jarvis queue — top = next. HQ (modelling chat) owns this file; the Jarvis loop only reads it (from main).
-# HQ version 26 Sep 13:55 (13:40 version + the box's main features; the infra draft of 13:15 is folded in). Machine: A30 (24 GB GPU, 16 vCPU, ~112 GB RAM);
+# HQ version 26 Sep 16:00 (13:55 version + a density-matched gate for jv1, item 1). Machine: A30 (24 GB GPU, 16 vCPU, ~503 GB RAM);
 # it can be resumed on an RTX PRO 6000 (96 GB) — items marked [RTX] only after that switch.
 
 ## Read first (5 min)
@@ -53,8 +53,25 @@
    Test-side, label-free: key_coverage_<country>.csv (target France `disjoint|a_eq|invented` ≥ 90%, v2 34%), mean
    matches/S1 per country vs the train GT 3.46 (v2: US 3.35 / India 3.12 / France 3.30), 0 records under two S1s.
    The --cand-cache union is the pool for item 2 (top-40 per S1 by the cascade score).
-   Gate: OOF ≥ v2 + 0.3 pt with no country down → full test → validator → `submissions/jv1_matching_results.tsv`,
-   SUBMIT-READY with the tables above and an expected LB gain. Record the jarvis-branch commit.
+   **Gate — density-matched (HQ 26 Sep 16:00, replaces "OOF ≥ v2 + 0.3").** v2's 0.9623 was measured on 150,000
+   train S1 (US 89,969 / India 60,031 = 6.8% of the 2.21M train S1). jv1 samples 600K (27%). With global one-to-one
+   the OOF depends on how many competing S1 are sampled: fewer orphan-record false positives (their true S1 is
+   present) but more stealing by sampled look-alikes. So jv1's 600K OOF and v2's 0.9623 are not comparable. After the
+   train pass, compute from `<out-dir>/oof_pairs.tsv.gz` (s1, cand, y, p) + the train GT (light work, ~15 min; use
+   `src.model.decide` / the pipeline's macro-F0.5 helpers, rule and threshold = the run's chosen ones):
+   (a) OOF F0.5 on all 600K S1, **per country** (US, India) and overall;
+   (b) the same on **v2's 150K S1**: per country `q_all.sample(n_c, random_state=42)` with v2's n_c (US 89,969,
+       India 60,031). pandas takes a prefix of one permutation, so this is a subset of jv1's 600K sample if the store's
+       S1 row order is unchanged. Check the containment; if it fails, use a random subset of the 600K with the same
+       per-country counts. Re-run decide + one-to-one on the subset's pairs only. Report per country and overall;
+   (c) per country: pair recall of the kept candidates (GT pairs present in oof_pairs / GT pairs of the sampled S1)
+       and cands/S1;
+   (d) per country: predicted matches/S1 and empty rate at the chosen rule vs the GT (3.46; singletons 5.6%).
+   Write (a)–(d) to `runs/jarvis/jv1_train.md` + a SCOREBOARD row. **Go:** (b) overall ≥ 0.9623 (no regression) →
+   start the test pass at once (`--load-model`, add `--save-probs`) → validator →
+   `submissions/jv1_matching_results.tsv` + test stats (per-country matches/S1, empty rate, key_coverage_<c>.csv,
+   records under 2+ S1 = 0) → SUBMIT-READY. The +1 pt upload call is HQ's, from (b) − 0.9623 per country + the test
+   stats. **Stop** and write why if (b) < 0.9623. Record the jarvis-branch commit.
 2. [B, GPU pair model on the pool → jv2] Fine-tune a cross-encoder: start from paraphrase-multilingual-MiniLM-L12-v2
    (Apache-2.0; a bi-encoder checkpoint, so train it with a pair-classification head on (text_a, text_b));
    xlm-roberta-base or intfloat/multilingual-e5-base (MIT) only if throughput allows. Text per side

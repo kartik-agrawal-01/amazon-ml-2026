@@ -1,0 +1,128 @@
+[    3.2s] top-k device: cuda (cuda available: True) | stage-B workers: 4
+== test
+  S1:    87964 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source1.tsv
+  S2:   342145 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source2.tsv
+  S3:   362330 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source3.tsv
+[store] test: staged 792439 raw rows into 2 country files (16s)
+[store] test/'india': normalised 316618 rows -> test__india.parquet (36 MB, 40s)
+[store] test/'us': normalised 475821 rows -> test__us.parquet (48 MB, 37s)
+[store] test: store complete in 93s
+== train
+  S1:   176603 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:   675403 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:   712731 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+[store] train: staged 1564737 raw rows into 2 country files (30s)
+  GT rows=176603 | singletons=5.6% | matches/S1: mean=3.46 max=11 | dist={0: 9867, 1: 9520, 2: 29911, 3: 42531, 4: 84774}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
+[store] train/'india': normalised 627424 rows -> train__india.parquet (71 MB, 53s)
+[store] train/'us': normalised 937313 rows -> train__us.parquet (95 MB, 70s)
+[store] train: store complete in 158s
+[  256.1s] GT: 176603 S1, 611627 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  452.2s] vectorisers (fit on 2357176 rows): [('name_c3', 18749), ('name_w', 102683), ('addr_c3', 21335), ('full_w', 268554)]
+[  452.6s] train S1 sample per country: {'india': 16032, 'us': 23968}
+[  454.3s] train/india: 16032 S1 sampled of 70783, 556641 docs (898 singletons in sample)
+[  492.2s] train/india: doc matrices [('name_c3', (556641, 18749), 3956445), ('name_w', (556641, 102683), 1185742), ('addr_c3', (556641, 21335), 6883491), ('full_w', (556641, 268554), 4129673)] (38s)
+/home/kartik/amazon-ml-2026/src/blocking.py:138: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+/home/kartik/amazon-ml-2026/src/blocking.py:138: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3     157409 pairs (3.9s)
+      S1->S2 name_w      157472 pairs (9.7s)
+      S1->S2 addr_c3     160180 pairs (3.8s)
+      S1->S2 full_w      160320 pairs (22.6s)
+      S1->S3 name_c3     157409 pairs (3.6s)
+      S1->S3 name_w      157562 pairs (9.6s)
+      S1->S3 addr_c3     160180 pairs (3.8s)
+      S1->S3 full_w      160320 pairs (23.1s)
+[  585.2s] stage-A features (28): ['addr_c3_rank', 'full_w_rank', 'name_c3_rank', 'name_w_rank', 'n_views', 'cos_name_c3', 'cos_name_w', 'cos_addr_c3', 'cos_full_w', 'c_src', 'score', 'r_score', 'gap_score', 'r_name_c3', 'gap_name_c3', 'r_name_w', 'gap_name_w', 'r_addr_c3', 'gap_addr_c3', 'r_full_w', 'gap_full_w', 'grp_margin', 'grp_n', 'grp_n_close', 'rq_score', 'rq_gap', 'c_nq', 'mutual_best']
+[  585.8s] train/india block 0 (16032 S1): 951066 cands, 53683/55604 GT pairs found
+[  586.3s] train/india: phase A done in 134s | peak RSS so far 3356 MB
+[  588.7s] train/us: 23968 S1 sampled of 105820, 831493 docs (1400 singletons in sample)
+[  626.2s] train/us: doc matrices [('name_c3', (831493, 18749), 6698972), ('name_w', (831493, 102683), 1925621), ('addr_c3', (831493, 21335), 7138236), ('full_w', (831493, 268554), 4650715)] (37s)
+      S1->S2 name_c3     237550 pairs (8.2s)
+      S1->S2 name_w      237378 pairs (17.9s)
+      S1->S2 addr_c3     239640 pairs (8.4s)
+      S1->S2 full_w      239680 pairs (36.9s)
+      S1->S3 name_c3     237550 pairs (8.6s)
+      S1->S3 name_w      237458 pairs (18.4s)
+      S1->S3 addr_c3     239640 pairs (8.9s)
+      S1->S3 full_w      239680 pairs (36.8s)
+[  791.1s] train/us block 0 (23968 S1): 1441743 cands, 82127/82631 GT pairs found
+[  791.5s] train/us: phase A done in 205s | peak RSS so far 3356 MB
+ k     pairs  pairs_per_s1  pair_recall  entity_full_recall
+ 1  191877.0      4.796925     0.700271            0.356727
+ 3  607303.0     15.182575     0.952631            0.860319
+ 5 1106831.0     27.670775     0.975448            0.928999
+10 2392809.0     59.820225     0.982457            0.949064
+    cascade model: AP=0.94408 on 2392809 pairs, 28 features
+[  944.0s] cascade fitted on 2392809 pairs x 28 stage-A features in 152s
+[  944.1s] cascade: before mean 59.8 / median 60 per S1, after mean 7.8 / median 8, train pair recall 0.9764 (p90 10, max 10, zero-cand share 0.0004)
+[  972.8s] features (83): ['addr_c3_rank', 'full_w_rank', 'name_c3_rank', 'name_w_rank', 'n_views', 'cos_name_c3', 'cos_name_w', 'cos_addr_c3', 'cos_full_w', 'c_src', 'r_score', 'gap_score', 'r_name_c3', 'gap_name_c3', 'r_name_w', 'gap_name_w', 'r_addr_c3', 'gap_addr_c3', 'r_full_w', 'gap_full_w', 'grp_margin', 'grp_n', 'grp_n_close', 'rq_score', 'rq_gap', 'c_nq', 'mutual_best', 'jw_core', 'jw_name', 'tok_jacc', 'tok_cont', 'tok_nq', 'tok_nc', 'core_eq', 'core_in', 'first_eq', 'acronym', 'len_ratio', 'ph_eq', 'jw_ph', 'ph_jacc', 'nospace_eq', 'jw_nospace', 'indic_q', 'indic_c', 'q_cnt_core_s1', 'c_cnt_core_s1', 'q_cnt_ph_s1', 'c_cnt_ph_s1', 'q_cnt_nsp_s1', 'c_cnt_nsp_s1', 'q_cnt_addr_all', 'c_cnt_addr_all', 'q_cnt_addr_s1', 'c_cnt_addr_s1', 'c_cnt_core_all', 'addr_empty_c', 'addr_len_c', 'addr_len_q', 'extra_c', 'extra_q', 'extra_c_content', 'extra_q_content', 'legal_eq', 'legal_conflict', 'legal_missing', 'num_jacc', 'num_any', 'num_both', 'num_first_eq', 'num_first_jw', 'num_only_q', 'num_only_c', 'zip_eq', 'zip_conflict', 'vague_q', 'vague_c', 'jw_addr', 'city_fld_eq', 'zip_fld_eq', 'state_fld_eq', 'country_fld_eq', 'score']
+[  973.0s] train/india: stage B on 125511 kept pairs (7.8 per S1) in 29s
+[ 1001.5s] train/us: stage B on 186057 kept pairs (7.8 per S1) in 28s
+    fold 0: fit=148870 valid=103856 pos_rate=0.4345 (21s)
+    fold 1: fit=148774 valid=103856 pos_rate=0.4339 (21s)
+    fold 2: fit=148991 valid=103856 pos_rate=0.4312 (21s)
+[ 1065.2s] OOF (lightgbm): AUC=0.99913 AP=0.99892
+rule  one2one  thr      f05
+ thr     True 0.85 0.976531
+ thr    False 0.85 0.976417
+ thr     True 0.80 0.976294
+ thr     True 0.90 0.976211
+ thr    False 0.80 0.976166
+ thr    False 0.90 0.976114
+ thr     True 0.75 0.976098
+ thr    False 0.75 0.975970
+ thr     True 0.70 0.975289
+ thr    False 0.70 0.975168
+  best global threshold: {'rule': 'thr', 'one2one': True, 'thr': 0.85, 'f05': 0.9765305504597395}
+  expected-F: {'rule': 'expf', 'one2one': True, 'thr': nan, 'f05': 0.97471105258528}
+[ 1152.0s] OOF macro F0.5 (chosen) = 0.97653 with {'rule': 'thr', 'one2one': True, 'thr': 0.85, 'f05': 0.9765305504597395}
+  OOF breakdown:
+macro F0.5 = 0.97653   over 40000 S1 entities
+  S1 ids missing from pred: 0 | extra ids in pred: 0
+  singletons (0 true)  n=   2298 (  5.7%)  mean F=0.9648  pred-empty=96.5%
+  1 true match         n=   2124 (  5.3%)  mean F=0.9315  pred-empty=5.6%
+  2 true matches       n=   6717 ( 16.8%)  mean F=0.9729  pred-empty=0.7%
+  3+ true matches      n=  28861 ( 72.2%)  mean F=0.9816  pred-empty=0.1%
+  top features: {'jw_name': 2649, 'cos_full_w': 2234, 'addr_len_q': 2095, 'gap_full_w': 1876, 'jw_ph': 1609, 'jw_addr': 1505, 'len_ratio': 1461, 'gap_addr_c3': 1416, 'c_cnt_core_all': 1267, 'addr_len_c': 1212, 'grp_n': 1134, 'jw_nospace': 1118, 'cos_addr_c3': 1063, 'c_nq': 1032, 'grp_n_close': 984}
+[ 1185.6s] model fitted | peak RSS so far 3356 MB
+[ 1220.8s] test/india: doc matrices [('name_c3', (281558, 18749), 1999592), ('name_w', (281558, 102683), 600152), ('addr_c3', (281558, 21335), 3479532), ('full_w', (281558, 268554), 2087655)] (35s)
+      S1->S2 name_c3     343934 pairs (4.4s)
+      S1->S2 name_w      339229 pairs (17.3s)
+      S1->S2 addr_c3     350404 pairs (4.9s)
+      S1->S2 full_w      350593 pairs (43.8s)
+      S1->S3 name_c3     343939 pairs (4.4s)
+      S1->S3 name_w      339971 pairs (17.4s)
+      S1->S3 addr_c3     350398 pairs (5.0s)
+      S1->S3 full_w      350587 pairs (43.3s)
+[ 1423.4s] test/india block 0 (35060 S1): 2091016 cands -> 206817 kept (5.9/S1), 32893 S1 with matches
+[ 1424.0s] test/india: global one-to-one removed 0 pairs (records kept under several S1s across blocks)
+[ 1424.6s] test/india: done in 239s | peak RSS so far 3356 MB
+[ 1459.6s] test/us: doc matrices [('name_c3', (422917, 18749), 3408614), ('name_w', (422917, 102683), 981508), ('addr_c3', (422917, 21335), 3629274), ('full_w', (422917, 268554), 2368004)] (35s)
+      S1->S2 name_c3     495685 pairs (7.2s)
+      S1->S2 name_w      492615 pairs (26.1s)
+      S1->S2 addr_c3     499960 pairs (7.7s)
+      S1->S2 full_w      499991 pairs (62.4s)
+      S1->S3 name_c3     495687 pairs (7.2s)
+      S1->S3 name_w      493174 pairs (26.0s)
+      S1->S3 addr_c3     499960 pairs (7.9s)
+      S1->S3 full_w      499999 pairs (62.6s)
+[ 1744.1s] test/us block 0 (50000 S1): 2988686 cands -> 326435 kept (6.5/S1), 47191 S1 with matches
+[ 1765.0s] test/us block 1 (2904 S1): 173238 cands -> 23919 kept (8.2/S1), 2769 S1 with matches
+[ 1766.0s] test/us: global one-to-one removed 5 pairs (records kept under several S1s across blocks)
+[ 1766.8s] test/us: done in 342s | peak RSS so far 3356 MB
+          n_s1  empty_rate  mean_matches  cand_mean  cand_median  o2o_removed  key_sure  key_sure_decided  prune_threshold
+country                                                                                                                   
+india    35060    0.061808      3.238363   5.898945          6.0            0         0                 0              NaN
+us       52904    0.055648      3.350352   6.622448          6.0            5         0                 0              NaN
+[ 1766.8s] test: 87964 S1 rows written | predicted-empty=5.8% | mean matches=3.31 | candidates/S1 mean 6.3 median 6 p90 10 max 10
+macro F0.5 = 0.98122   over 87964 S1 entities
+  S1 ids missing from pred: 0 | extra ids in pred: 0
+  singletons (0 true)  n=   4840 (  5.5%)  mean F=0.9826  pred-empty=98.3%
+  1 true match         n=   4728 (  5.4%)  mean F=0.9457  pred-empty=4.8%
+  2 true matches       n=  15010 ( 17.1%)  mean F=0.9782  pred-empty=0.6%
+  3+ true matches      n=  63386 ( 72.1%)  mean F=0.9845  pred-empty=0.1%
+[ 1768.8s] copied report + matching_results to runs/day_n3_slice_mix/ (commit report.json + stdout.txt, not the tsv)
+[ 1768.8s] done | peak RSS 3356 MB
+EXIT=0
