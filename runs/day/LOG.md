@@ -291,3 +291,11 @@ Plan (QUEUE 1, P0 fast lane):
    (Jarvis) OOF curve at low t for the unseen-like 1-true bucket. Or a leave-one-country-out OOF: train US, predict India
    OOF at full density. Don't pick a floor from the xc_us curve alone.
 4. QUEUE 2d (iii) R3 (sure-key recall matching) still open; low value now that lower-only R2 works.
+
+## Session 9 — 26 Sep 16:59 (Session 5 of this driver)
+- Start: chain4 running n3ph slice_mix (its bash SIGSTOPped by chain6), chain6 waits (n3ka next), chain5 waits (n4ph).
+  Jarvis ISSUES 1 was already ported (14:30). Plan: NEXT 3 (thr-adapt floor evidence) while n3ph runs.
+- 17:03 runs/day/floor_evidence.md: in-distribution OOF, a low t costs 1.4–2.2x more at FULL density (v2 train pass)
+  than on the slice (t 0.03: −0.105 vs −0.047). Transferred to xc_us, the unfloored t 0.03 could be ≈ −0.04 at full
+  density; floor 0.30 ≈ +0.013. New flag `--thr-adapt-floor` (default 0.02 = unchanged). Slice xc_us with floor 0.30:
+  0.9497 (unfloored 0.9480, best 0.9511). RECOMMEND `--thr-adapt --thr-adapt-floor 0.30` for full-data files (HQ / jv1).

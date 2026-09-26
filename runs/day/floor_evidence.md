@@ -1,4 +1,4 @@
-# --thr-adapt floor: evidence (loop session 9, 26 Sep ~17:15). NEXT 3 of session 8.
+# --thr-adapt floor: evidence (loop session 9, 26 Sep ~17:03). NEXT 3 of session 8.
 
 Question: xc_us picks t = 0.03 on the slice. Is a low t safe at FULL density (~12x more same-name decoys)?
 Method (label-free w.r.t. the test): in-distribution OOF curves F0.5(t) − F0.5(t_ref) per country, full-density v2 train
