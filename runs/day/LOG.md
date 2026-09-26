@@ -216,3 +216,7 @@ Plan (QUEUE 1, P0 fast lane):
 3. n3 vs base is not settled: the xc_us noise (±0.007) is larger than the n3 effect. Consider 2 seeds (or bagging) for
    the xc_us screens before any KEEP/REVERT that hinges on xc_us.
 4. AML_GENERIC=v2fr mode exists (v2 set + French words) but has NOT been run. Low priority now.
+- 15:36 n3f slice_mix DONE: 0.9810, OOF 0.97637 -> n3f Q=0.9629: REVERT (AML_GENERIC=v2 stays an opt-in env switch
+  only; default behaviour = HEAD). chain4 continues: n3xin (first run with --save-probs) -> n3k -> n3ph -> n3r -> gateA
+  -> gateB. Champion unchanged (cycle 0/base). n3 status: HOLD, pending xc_in and the threshold sweep (NEXT 2).
+- Session 6 ends ~15:37. Running: chain4 (tmux `chain4`), sysmon, gpulog. chain3 has exited.
