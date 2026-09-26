@@ -159,3 +159,29 @@ Plan (QUEUE 1, P0 fast lane):
   Jarvis note: reverse top-k on --topk-device cuda is ~5x slower than CPU sparse_dot_topn at full density (docs as
   queries); slices are small enough that n3r keeps cuda.
 - Session 5 ends 14:31: chain3 running n3 slice_mix; nothing else of ours running besides sysmon/gpulog.
+
+## Session 6 — 26 Sep 14:27 (Session 2 of this driver)
+- chain3 running n3 slice_mix (started 14:25; store build first).
+- n3 xc_us drop analysis (scripts/day/diff_runs.py; output runs/day/n3_vs_base_xc_us.txt): n3 vs base on India test
+  loses 2965 TP and gains 1443. Only 62 of the lost TPs were NOT n3 candidates, so blocking is not the cause (n3's
+  candidate recall is actually higher, 0.9534 vs 0.9516). The model now rejects them: 67% of lost TPs have an
+  Indic-script candidate name (1998 lost vs 290 gained). TP count on Indic-name GT pairs drops 19478 -> 17770 (-9%);
+  ASCII names are net +148. scripts/day/norm_diff.py: for 759 of 800 lost-pair records the v2 and HEAD normalisers
+  give IDENTICAL name/core/legal/address (the other 41 are only leading-zero or "tg" -> "telangan"). So the change
+  comes from the model trained on US with the new features, not from the Indic records' own features. The only
+  features.py diff vs v2 is the larger `generic` token set (dba/fka/aka/shri/sri/dr/mr + French words).
+- Plan: ablation n3f = n3 stores + v2's generic set (new env switch AML_GENERIC=v2 in src/features.py; default = HEAD
+  behaviour, so the running job is not affected). If n3f recovers xc_us -> the generic set is the cause (US-trained
+  extra_*_content shifts the decision surface for India transliterations); if not -> the normalisation (US training
+  pairs look different) is. Then n3 xc_in (never run) for a full Q.
+- scripts/day/chain4.sh (tmux `chain4`) waits for chain3 to exit. chain3's remaining steps n3k/n3ph/n3r/gateA/gateB are
+  skipped via placeholder .done markers (listed in runs/day/chain/.chain4_placeholders; chain4 removes them at start).
+  chain3 will print "ALL DONE" even though it skipped them; ignore that. chain4 order: n3f (xc_us, slice_mix) ->
+  n3xin -> n3k -> n3ph -> n3r -> gateA -> gateB.
+### NEXT (session 7+)
+1. After a reboot: relaunch sysmon + gpulog and **chain4** (not chain3). If .chain4_placeholders still exists and n3.done
+   exists, just start chain4. If n3.done is missing: remove the placeholders listed there, then start chain3.
+2. n3f vs n3 on xc_us (n3 0.9273, base 0.9344), then on slice_mix. Decide the generic set. If AML_GENERIC=v2 wins on
+   xc_us with no mix loss: make v2's set the default (only for India/US? the France words matter only for France,
+   which the slices can't measure. Option: generic = v2 set + French words only, dropping dba/fka/aka/shri/sri/dr/mr/
+   ta/as/www). Write the result for HQ in runs/day/n3_NOTES.md.

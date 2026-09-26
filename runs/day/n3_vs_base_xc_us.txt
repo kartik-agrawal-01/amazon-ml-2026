@@ -1,0 +1,8 @@
+GT 121483 | A pred 104388 TP 103781 | B pred 102771 TP 102259
+cand recall A 0.9516 B 0.9534 | cands A 179326 B 184286
+B vs A: TP lost 2965 (not a B candidate: 62) | TP gained 1443 (not an A candidate: 102) | FP removed 179 | FP added 84
+
+== share by candidate-side tag (lost TP / gained TP / all GT)
+  nonascii_name  lost  1998  gained   290  GT  28491  A-TP  19478  B-TP  17770
+  empty_addr     lost    97  gained   135  GT   4330  A-TP   1880  B-TP   1918
+  ascii          lost   870  gained  1018  GT  88662  A-TP  82423  B-TP  82571
