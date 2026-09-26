@@ -321,3 +321,13 @@ Plan (QUEUE 1, P0 fast lane):
    edit it while it runs; write a new chain script instead that SIGSTOPs chain4 like chain6 does).
 3. n4ph (chain5) vs n3ph when it finishes; evaluate with --key-rules 0.96 --thr-adapt too, or compare to n3ph.
 4. xc_us noise ±0.007: a second-seed xc_us of n3ka would confirm the +0.019 (it is ~3x the noise already).
+
+## Session 10 — 26 Sep 18:10 (Session 6 of this driver)
+- Start: chain6 running n3ka xc_in (started ~18:09), chain4 bash SIGSTOPped (n3ph finished; n3ph.done is touched when it
+  resumes), chain5 waits (n4ph). No guard.log file exists (sysmon.log only). Git pull clean.
+- Plan: NEXT 2 = gate A/B BEFORE n3r so the box can build v3 (row-6 recipe, full data, fast lane) as the Jarvis fallback.
+  Placeholder runs/day/chain/n3r.done (listed in .chain7_placeholders) -> chain4 goes n3ph.done -> gateA (DUTY 0.3) -> gateB.
+  chain5 (n4ph) follows chain4 as before. New tmux chain7 (scripts/day/chain7.sh) waits for chain4/5/6, removes the
+  placeholder, runs n3r = champion flags + --reverse-k 3 --reverse-bypass 2 (xc_us, slice_mix) -> compare with row 6.
+- scripts/day/v3.sh (NOT launched): full data, store cache_n3 (new), cands_v2 unions, --key-rules 0.96 --thr-adapt
+  --thr-adapt-floor 0.30, --feat-cache feats_v3, --save-probs, then the validator. Launch only after gate B passes.
