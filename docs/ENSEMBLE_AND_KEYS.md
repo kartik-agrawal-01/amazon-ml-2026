@@ -113,3 +113,25 @@ keys (India's key-rule coverage is already 93–99%). It's fuzzy: Indic scripts,
    after `decide`. Calibrate on the full-density train pass with `kq_ctx` = all S1 of the country.
 4. India recall: the largest remaining loss (≈0.35 pairs/S1). Blocking k and cascade cap for India, name_ph view.
    Evaluate at full density, where the train pass's per-country pair recall after the cascade is the metric.
+
+## 7. Result of the box's check (QUEUE 2b, runs/day/keys_check.md, 12:20)
+
+For the 130,678 sure key pairs v2 missed: was the pair in v2's candidate set (the model rejected it) or cut earlier
+by blocking/the cascade?
+
+| country | missed | cut before the model | model-rejected |
+|---|---|---|---|
+| France | 56,600 | **71%** | 29% |
+| India | 49,283 | 48% | 52% |
+| US | 24,795 | 16% | **84%** |
+
+By rule: France `disjoint|a_eq|invented` 76% cut, `core_eq|num_eq` 84% cut, `nsp_eq|num_eq` 99.9% cut; India
+`nsp_eq|num_eq` 99% cut, `core_eq|c_empty` 94% cut, `core_eq|num_eq` 44% cut (90% cut when v2 gave the record to
+another S1). US misses are almost all model rejections (`swap1|a_eq`: 98–99% rejected).
+
+Reading: France's and much of India's misses are **candidate-generation** losses. The model never saw those pairs,
+so their precision is the calibrated rule rate (~0.96), not lower. The US misses are the model's own judgement and
+may well be the rule's ~3–5% negatives. Consequences (26 Sep 13:40): key pairs and reverse blocking enter as
+post-cascade candidates (Jarvis lane item 1b; box QUEUE item 4 moved there). No forcing for US rules. An ens2c
+variant restricted to the CUT pairs would add France ~40K + India ~24K + US ~4K pairs, estimated +0.45–0.5 pt with
+the one-to-one fix, still below the 1-pt upload bar.

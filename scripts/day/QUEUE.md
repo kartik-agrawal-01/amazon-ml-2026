@@ -10,7 +10,8 @@ country. (2) Train GT has 3.46 true matches per S1 in both US and India. v2 pred
 UPLOAD POLICY (HQ, 26 Sep 12:30): uploads are spent only on files expected to beat the best LB by ≥ 1 pt. So do
 NOT run a full-data test pass per item: implement and evaluate items 2, 3, 4 (and 5 if ready) separately on the
 full-density train pass / slices, then run ONE full-data test pass with every KEEP → v3 = France fixes + global
-one-to-one + key rules (+ India recall). ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
+one-to-one (items 2–3; key candidates and wider blocking now run on the Jarvis lane, scripts/jarvis/QUEUE.md).
+ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
 
 1. [P0] FAST LANE + correctness gate (see DAY_TASK.md). Nothing else until it passes.
 2. [P0.5, correctness — KEEP without the Q rule] GLOBAL one-to-one. v2 applies one-to-one per 100K-S1 block only. In
@@ -45,19 +46,9 @@ one-to-one + key rules (+ India recall). ens2c (LOG #3: one-to-one + key pairs o
       `disjoint|a_eq|invented` in France vs 92% in US; target ≥ 85%). SUBMIT-READY if the train-pass OOF holds; HQ
       decides the upload.
    d) Save per-pair test probabilities (P0-c).
-4. [Keys — GO for (a); (b) force_mask only if item 2b shows the France misses were mostly CUT before the model
-   (not model-rejected). No LB test is coming: ens2c is held.] Wire
-   `src/hq_keys.py` (self-contained; `python -m src.hq_keys` self-test). Per country: `record_keys` for ALL S1 (kq_ctx)
-   and all docs; per block `key_pairs(kq_block, kd, kq_ctx=kq_all)`.
-   a) TRAIN pass: `calibrate(P, y)` per country → store the rule table in model.joblib. Union the pairs of rules with
-      P ≥ 0.96 (`apply_rules`) into the post-cascade candidates. They bypass `--cascade-top` (France S1s all sit at the
-      cap of 10) and are deduplicated with the existing ones. Then stage B and the model train on them as usual.
-   b) TEST pass: same union (an unseen country gets the MINIMUM rate over the train countries: `rules_for_country`), so
-      they reach stage B, the model and candidate_pairs.tsv. After `decide`: `force_mask(..., bound_min=0.80)` adds sure
-      pairs the model still rejects, but only in rules where the model's coverage is far below the calibrated rate.
-      Then run global one-to-one.
-   c) Evaluate: full-density train-pass OOF per country, test coverage of sure pairs per rule and country, mean
-      matches/S1 per country, candidates/S1 (expect +0.1 to +0.3/S1). Full-data file → SUBMIT-READY.
+4. [Keys — MOVED to the Jarvis lane (scripts/jarvis/QUEUE.md item 1b): SKIP on the box, mark it SKIPPED.]
+   The loop's 2b result shows why: most sure pairs v2 misses were cut before the model (France 71%, India 48%),
+   so they must enter as post-cascade candidates, and Jarvis has the RAM for that plus reverse blocking.
 5. [India recall — moved up; the largest measured loss] India: 3.12 predicted matches/S1 vs 3.465 in the train GT (US
    3.35 vs 3.459). That is ≈ 0.3 true pairs/S1 missing on 47% of test. Exact keys don't fix it: India's key-rule
    coverage is already 93–99%, so the loss is fuzzy (Indic scripts, landmark addresses, heavy reordering). Full-density
@@ -65,13 +56,8 @@ one-to-one + key rules (+ India recall). ens2c (LOG #3: one-to-one + key pairs o
    a) Decompose India's missed GT pairs on the full-density train pass: blocking miss / cascade cut / model FN / model
       FP, by category (Indic-script name, empty candidate address, name-token Jaccard bins, address Jaccard bins,
       transliterated legal forms). Write `runs/day/india_recall.md`.
-   b) Attack the biggest bucket: India-only k 10 → 20 on the name views (GPU top-k is cheap), the `name_ph` view back
-      for India only, and/or India cascade_top 12. Also try REVERSE blocking (infra's idea): each S2/S3 record
-      queries its top-3 S1 per view, and those pairs join the S1's candidates after the cascade, like the key
-      pairs in item 4. It targets the decoy crowding in France too (~16 same-name decoys per S1, cap 10). Use
-      the candidate-augmentation path (new passes only). Item 2b's cut-vs-rejected counts say which country
-      needs it. Metric: India pair recall after the cascade + India OOF F0.5 on the
-      full-density train pass. Promote at India OOF +0.5 pt. Keep final cands/S1 ≤ 12 and report it.
+   b) MOVED to the Jarvis lane (its item 1: 6 views, k 15, key + reverse candidates, 600K train S1 at full
+      density). On the box, do 5a only; mark 5 DONE after 5a.
 6. [France] Country-neutral model: adversarial validation (classifier France-vs-US/India pairs on the pair features),
    drop or re-normalise the most country-shifted features (e.g. rank/percentile within country instead of raw
    counts); evaluate Q. Also: 36% of French S2/S3 addresses have no region/département while S1 always has one
