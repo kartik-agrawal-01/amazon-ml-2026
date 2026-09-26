@@ -13,6 +13,7 @@ and Malayalam share the same layout (same offset = same phoneme). Pure Python, n
 """
 from __future__ import annotations
 
+import os
 import re
 import unicodedata
 
@@ -113,6 +114,10 @@ def to_latin(s: str) -> str:
 _ph_rules = [(r"ph", "f"), (r"chh", "ch"), (r"sh", "s"), (r"ck", "k"), (r"c(?=[eiy])", "s"), (r"c", "k"), (r"q", "k"),
              (r"x", "ks"), (r"w", "v"), (r"z", "j"), (r"th", "t"), (r"dh", "d"), (r"bh", "b"), (r"gh", "g"),
              (r"kh", "k"), (r"jh", "j"), (r"ny", "n"), (r"ng", "n"), (r"y", "i")]
+# AML_PH=2 (day loop s7, opt-in): Tamil script has no voiced/voiceless or f contrast ("kulopal pilak" = "global black",
+# "hpavunteshn" = "foundation"), so fold hp -> f and g/b/d -> k/p/t in the key.
+if os.environ.get("AML_PH", "") == "2":
+    _ph_rules = [(r"hp", "f")] + _ph_rules + [(r"g", "k"), (r"b", "p"), (r"d", "t")]
 _ph_compiled = [(re.compile(p), r) for p, r in _ph_rules]
 
 

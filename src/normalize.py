@@ -15,6 +15,7 @@ Adds to the record table:
 """
 from __future__ import annotations
 
+import os
 import re
 import unicodedata
 
@@ -48,6 +49,13 @@ LEGAL_CANON = {
     "de": None, "and": None, "et": None,  # None = drop only when trailing after a legal token
 }
 LEGAL_CANON.pop("as", None)
+# AML_PH=2 (day loop s7, opt-in): Tamil/Malayalam/Telugu transliterations of "private limited" that were kept in the core
+# name (runs/day/india_blocked_sample.md: "piraivet limitet", "praivarr limirrad").
+if os.environ.get("AML_PH", "") == "2":
+    LEGAL_CANON.update({t: "pvt" for t in ["piraivet", "piraivett", "pirayvet", "praivarr", "praivar",
+                                          "praivett", "praivettu", "piraivettu", "praivetu", "prayvet"]})
+    LEGAL_CANON.update({t: "ltd" for t in ["limirrad", "limirrat", "limitettu", "limitedu", "limited", "limittet",
+                                          "limitat", "limitedd", "limirred", "limitetu", "limiteddu"]})
 # legal forms that lead the name (5.7% of French S2/S3 names, 0.01% of S1: "SARL JEUNE PHARMACIE") + honorifics
 NAME_PREFIXES = {"the", "ms", "messrs", "m s", "sarl", "sas", "sasu", "sa", "eurl", "sci", "snc", "scp", "selarl"}
 # name-token canon applied inside fold(): French "et" is the "&"/"and" variant (1.1% of FR S2/S3 names vs 0.01% of S1);

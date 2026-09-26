@@ -57,7 +57,7 @@
 Blocked GT pairs per S1-with-a-blocked-pair: 1.38; S1 with >= 1 blocked pair: 10,045
 Cascade-cut GT pairs: 2,919. Model FN p quantiles (10/50/90%): [0.053, 0.411, 0.656]
 
-## Reading (loop, 26 Sep 16:15)
+## Reading (loop, 26 Sep 15:50)
 - India loses 11.4% of GT pairs; **59% of the loss is blocking** (6.7% of GT), 12% cascade (1.4%), 29% model FN (3.3%).
   Precision is fine (0.84% FP/GT). So India recall = candidate generation first.
 - Blocking misses sit where BOTH name and address differ: Indic-script candidate names (20.5% blocked vs 3.7% ASCII;

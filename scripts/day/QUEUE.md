@@ -36,7 +36,7 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    `output_v2_train/oof_pairs.tsv.gz` (or any dump of v2's train-pass OOF pairs) exists, compute OOF F0.5 per country
    at thr 0.70 + one-to-one on that sample, plus predicted matches/S1 and empty rate per country →
    `runs/day/v2_oof_by_country.md`. If no dump exists, write that in one line and stop (do NOT retrain v2).
-   — DONE 26 Sep 16:00 (loop): runs/day/v2_oof_by_country.md. OOF India 0.9476 / US 0.9722; India cand recall 0.919 vs US 0.976.
+   — DONE 26 Sep 15:45 (loop): runs/day/v2_oof_by_country.md. OOF India 0.9476 / US 0.9722; India cand recall 0.919 vs US 0.976.
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
    to "north 32" (5% of French addresses); zero-padded house numbers (also 3% of US / 5% of India S2/S3); région vs
@@ -65,7 +65,7 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    a) Decompose India's missed GT pairs on the full-density train pass: blocking miss / cascade cut / model FN / model
       FP, by category (Indic-script name, empty candidate address, name-token Jaccard bins, address Jaccard bins,
       transliterated legal forms). Write `runs/day/india_recall.md`.
-      — DONE 26 Sep 16:15 (loop): runs/day/india_recall.md. Lost 11.4% of GT = blocked 6.7% / cascade 1.4% / model FN 3.3%;
+      — DONE 26 Sep 15:50 (loop): runs/day/india_recall.md. Lost 11.4% of GT = blocked 6.7% / cascade 1.4% / model FN 3.3%;
         Indic cand names 20.5% blocked; empty cand address TP rate 43%.
    b) Slice screens on the box (n3ph = name_ph back, n3r = reverse blocking) are fine. The full-density
       evaluation runs on Jarvis (item 1: 6 views, k 15, keys + reverse, 600K train S1).

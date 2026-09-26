@@ -220,3 +220,38 @@ Plan (QUEUE 1, P0 fast lane):
   only; default behaviour = HEAD). chain4 continues: n3xin (first run with --save-probs) -> n3k -> n3ph -> n3r -> gateA
   -> gateB. Champion unchanged (cycle 0/base). n3 status: HOLD, pending xc_in and the threshold sweep (NEXT 2).
 - Session 6 ends ~15:37. Running: chain4 (tmux `chain4`), sysmon, gpulog. chain3 has exited.
+
+## Session 7 — 26 Sep 15:37 (Session 3 of this driver)
+- chain4 running n3xin at start. git auth OK.
+- 15:45 QUEUE 2c DONE -> runs/day/v2_oof_by_country.md (scripts/day/v2_oof_by_country.py on output_v2_train/oof_pairs.tsv.gz):
+  v2 OOF India 0.9476 / US 0.9722 (all 0.96234 = logged 0.9623). Pred matches/S1 India 3.10 vs GT 3.46; US 3.27 vs 3.45.
+  India GT pairs reaching the model: 0.919 (US 0.976).
+- 15:50 QUEUE 5a DONE -> runs/day/india_recall.md (scripts/day/india_recall.py: v2's FULL-DENSITY India union from
+  cands_v2/train_india__b000 (gate A cache) + OOF dump). India loses 11.4% of GT: blocked 6.7%, cascade 1.4%, model FN
+  3.3% (FP 0.8%). Indic-script candidate names: 20.5% blocked (ASCII 3.7%). Empty candidate address: TP rate 43%.
+- 15:52 offline OOF sweep (scripts/day/oof_rule_sweep.py): a separate lower threshold for empty-address candidates
+  LOSES (0.30: −0.0043; 0.60: −0.0003). TRIED & FAILED — don't retry. (Script's per-country columns are broken; ALL valid.)
+- 16:00 runs/day/india_blocked_sample.md (40 random blocked India GT pairs). Two patterns:
+  (a) candidate = same name + legal words, EMPTY address ("Sai Solutions Pvt", "United Consultancy Private Limited"):
+      the ph key is IDENTICAL, but at full density the top-10 of each view is full of same-name decoys. Key rules
+      (n3k) / name_ph can help.
+  (b) Indic-script names: Devanagari/Gujarati already give identical ph keys ("sautha pavara" -> "st pvr" = "south
+      power"), but Tamil/Malayalam do not: their transliterated legal words stay in the core name ("piraivet",
+      "praivarr limirrad"), and Tamil has no g/k, b/p, d/t or f contrast ("kulopal pilak tek" = "global black tech").
+- NEW opt-in switch AML_PH=2 (src/normalize.py + src/translit.py; default = HEAD behaviour, the running chain and the
+  _n3 stores are unaffected): extra Tamil/Malayalam/Telugu legal-form spellings + hp->f + voicing fold g/b/d -> k/p/t in
+  phonetic_key. Only the store build uses these, so a run needs AML_PH=2 only while its stores are built (new
+  suffix _n4). Check: "குளோபல் பிளாக் டெக் பிரைவேட் லிமிடெட்" -> core "kulopal pilak tek", ph "klpl plk tk" =
+  "Global Black Tech Private Limited".
+- 16:05 n3 xc_in DONE: 0.9819 (Q0 value 0.9810), OOF 0.96962, thr 0.85 -> n3 Q = 0.9652 (base 0.9669). n3 stays HOLD
+  (the xc_us drop dominates). thr_sweep on n3 xc_in reproduces 0.9819 at the chosen 0.85, and 0.85 is the peak
+  (0.80: 0.9818, 0.90: 0.9816, 0.70: 0.9807). For India->US the OOF-chosen threshold is right.
+- tmux chain5 (scripts/day/chain5.sh) waits for chain4 to exit, then runs n4ph = AML_PH=2, _n4 stores, views +name_ph,
+  xc_us + slice_mix. Compare it with n3ph.
+### NEXT (session 8+)
+1. After a reboot: relaunch sysmon, gpulog, chain4 and chain5 (both skip steps that have a .done marker).
+2. n3k / n3ph / n3r: after each one, run q_table + `PYTHONPATH=. python scripts/day/thr_sweep.py data_xc_us output_day_<tag>_xc_us`
+   (not valid for n3k, which uses key rules). The xc_us threshold curve is the France-relevant question (session 6 NEXT 2).
+3. n4ph vs n3ph when chain5 finishes. If n4ph wins on xc_us with mix flat -> run its xc_in; KEEP -> AML_PH=2 behaviour
+   becomes the default (remove the switch, and tell HQ in LOG: it changes normalize.py = store rebuild).
+4. Gate A/B are at the end of chain4 (hours away). If HQ needs v3 sooner, consider running the gate before n3r.
