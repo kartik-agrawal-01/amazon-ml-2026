@@ -256,6 +256,31 @@ class CandCache:
         u["c"] = c
         return u
 
+    def _aug_path(self, tag: str, bi: int, view: str) -> str:
+        return os.path.join(self.root, f"{self._fname(tag)}__b{bi:03d}__aug_{view}.parquet")
+
+    def load_aug(self, tag: str, bi: int, view: str) -> Optional[pd.DataFrame]:
+        """Long-format top-k part (q, c, view, rank) of an extra view computed on top of the cached union."""
+        p = self._aug_path(tag, bi, view)
+        if not os.path.exists(p):
+            return None
+        a = pd.read_parquet(p)
+        q, c = a["q"].to_numpy().astype(np.int64), a["c"].to_numpy().astype(np.int64)
+        m = self._drid_map.get(tag)
+        if m is not None:
+            c = m[c]
+            ok = c >= 0
+            q, c, a = q[ok], c[ok], a[ok]
+        return pd.DataFrame({"q": q, "c": c, "view": view, "rank": a["rank"].to_numpy()})
+
+    def save_aug(self, tag: str, bi: int, view: str, part: pd.DataFrame) -> None:
+        if self._drid_map.get(tag) is not None:
+            return
+        p = self._aug_path(tag, bi, view)
+        pd.DataFrame({"q": part["q"].astype(np.int32), "c": part["c"].astype(np.int32),
+                      "rank": part["rank"].astype(np.int16)}).to_parquet(p + ".tmp", index=False)
+        os.replace(p + ".tmp", p)
+
     def save(self, tag: str, bi: int, q_rid: np.ndarray, union: pd.DataFrame) -> None:
         pq, pr = self._paths(tag, bi)
         if self._drid_map.get(tag) is not None:
@@ -315,8 +340,12 @@ class CountryContext:
             del parts
             if cache is not None:
                 cache.save(self.tag, bi, q_rid, cands)
-        elif verbose:
-            log(f"{self.tag} block {bi}: union loaded from the candidate cache ({len(cands)} pairs, top-k skipped)")
+        else:
+            if verbose:
+                log(f"{self.tag} block {bi}: union loaded from the candidate cache ({len(cands)} pairs, top-k skipped)")
+            missing = [v for v in self.views if f"{v}_rank" not in cands.columns]
+            if missing:  # candidate augmentation: top-k only for the views the cached union lacks
+                cands = self._augment(cands, cache, bi, missing, q_mats, k, verbose)
         if union_only:
             return cands, qb, q_emb
         if extra is not None:
@@ -326,6 +355,29 @@ class CountryContext:
                 log(f"{self.tag} block {bi}: key pairs: {int(cands['key_sure'].sum())} sure ({len(cands) - n0} new to the union)")
         cands = stage_a(cands, self.d_src, q_mats, self.d_mats, self.views, q_emb, self.d_emb)
         return cands, qb, q_emb
+
+
+    def _augment(self, cands, cache, bi, missing, q_mats, k, verbose):
+        parts = []
+        for v in missing:
+            a = cache.load_aug(self.tag, bi, v)
+            if a is None:
+                a_parts = lexical_candidates(q_mats, self.d_mats, self.d_src, k, [v], verbose=verbose,
+                                             n_threads=self.n_jobs)
+                a = pd.concat(a_parts, ignore_index=True) if a_parts else pd.DataFrame(
+                    {"q": np.zeros(0, np.int64), "c": np.zeros(0, np.int64), "view": v, "rank": np.zeros(0, np.int16)})
+                cache.save_aug(self.tag, bi, v, a)
+            parts.append(a)
+        new = union_candidates(parts, missing).drop(columns="n_views")
+        n0 = len(cands)
+        u = cands.drop(columns="n_views").merge(new, on=["q", "c"], how="outer")
+        rank_cols = [f"{v}_rank" for v in self.views if f"{v}_rank" in u.columns]
+        u[rank_cols] = u[rank_cols].fillna(99).astype(np.int16)
+        u["n_views"] = (u[rank_cols] < 99).sum(axis=1).astype(np.int8)
+        u = u.sort_values(["q", "c"], kind="stable").reset_index(drop=True)
+        if verbose:
+            log(f"{self.tag} block {bi}: augmented with {missing}: {len(u) - n0} new pairs ({len(u)} total)")
+        return u
 
 
 def need_cols(dense: bool) -> List[str]:
@@ -445,9 +497,27 @@ def main() -> None:
     if a.vec_cache and os.path.exists(a.vec_cache):
         import joblib
         vc = joblib.load(a.vec_cache)
+        base_key = {k: v for k, v in (vc.get("key") or {}).items() if k != "views"}
+        missing = [v for v in views if v not in vc["vecs"]]
         if vc.get("key") == vec_key:
             vecs = vc["vecs"]
             log(f"vectorisers loaded from {a.vec_cache}")
+        elif base_key == {k: v for k, v in vec_key.items() if k != "views"}:
+            # views are fitted independently -> reuse the cached ones, fit only the new views; the reference file is
+            # never overwritten (the extended set goes to <vec_cache>+<views>.joblib)
+            ext = a.vec_cache.replace(".joblib", "") + "+" + "+".join(sorted(missing)) + ".joblib"
+            if missing and os.path.exists(ext):
+                vecs = {v: joblib.load(ext)["vecs"][v] for v in views}
+                log(f"vectorisers loaded from {a.vec_cache} + {ext}")
+            else:
+                vecs = {v: vc["vecs"][v] for v in views if v in vc["vecs"]}
+                if missing:
+                    sample = text_sample([meta_tr, meta_te], a.vec_sample, a.seed)
+                    vecs.update(fit_vectorizers(sample, missing, max_df=a.max_df, seed=a.seed))
+                    del sample
+                    joblib.dump(dict(key=vec_key, vecs=vecs), ext)
+                vecs = {v: vecs[v] for v in views}
+                log(f"vectorisers loaded from {a.vec_cache}; fitted {missing}")
         else:
             log(f"vec-cache {a.vec_cache} was fitted with {vc.get('key')} != {vec_key} -> refitting")
     if vecs is None:
@@ -457,6 +527,7 @@ def main() -> None:
         del sample
         if a.vec_cache:
             import joblib
+            os.makedirs(os.path.dirname(os.path.abspath(a.vec_cache)), exist_ok=True)
             joblib.dump(dict(key=vec_key, vecs=vecs), a.vec_cache)
     release_memory()
     cache = CandCache(a.cand_cache) if a.cand_cache else None
