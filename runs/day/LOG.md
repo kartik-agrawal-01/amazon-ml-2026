@@ -231,7 +231,7 @@ Plan (QUEUE 1, P0 fast lane):
   3.3% (FP 0.8%). Indic-script candidate names: 20.5% blocked (ASCII 3.7%). Empty candidate address: TP rate 43%.
 - 15:52 offline OOF sweep (scripts/day/oof_rule_sweep.py): a separate lower threshold for empty-address candidates
   LOSES (0.30: −0.0043; 0.60: −0.0003). TRIED & FAILED — don't retry. (Script's per-country columns are broken; ALL valid.)
-- 16:00 runs/day/india_blocked_sample.md (40 random blocked India GT pairs). Two patterns:
+- 15:56 runs/day/india_blocked_sample.md (40 random blocked India GT pairs). Two patterns:
   (a) candidate = same name + legal words, EMPTY address ("Sai Solutions Pvt", "United Consultancy Private Limited"):
       the ph key is IDENTICAL, but at full density the top-10 of each view is full of same-name decoys. Key rules
       (n3k) / name_ph can help.
@@ -243,7 +243,7 @@ Plan (QUEUE 1, P0 fast lane):
   phonetic_key. Only the store build uses these, so a run needs AML_PH=2 only while its stores are built (new
   suffix _n4). Check: "குளோபல் பிளாக் டெக் பிரைவேட் லிமிடெட்" -> core "kulopal pilak tek", ph "klpl plk tk" =
   "Global Black Tech Private Limited".
-- 16:05 n3 xc_in DONE: 0.9819 (Q0 value 0.9810), OOF 0.96962, thr 0.85 -> n3 Q = 0.9652 (base 0.9669). n3 stays HOLD
+- 15:55 n3 xc_in DONE: 0.9819 (Q0 value 0.9810), OOF 0.96962, thr 0.85 -> n3 Q = 0.9652 (base 0.9669). n3 stays HOLD
   (the xc_us drop dominates). thr_sweep on n3 xc_in reproduces 0.9819 at the chosen 0.85, and 0.85 is the peak
   (0.80: 0.9818, 0.90: 0.9816, 0.70: 0.9807). For India->US the OOF-chosen threshold is right.
 - tmux chain5 (scripts/day/chain5.sh) waits for chain4 to exit, then runs n4ph = AML_PH=2, _n4 stores, views +name_ph,
