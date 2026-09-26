@@ -150,3 +150,9 @@
    `--ce-dir /home/pools/jv1_ce --out-dir /home/out_jv/jv2 --run-name jv2 --feat-cache /home/cache_jv/j2_feats` (no --pool-dir;
    cand-cache reused, top-k skipped), then test with --load-model /home/out_jv/jv2/model.joblib (CE scoring ~46-90 min on GPU).
    Pick ce-w from the report (0.5 default; try the blend recall per w in a quick script on train_ce.parquet).
+- 10:25 jv_ce report now sweeps --ce-w (0.3..1.0) x top 8/10 with the 0.005 floor. Pilot (India 30K S1, crude proxy pa):
+  w 0.5 top 10: 0.9175 @ 10.0/S1 | w 0.85: 0.9188 @ 10.0 | w 1.0 (pure CE + floor): 0.9187 @ 4.33 cands/S1 (pool ceiling
+  0.9194). => pure-CE ranking + floor could HALVE cands/S1 at equal recall (organisers rank smaller candidate sets higher).
+  Check this on the real pool (cascade pa) first; if it holds, jv2 uses --ce-w 1.0 (maybe --ce-floor 0.01-0.02).
+  Rerun the sweep any time: python -m src.jv_ce report --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce
+- SESSION 4 END 10:27 UTC. Running: tmux jv1 (train pass, US reverse), tmux ce (waits for the jv1 pool, then CE train).

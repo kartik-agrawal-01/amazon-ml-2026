@@ -196,6 +196,14 @@ def report(pool: pd.DataFrame, store: str) -> None:
         log(" | ".join(msg))
         log(f"{c}: recall of the pipeline's kept set {g.loc[g.keep == 1, 'y'].sum() / max(tot, 1):.4f} "
             f"({g.keep.sum() / g.s1.nunique():.2f} cands/S1)")
+        ce_p = 1 / (1 + np.exp(-g["ce"].to_numpy()))
+        n_s1 = g.s1.nunique()
+        for w in (0.3, 0.5, 0.7, 0.85, 1.0):  # pipeline --ce-w sweep: top-10 by blend with blend >= 0.005 (without sure pairs)
+            b = w * ce_p + (1 - w) * g["pa"].to_numpy()
+            r = pd.Series(b).groupby(g["s1"].to_numpy()).rank(ascending=False, method="first").to_numpy()
+            for top in (8, 10):
+                k = (r <= top) & (b >= 0.005)
+                log(f"{c}: w {w} top {top}: recall {g['y'].to_numpy()[k].sum() / max(tot, 1):.4f} at {k.sum() / n_s1:.2f} cands/S1")
 
 
 def cmd_test(a) -> None:
