@@ -30,6 +30,8 @@ GUARD=$!; trap 'kill $GUARD 2>/dev/null' EXIT
 n=0; quick=0
 while [ "$(date +%s)" -lt "$END" ] && [ "$n" -lt "$MAX_SESSIONS" ]; do
   [ -f "$LOG/STOP" ] && { say "STOP file found - stopping"; break; }
+  # pull first so DAY_TASK.md edits pushed from the laptop reach THIS session's prompt (it is read below)
+  timeout 120 git pull --no-edit -q >> "$LOG/driver.log" 2>&1 || say "git pull failed (the session retries)"
   n=$((n+1)); ts=$(date +%m%d-%H%M); t0=$(date +%s)
   say "session $n start (heavy jobs running: $(pgrep -u "$USER" -fc "$PAT"))"
   timeout --kill-after=60 5100 "$CLAUDE_BIN" -p "$(cat scripts/day/DAY_TASK.md)
