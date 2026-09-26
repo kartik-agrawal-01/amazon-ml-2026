@@ -76,7 +76,7 @@
   If paused: rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (cand-cache skips forward top-k).
 - e025b62 fix(main): reverse pairs cached under --cand-cache (ISSUES.md #1). The running jv1 process has the old code, so
   its train reverse is NOT cached; the test pass (separate invocation, --load-model) will cache.
-- 09:05 jv1 RESTARTED (commit 8792474) with `--pool-dir /home/pools/jv1` (new flag: top-40 pre-cascade pool per S1 by the
+- 08:52 jv1 RESTARTED (commit 8792474) with `--pool-dir /home/pools/jv1` (new flag: top-40 pre-cascade pool per S1 by the
   cascade score, OOF on train, + keep + y; test pool per block) and the reverse cache. Command in runs/jarvis/jv1.cmd.
   Synthetic check: matching_results byte-identical with/without --pool-dir.
 - QUEUE 2 prep: src/jv_ce.py (train/test/report). Fake pool (4K India S1, GT pos + random neg): end-to-end OK.
