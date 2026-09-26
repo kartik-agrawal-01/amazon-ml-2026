@@ -178,9 +178,19 @@ def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
     f["addr_len_c"] = np.fromiter((len(x) for x in _D["n_addr"][ci]), np.int16, n)
     f["addr_len_q"] = np.fromiter((len(x) for x in _Q["n_addr"][qi]), np.int16, n)
     # extra tokens (name words present on one side only) and how "generic" they are
+    # Generic = tokens the vendor generators add/drop/move without changing the entity (measured on same-address
+    # train pairs: legal forms, dba/fka/aka constructs, honorifics, corporate filler) — US/India words AND their French
+    # counterparts, so a French pair with an extra "groupe"/"sarl"/"fils" gets the same extra_*_content as a US pair
+    # with an extra "group"/"llc"/"services" (the model is trained on US/India only).
     generic = {"co", "company", "inc", "llc", "ltd", "limited", "pvt", "private", "corp", "corporation", "group",
                "holdings", "center", "centre", "services", "service", "the", "and", "of", "international", "enterprises",
-               "solutions", "partners", "associates", "llp", "pc", "pllc", "lp", "trust", "foundation", "india"}
+               "solutions", "partners", "associates", "llp", "pc", "pllc", "lp", "trust", "foundation", "india",
+               "dba", "fka", "aka", "formerly", "known", "as", "doing", "business", "ta", "www", "dr", "mr", "shri", "sri",
+               "smt", "incorporated", "corp", "holding",
+               # France
+               "sarl", "sas", "sasu", "eurl", "sa", "sci", "snc", "ei", "compagnie", "cie", "societe", "ste", "ets",
+               "etablissements", "groupe", "participations", "developpement", "distribution", "associes", "fils",
+               "freres", "france", "de", "du", "des", "la", "le", "les", "et"}
     tq_ = [set(a.split()) for a in cq]
     tc_ = [set(b.split()) for b in cc]
     f["extra_c"] = np.fromiter((len(b - a) for a, b in zip(tq_, tc_)), np.int8, n)

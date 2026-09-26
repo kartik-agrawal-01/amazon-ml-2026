@@ -40,15 +40,23 @@
 - Submission flow: log row in `submissions/LOG.md` -> push file to `submissions/` ->
   leader pulls + validates + uploads -> leader reports LB score -> fill LOG.md.
 
-## Current state
-- Best local CV: **0.9768 OOF macro-F0.5** (40K-S1 train slice, 3-fold, sklearn HistGB, thr=0.80 + 1-to-1);
-  **0.9826 on a disjoint 30K-S1 train-derived holdout** (runs/slice_v3; v1 was 0.966/0.974, v2 0.970/0.977).
-  Gains came from: word views over name+address (blocking recall 97.1% -> 98.6%), global name/address
-  uniqueness counts (how many S1 share a candidate's name -> resolves empty-address / trade-name records),
-  extra-token and house-number-detail features. Post-hoc rules (calibration, 2nd-stage group model,
-  per-country thresholds) gave NOTHING (tried, see scripts/tune_rules.py). Full-data box run pending.
-- Best public LB:  — (nothing yet)
-- Submissions used: Day1 0/5 · Day2 0/5 · Day3 0/5
+## Current state (26 Sep ~10:40 IST)
+- **Public LB: v2 = 0.947** (26 Sep 09:45, uploaded by Soha). Soha's own pipeline 0.948. Target 98.4+.
+  v2 = commit 48bc4e7, full data: 4 TF-IDF views (name_c3,name_w,addr_c3,full_w), GPU top-k, cascade 9.2 cands/S1,
+  LightGBM on 150K train S1, thr 0.70 + 1-to-1; OOF 0.9623 -> LB gap -1.5. Runtime 4.9 h, peak RSS 7.3 GB.
+  Test: predicted-empty 6.0% (FR 5.2 / IN 6.7 / US 5.5), mean matches 3.23. Files: output_v2/, runs/v2/NOTES.md.
+- Cross-country proxy (slice, hidden holdout): train US+IN 0.9805 (IN 0.9717 / US 0.9863); train US only -> India
+  0.9339 (-3.8); train India only -> US 0.9810. India full-data blocking recall 0.933 (US 0.984) -> India = 47% of
+  test is the biggest known loss; France (15%, unseen) the biggest unknown.
+- Best local CV on the 8% slice: 0.9768 OOF / 0.9826 holdout (runs/slice_v3, 6 views, HistGB, 40K S1).
+- **Box now runs Claude Code unattended ("day loop", scripts/day/DAY_TASK.md + QUEUE.md, until 27 Sep 20:00 IST)**:
+  objective Q = 0.5*slice_mix + 0.3*xc_us + 0.2*xc_in (Q0 = 0.9666); P0 = fast lane (--reuse-candidates: full-data
+  model in ~1 h). It never submits; SUBMIT-READY files appear in runs/day/SCOREBOARD.md. HQ steers via QUEUE.md.
+- **France fixes (HQ, 26 Sep, docs/FRANCE_FIXES.md)** in src/normalize.py + src/features.py, queued as QUEUE item 2:
+  "N° 32" was normalised to "north 32", zero-padded house numbers (also 3% US / 5% IN), region vs departement,
+  St-Nazaire -> "street", bis/ter, legal form leading the name, EI, et/&, domain names with glued legal forms,
+  @handles, French filler words in the generic-token set. French pseudo-pair address agreement 14% -> 33%.
+- Submissions used: Day1 0/5 · **Day2 1/5** · Day3 0/5 (see submissions/LOG.md)
 
 ## Decisions
 - 25 Sep — Pipeline-first: blocking -> candidate_pairs -> pairwise model -> per-entity
@@ -58,22 +66,34 @@
   + exact dense top-k on GPU (MiniLM) as a second view; GBDT matcher; no LLMs.
 
 ## Tried & failed (don't repeat these)
-- 
+- Post-hoc decision machinery on OOF probabilities: expected-F0.5 set selection, isotonic calibration, per-country
+  thresholds, 2nd-stage group model, 2nd-stage candidate-candidate model -> no gain (scripts/tune_rules.py).
+- Key blocking + dense MiniLM as a REPLACEMENT for TF-IDF (src/blocking_b.py): India pair recall 0.855 vs 0.966,
+  US 0.948 vs 0.994; encoder alone ~2 h for 24M records. Exact-key views as an ADDITION: +1.0 pt India / +0.1 US
+  at +4 cands/S1 (not yet applied).
+- 6 TF-IDF views on the full data: too slow (~9 h); name_ph + addr_w dropped (base+full_w keeps 99.3%/99.9% of
+  the 6-view recall). k=15 India: +0.4 pt recall for +55% candidates (parked).
+- Concurrent heavy jobs on the box (v2 killed once by the memory guard; pandas-3 Arrow `rid` indexing stalled the
+  test pass -> .to_numpy(dtype=object) fix, commit ea7375a).
 
 ## Open / next up
-- **Box run v1** (someone with RDP access, see docs/BOX_RUNBOOK.md): `git pull` -> `bash scripts/gpu_check.sh`
-  -> unzip data -> `bash scripts/run_pipeline.sh v1 --max-df 0.01 --train-s1 300000 --block-size 100000`
-  (add `--dense` once the GPU works) -> validate -> `submissions/v1_matching_results.tsv` -> LOG.md -> leader uploads.
+1. Box P0 fast lane -> QUEUE 2 France fixes (rebuild stores, Q check, full-data v3 via fast lane, France tables in
+   runs/v3/NOTES.md) -> HQ decides upload v3 vs v2 (log in submissions/LOG.md first).
+2. Ensemble with Soha's pipeline: put her matching_results.tsv in submissions/soha_matching_results.tsv; per-country
+   agreement; intersection/union/vote evaluated on a train-derived holdout.
+3. India blocking recall 0.93 -> 0.97 keeping <= 10 cands/S1 after the cascade (exact-key views, name_ph, k=15 India).
+4. Country-neutral features / adversarial validation (QUEUE 3); region imputation from city for France.
+5. Day 3: Documentation_template.md numbers, scripts/make_package.py, final robust upload; runs/day/FINAL.md.
 - Real-data facts (slice EDA): ~24% of Indian S2 names are in Indic scripts (handled: rule-based
   transliteration + phonetic key, src/translit.py); ALL-CAPS, "null" tokens, leet typos (Precisi0n),
   domain names as names, DBA names, state names vs codes (IL/Illinois, MH/Maharashtra), house-number
-  labels (H No / Door No / Plot No), 3.8% empty addresses in S2/S3. All GT matches are same-country.
-- Blocking (lexical, 4 views, k=10, max_df=0.01): pair recall 97.1% (US 98.3%, India 95.3%) at ~62 cands/S1
-  -> ~52 after pruning. Recall ceiling for India is the first thing to raise (dense view / better translit).
-- Then: dense GPU view, bigger train sample + LightGBM, France sanity check (unseen country), 2nd-stage.
+  labels (H No / Door No / Plot No), 3.8% empty addresses in S2/S3, zero-padded house numbers, @handles.
+  All GT matches are same-country. "Different name at the same exact address" is a MATCH 98.6% of the time.
 
 ## Who's on what
-- Gaurav:
+- Gaurav: git bridge laptop<->GitHub<->box, leader liaison, HQ (Claude) steering.
+- Soha Chand (leader): uploads, own pipeline (LB 0.948).
+- Kartik Agrawal: box account.
 - Member 2:
 - Member 3:
 - Member 4:
