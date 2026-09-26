@@ -24,6 +24,7 @@ step base qeval base "" "xc_us slice_mix"
 step n3 qeval n3 _n3 "xc_us slice_mix"
 step n3k qeval n3k _n3 "xc_us slice_mix" --key-rules 0.96
 step n3ph qeval n3ph _n3 "xc_us slice_mix" --views name_c3,name_w,addr_c3,full_w,name_ph
+step n3r qeval n3r _n3 "xc_us slice_mix" --reverse-k 3 --reverse-bypass 2   # QUEUE 5b reverse blocking
 AML_GPU_DUTY=0.3 step gateA gate_a || exit 1
 step gateB gate_b || exit 1
 echo "[chain] ALL DONE"
