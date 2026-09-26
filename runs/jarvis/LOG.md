@@ -59,3 +59,20 @@
   TODO next session: cache reverse pairs per (split, country, views, k) under /home/cache_jv/rev_* so reruns skip
   them (edit src/jv_aug.py; safe while jobs run: modules already imported). Reverse is the largest new cost
   (~1-1.5 h of the full run); consider rev views = full_w only if the policy table shows name_c3 adds little.
+
+## Session 2 — 26 Sep 08:47 UTC
+- QUEUE (HQ 13:55 IST) now says: use main's --key-rules/--reverse-k/global o2o, drop pipeline_jv reimplementation.
+  Moved untracked env.txt aside (identical to main's), `git merge origin/main` clean (91e04b6).
+- Killed tmux smoke + jv1 (both src.pipeline_jv; smoke was at US train reverse, jv1 at India forward). src/pipeline_jv.py and
+  src/jv_aug.py stay in the tree but are NOT used any more.
+- QUEUE 0 DONE (partial, from the pipeline_jv smoke; same top-k/stage-A code as main): India train 24K S1 phase A 724 s,
+  peak RSS 11.1 GB; forward top-k GPU 10-11 s per view per source per 24K S1 (-> CPU sdt for full runs); reverse top-3 on
+  CPU 14 thr: 180-640 s per view per country (depends on contention); doc matrices 45-50 s per country.
+  Projection jv1 (6 views, k 15, main reverse on ALL 6 views): reverse ~1 h per split, forward ~15 min per split,
+  stage B + model TBD -> train pass ~3-4 h, test pass ~3-4 h. k 15 kept (projection < 5 h per pass).
+- 08:52 jv1 RELAUNCHED on MAIN's src.pipeline (commit 91e04b6 code; tmux 'jv1', log runs/jarvis/jv1.log, command in
+  runs/jarvis/jv1.cmd): 6 views k 15, 600K train S1, block 100000, --key-rules 0.96 --reverse-k 3 --reverse-bypass 2,
+  --topk-device cpu (GPU reverse 5x slower), n-jobs 14, stage-b-jobs 8, caches /home/cache_jv/j1_cand, j1_feats, --skip-test.
+  If paused: rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (cand-cache skips forward top-k).
+- e025b62 fix(main): reverse pairs cached under --cand-cache (ISSUES.md #1). The running jv1 process has the old code, so
+  its train reverse is NOT cached; the test pass (separate invocation, --load-model) will cache.
