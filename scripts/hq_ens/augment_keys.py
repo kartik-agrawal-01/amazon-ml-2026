@@ -26,6 +26,8 @@ def main():
     ap.add_argument("inp")
     ap.add_argument("out")
     ap.add_argument("--bound-min", type=float, default=0.80)
+    ap.add_argument("--false-mult", type=float, default=1.0,
+                    help="multiply the train false rate (1-P) by this: test has ~2x the unmatched S2/S3 records per S1 of train")
     a = ap.parse_args()
     t0 = time.time()
     header, res = read_res(a.inp)
@@ -46,6 +48,7 @@ def main():
     T["rule"] = T.cat.str.replace("n_", "", regex=False).str.replace(" | a_", "|", regex=False) + \
         np.where(T.kind != "", "|" + T.kind, "")
     g = T.groupby(["cty", "rule"]).agg(n=("inX", "size"), cov=("inX", "mean"), P=("p", "mean")).reset_index()
+    g["P"] = (1 - a.false_mult * (1 - g.P)).clip(0, 1)
     g["bound"] = ((g.P - g["cov"]) / (1 - g["cov"]).clip(lower=1e-9)).clip(0, 1)
     ok = g[(g.bound >= a.bound_min) & (g.n >= 200)]
     allow = {(r.cty, r.rule): r.bound for r in ok.itertuples()}
