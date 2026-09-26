@@ -1,4 +1,4 @@
-# QUEUE 2d: threshold for an unseen country (loop, 26 Sep ~17:15)
+# QUEUE 2d: threshold for an unseen country (loop, 26 Sep ~16:50)
 
 Scripts: `scripts/day/unseen_thr.py <data> <out>` (sweep + rules), `scripts/day/check_adapt.py` (checks the pipeline
 implementation offline). Raw outputs: `runs/day/unseen_thr_{xc_us_n3k,xc_in_n3,mix_n3k}.txt`.

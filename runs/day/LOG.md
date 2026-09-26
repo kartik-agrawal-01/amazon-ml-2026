@@ -267,7 +267,7 @@ Plan (QUEUE 1, P0 fast lane):
 
 ## Session 8 — 26 Sep 16:41 (Session 4 of this driver)
 - Start: chain4 running n3ph (xc_us), chain5 waiting. Plan: QUEUE 2d (unseen-country threshold; HQ needs it by 21:30).
-- 17:15 QUEUE 2d (i)+(ii) DONE -> runs/day/unseen_thr.md (scripts/day/unseen_thr.py). xc_us (US->India): hidden F rises
+- 16:50 QUEUE 2d (i)+(ii) DONE -> runs/day/unseen_thr.md (scripts/day/unseen_thr.py). xc_us (US->India): hidden F rises
   monotonically as t drops, 0.85 -> 0.15: 0.9321 -> 0.9511 (+0.019). xc_in: the OOF-chosen 0.85 is already best. R1
   (count) and R2 (empty-rate) matching overshoot on xc_in (0.97/0.99: −0.005/−0.018), but their LOWER-ONLY versions
   min(t_oof, R) never hurt: R2lo xc_us +0.0158, xc_in 0, mix +0.0005 -> est ΔQ ≈ +0.005. v2 France counts (empty 5.2%,
@@ -277,3 +277,17 @@ Plan (QUEUE 1, P0 fast lane):
 - tmux chain6: SIGSTOPs the chain4 bash (pid 54443; its running n3ph python is unaffected), waits for n3ph to exit,
   runs n3ka = --key-rules 0.96 --thr-adapt on _n3 (xc_us, slice_mix, xc_in), then SIGCONTs chain4 (trap on EXIT).
   If a reboot/kill leaves chain4 stopped: `kill -CONT $(pgrep -xf 'bash scripts/day/chain4.sh')`.
+- 16:58 n3ph xc_us DONE: 0.9310 (n3 0.9273, n3k 0.9321), OOF 0.98394, cands/S1 5.65 (n3 5.26, +7%), 18.5 min, 2.9 GB.
+  check_adapt on n3ph xc_us: 0.9310 -> 0.9501 (t 0.03), the same +0.019 as on n3k. So the threshold effect is ~4x any
+  feature/blocking effect measured on xc_us so far. n3ph slice_mix is running (chain4); n3ka starts after it.
+- Session 8 ends ~17:05. Running: chain4 (n3ph slice_mix; its bash is SIGSTOPped by chain6), chain6 (n3ka after n3ph),
+  chain5 (n4ph after chain4), sysmon, gpulog.
+### NEXT (session 9+)
+1. n3ka done (runs/day/qeval_n3ka.log, q_table): SCOREBOARD row. The KEEP rule is vs n3k (Q 0.9668 with n3 xc_in). Expected
+   xc_us ≈ 0.948, mix ≈ 0.9820, xc_in ≈ n3k's. If KEEP, --thr-adapt joins the v3 recipe. Tell HQ in LOG and in unseen_thr.md
+   (jv1 France threshold; the Jarvis lane uses the same pipeline flag).
+2. Check chain4 resumed after chain6 (ps STAT must not be T). n3ph slice_mix -> SCOREBOARD row (n3ph vs n3; name_ph view).
+3. Floor question: t=0.03 at full density. Evidence to collect without tuning on the test: the full-density train pass
+   (Jarvis) OOF curve at low t for the unseen-like 1-true bucket. Or a leave-one-country-out OOF: train US, predict India
+   OOF at full density. Don't pick a floor from the xc_us curve alone.
+4. QUEUE 2d (iii) R3 (sure-key recall matching) still open; low value now that lower-only R2 works.

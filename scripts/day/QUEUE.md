@@ -49,7 +49,7 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
            apply_rules, p_min 0.96, on the slice) = the source's at its OOF threshold.
    Table per screen: OOF-chosen t, hidden-best t, R1/R2/R3 t, hidden F at each → `runs/day/unseen_thr.md`. If a rule
    lands within 0.001 of the hidden best on both screens, HQ applies it to France in jv1 (Jarvis QUEUE 1b).
-   — DONE (i)+(ii) 26 Sep 17:15 (loop): runs/day/unseen_thr.md. No plain rule within 0.001 on both screens; R2 'lower-only'
+   — DONE (i)+(ii) 26 Sep 16:50 (loop): runs/day/unseen_thr.md. No plain rule within 0.001 on both screens; R2 'lower-only'
      = min(t_oof, R2) is: xc_us +0.0158, xc_in 0, mix +0.0005. It leaves v2's France threshold unchanged. R3 not done yet.
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
