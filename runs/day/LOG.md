@@ -120,3 +120,10 @@ Plan (QUEUE 1, P0 fast lane):
   Slice screens use --n-jobs 6 (QE_NJOBS) to lower the box load next to the 10-core postgres process.
   tmux `sysmon` logs MemAvailable/load/max CPU temp/top process every 5 s (fsync'd) to runs/day/sysmon.log.
 - 13:23 chain3 started (base).
+- 13:26 QUEUE 5b reverse blocking implemented (628591f): `--reverse-k 3 --reverse-bypass 2`. Per country, every S2/S3
+  doc queries its top-3 S1 among ALL S1 of the country (train: all train S1, then mapped to the sample, so the
+  competition matches the test pass) per view; pairs are unioned pre-cascade with features rev_rank (best rank over
+  views), rev_n (#views), rev_best (#views where the S1 is the doc's #1) and rev_sure = rev_best >= 2, which bypasses
+  the cascade cap (like key_sure). Stored in model.joblib (`reverse`), restored by --load-model. Unit test vs brute force:
+  scripts/day/test_reverse.py (exact). Not yet run end-to-end -> first real run is the chain step n3r.
+- Chain restarted 13:26 with n3r inserted after n3ph: base -> n3 -> n3k -> n3ph -> n3r -> gateA -> gateB.
