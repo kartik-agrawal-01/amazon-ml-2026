@@ -131,6 +131,12 @@ def load_meta(cache_dir: str, split: str) -> Optional[dict]:
         return None
     with open(p) as fh:
         meta = json.load(fh)
+    # paths are stored relative to the cwd of the build; resolve them against cache_dir so a store can be read
+    # from another working directory (e.g. a git worktree) instead of silently being rebuilt
+    for info in list(meta["countries"].values()) + ([meta["gt"]] if isinstance(meta.get("gt"), dict) else []):
+        alt = os.path.join(cache_dir, os.path.basename(info.get("path", "")))
+        if not os.path.exists(info.get("path", "")) and os.path.exists(alt):
+            info["path"] = alt
     if not all(os.path.exists(c["path"]) for c in meta["countries"].values()):
         return None
     return meta
