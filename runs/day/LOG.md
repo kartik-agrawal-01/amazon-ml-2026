@@ -140,3 +140,7 @@ Plan (QUEUE 1, P0 fast lane):
 3. After a reboot: pgrep check, then relaunch sysmon, gpulog and chain (see Session 4 NEXT; chain3.sh instead of
    chain1/chain2 - it is resumable via runs/day/chain/*.done). Check runs/day/sysmon.log tail for the moments before.
 4. Git auth still missing -> everything is committed locally only (HQ can't see it). Humans: please `git push` once.
+- 14:12 GIT AUTH WORKS AGAIN: pulled HQ a7b2489 (QUEUE 4/5b: box only slice-screens keys/reverse/name_ph; full-density
+  runs of them belong to the Jarvis lane; port fixes from runs/jarvis/ISSUES.md — file does not exist yet) and pushed
+  everything (e05b148). The gate A/B at the end of chain3 is still needed for the box's fallback v3 (France fixes +
+  global o2o only, per the new UPLOAD POLICY).
