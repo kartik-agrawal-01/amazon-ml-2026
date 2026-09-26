@@ -346,3 +346,17 @@ Plan (QUEUE 1, P0 fast lane):
    continue if possible (chain5/7 steps are slices; v3 is the fallback file HQ needs). v3 -> runs/v3/NOTES.md with the
    France table (QUEUE 3c) -> submissions/v3_matching_results.tsv -> SCOREBOARD SUBMIT-READY.
 3. n4ph (chain5), n3r and n3ka_s7 (chain7) -> SCOREBOARD rows vs row 6 (n3r uses the champion flags; n4ph compares with n3ph).
+
+## Session 11 — 26 Sep 18:44 (Session 7 of this driver)
+- Start: gate A (chain4, DUTY 0.3) in train/us top-k (train/india loaded from cache), chain5 (n4ph) and chain7 (n3r,
+  n3ka_s7) wait for it. Uptime 5:35 (no reboot since 13:18). HQ context: Soha-2 LB 0.9808; our pipeline is now a BLEND
+  PARTNER (CONTEXT 16:20), so the box's main deliverable is v3 + its per-pair test probabilities (fast lane).
+- Plan: light work only while gate A runs -> QUEUE 6 adversarial validation (scripts/day/adv_val.py on the France-diag
+  v2 test pair features) -> runs/day/adv_val.md. DONE 18:55: France vs US+India AUC 0.997, still ≥ 0.985 after dropping the
+  top 5 features; the shift = address format (addr_len_q, addr_c3_rank 53 vs 15 for likely matches) + decoy density
+  (c_nq 5.5 vs 2.4, grp_n_close 16 vs 9). Feature dropping is low-EV (QUEUE 6 marked PARTIAL); density is what --thr-adapt
+  handles; for a blend with Soha, calibrate/rank per country rather than averaging raw p in France.
+- Checked gate B semantics: ~/aml_gate is at 802ee11 (+ local DUTY patch in blocking.py) = before global one-to-one
+  (47d7c89), so gate B's block-local one-to-one matches v2; no --no-global-o2o needed.
+- ETA: test S1 US 663K / IN 810K / FR 259K = 19 blocks x 8 top-k passes x ~6 min at DUTY 0.3 ≈ 15 h -> gate A ~10:00
+  Sun, gate B ~+1.5 h, v3 ~+2.5 h -> v3 file ≈ 14:00-15:00 Sun (freeze 20:00). Slices are blocked meanwhile (by design).

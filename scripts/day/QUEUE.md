@@ -87,6 +87,9 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    drop or re-normalise the most country-shifted features (e.g. rank/percentile within country instead of raw
    counts); evaluate Q. Also: 36% of French S2/S3 addresses have no region/département while S1 always has one
    (US 4.5%, India 14%) — consider imputing the region code from the city using S1 itself (no external data).
+   — PARTIAL 26 Sep 18:55 (loop): adversarial validation only -> runs/day/adv_val.md. AUC 0.997 France vs rest, shift spread
+     over address-format + decoy-density features (still 0.985+ after dropping the top 5) -> feature dropping is low-EV;
+     the density shift is what --thr-adapt handles. Region imputation part not done.
 7. [Accuracy, cheap] Model capacity on the fast lane: more trees/leaves, train S1 150K → 300K, 3-seed average.
 8. [Efficiency] cascade_top 10 → 8 only if the full-density pair recall after the cascade holds PER COUNTRY. Every
    French S1 already sits at the cap, so consider a per-country cap before any global cut.
