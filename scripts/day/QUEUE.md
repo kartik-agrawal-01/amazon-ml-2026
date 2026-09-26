@@ -51,7 +51,7 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    lands within 0.001 of the hidden best on both screens, HQ applies it to France in jv1 (Jarvis QUEUE 1b).
    — DONE (i)+(ii) 26 Sep 16:50 (loop): runs/day/unseen_thr.md. No plain rule within 0.001 on both screens; R2 'lower-only'
      = min(t_oof, R2) is: xc_us +0.0158, xc_in 0, mix +0.0005. It leaves v2's France threshold unchanged. R3 not done yet.
-   — DONE (iii) R3 26 Sep 19:20 (loop): unseen_thr.md §(iii). Two-sided R3 unstable (recall saturates -> t 0.02/0.99);
+   — DONE (iii) R3 26 Sep 19:05 (loop): unseen_thr.md §(iii). Two-sided R3 unstable (recall saturates -> t 0.02/0.99);
      lower-only R3n = R2 lower-only (xc_us +0.0158, xc_in 0, mix +0.0002). Nothing beyond --thr-adapt.
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
@@ -92,7 +92,7 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    — PARTIAL 26 Sep 18:55 (loop): adversarial validation only -> runs/day/adv_val.md. AUC 0.997 France vs rest, shift spread
      over address-format + decoy-density features (still 0.985+ after dropping the top 5) -> feature dropping is low-EV;
      the density shift is what --thr-adapt handles. Region imputation part not done.
-   — DONE (evidence) region imputation 26 Sep 19:40 (loop): runs/day/fr_region_impute.md. 74% of region-less FR S2/S3
+   — DONE (evidence) region imputation 26 Sep 19:10 (loop): runs/day/fr_region_impute.md. 74% of region-less FR S2/S3
      imputable from 22 S1 cities at 100% label-free accuracy; not implemented (unscorable on Q, v3 queued) — HQ's call.
 7. [Accuracy, cheap] Model capacity on the fast lane: more trees/leaves, train S1 150K → 300K, 3-seed average.
 8. [Efficiency] cascade_top 10 → 8 only if the full-density pair recall after the cascade holds PER COUNTRY. Every

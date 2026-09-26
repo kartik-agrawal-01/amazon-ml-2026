@@ -59,7 +59,7 @@ bash) until chain6 is done, then resumes with n3r.
 Caveat: t = 0.03 is extreme. At full density (12x more decoys) a very low threshold may cost more precision than on the
 slice. A floor (e.g. 0.10–0.15; 0.15 is the xc_us best) would be safer, but choosing it from this one screen would be tuning on the test.
 
-## (iii) R3 sure-key matching (loop, 26 Sep 19:20) — `scripts/day/unseen_r3.py <data> <cache_n3> <out>`
+## (iii) R3 sure-key matching (loop, 26 Sep 19:05) — `scripts/day/unseen_r3.py <data> <cache_n3> <out>`
 Raw: `runs/day/unseen_r3_{xc_us_n3k,xc_in_n3,mix_n3k}.txt`. Sure pairs = hq_keys key_pairs + apply_rules (p_min 0.96),
 rules calibrated on the source's OOF S1 (context all S1; unseen target -> min over train countries). R3 = t where the
 target's sure-pair recall = source OOF recall at t_oof; R3n = same on recall relative to the p-floor (0.02) recall.

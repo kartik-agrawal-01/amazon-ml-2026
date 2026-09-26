@@ -380,9 +380,25 @@ Plan (QUEUE 1, P0 fast lane):
 - Start: no reboot (up 5:38). gate A (chain4) in train/us top-k (addr_c3 done 18:5x), chain8 waiting for it, chain5 stopped,
   chain7 waiting. MemAvailable 6 GB. Jarvis ISSUES 1 already ported (14:30), nothing new there.
 - Light work: QUEUE 2d (iii) R3 sure-key threshold rule -> scripts/day/unseen_r3.py, runs/day/unseen_r3_*.txt,
-  unseen_thr.md §(iii). DONE 19:20: two-sided R3 unstable; lower-only R3n = R2 lower-only (--thr-adapt). No change to code.
+  unseen_thr.md §(iii). DONE 19:05: two-sided R3 unstable; lower-only R3n = R2 lower-only (--thr-adapt). No change to code.
   (Peak RSS of the script 1.5-2.0 GB on the slice stores — above the 1 GB light-work target; ran one at a time with
   MemAvailable ≥ 5.9 GB. Don't run it on full-data stores.)
-- QUEUE 6 part 2 (region imputation) evidence DONE 19:40: runs/day/fr_region_impute.md. French test = 3 regions / ~22 cities;
+- QUEUE 6 part 2 (region imputation) evidence DONE 19:10: runs/day/fr_region_impute.md. French test = 3 regions / ~22 cities;
   74% of the 44% region-less FR S2/S3 imputable at 100% label-free accuracy. Not implemented (can't be scored on Q;
   would change France's store under v3). HQ decides.
+- scripts/hq_ens/score_sub.py does NOT run on the box (needs HQ-only res.pkl / test_pairs_p.pkl / test_sure_refined.pkl).
+  Box replacement: scripts/day/country_table.py <matching_results.tsv> [--ref v2] [--store-dir cache_n3] [--keys france]
+  [--rules-from runs/v3/stdout.txt] -> per-country empty / matches/S1 / multi-owner records / identical sets vs v2 + France
+  exact-key coverage by rule. Tested on v2 vs itself with the v2 store (runs/day/country_table_v2.md): France
+  disjoint|a_eq|invented coverage 0.468 (v2 store/normaliser), multi-owner records FR 6672 / IN 4899 / US 2235.
+  Peak RSS 3.5 GB, 260 s -> run only with MemAvailable >= 5 GB (not next to a full-data job).
+### NEXT (session 13+)
+1. Reboot? relaunch sysmon, gpulog, chain4 (cached blocks are skipped), chain8 (BEFORE chain5), chain5, chain7.
+2. Gate A crashes twice -> NOTES + stop gate; else wait (ETA gate A ~10:00 Sun). After gate B: check runs/day/chain8.log.
+   PASS -> mark QUEUE 1 DONE (gate numbers from gateB.log), commit. FAIL -> debug the fast lane (compare_matches by
+   country), v3 not started.
+3. v3 done (chain/v3.done): runs/v3/NOTES.md (cmd, runtime by stage, OOF per country, thr-adapt t per country, and
+   `PYTHONPATH=. python scripts/day/country_table.py output_v3/matching_results.tsv --store-dir cache_n3 --keys france
+   --rules-from runs/v3/stdout.txt > runs/v3/country_table.md` — needs MemAvailable >= 5 GB; if chain5's slice job is
+   running, wait for a gap or SIGSTOP chain5's python only if you started it). SCOREBOARD row SUBMIT-READY (blend
+   partner / fallback), git add runs/v3 submissions/v3_matching_results.tsv. Tell HQ where output_v3/test_probs_*.parquet are.

@@ -1,4 +1,4 @@
-# QUEUE 6 part 2: France region imputation from the city using S1 (evidence only; loop 26 Sep 19:40)
+# QUEUE 6 part 2: France region imputation from the city using S1 (evidence only; loop 26 Sep 19:10)
 
 Script: `scripts/day/fr_region_impute.py` (streams the test TSVs, France rows; HQ's `_FR_CANON` region/département -> code).
 Raw: `runs/day/fr_region_impute.txt`. The stores' `city`/`state` columns are empty for all countries (the data has one
