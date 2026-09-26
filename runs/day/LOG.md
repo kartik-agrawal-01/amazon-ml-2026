@@ -439,3 +439,11 @@ Plan (QUEUE 1, P0 fast lane):
   A variant that beats base by ≥ 0.0015 OOF on both countries -> rescore test from feats_v3's per-block parquets (not
   written yet: needs a small script that applies a model to feats_v3/test_*.parquet + the v3 rule).
 3. After v3: run model_capacity.py (above), then the cascade cap check decision.
+- src/rescore.py (fast lane, model/rule stage on a --feat-cache) gained --thr-adapt/--thr-adapt-floor (same order as the
+  pipeline: decide at p 0.02 -> global one-to-one -> adapt_threshold per country), src_empty from its own OOF, and
+  --variant base|big|deep|seed3 (OOF + final fit; seed3 = 3-seed prob average). Tested on a synthetic feat cache
+  (2 countries, 3 blocks, --load-model + seed3 + adapt; and without adapt). Not yet run on real data.
+  After v3, sanity gate: `python -m src.rescore --feat-cache feats_v3 --cache-dir cache_n3 --out-dir output_v3_rs
+  --load-model output_v3/model.joblib --thr-adapt --thr-adapt-floor 0.30` must reproduce output_v3/matching_results.tsv
+  (scripts/day/compare_matches.py); then a winning --variant from model_capacity.md -> output_v4 (SUBMIT-READY if its
+  OOF gain ≥ 0.0015 on both countries; it can't be screened on Q because the slices have no feat caches).
