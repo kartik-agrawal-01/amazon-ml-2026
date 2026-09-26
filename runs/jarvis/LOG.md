@@ -55,3 +55,7 @@
      follows automatically -> validator -> submissions/jv1_matching_results.tsv -> SCOREBOARD SUBMIT-READY.
      Validator: python data/student_resource/utils/validate_submission.py --matching /home/out_jv/jv1/matching_results.tsv
        --candidate /home/out_jv/jv1/candidate_pairs.tsv --test-dir data/student_resource/dataset/test
+- 08:46 reverse top-k under contention (smoke + jv1 together): jv1 India full_w 529 s (solo 266 s), smoke US full_w 637 s.
+  TODO next session: cache reverse pairs per (split, country, views, k) under /home/cache_jv/rev_* so reruns skip
+  them (edit src/jv_aug.py; safe while jobs run: modules already imported). Reverse is the largest new cost
+  (~1-1.5 h of the full run); consider rev views = full_w only if the policy table shows name_c3 adds little.
