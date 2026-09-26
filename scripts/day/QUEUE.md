@@ -31,6 +31,11 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    which rules to force: cut pairs are ~96% true at the train rates, model-rejected ones may be the real negatives.
    The key rows: India `core_eq|num_eq` (29.8K pairs, train rate 0.958) and France `disjoint|a_eq|invented` (24.8K).
    — DONE 26 Sep 12:20 (loop): runs/day/keys_check.md. Cut before the model (blocking/cascade): France 71%, India 48%, US 16%.
+2c. [Evidence, cheap, ungated, ~5 min of light work while a heavy job runs — HQ needs it for tonight's upload call]
+   v2's OOF PER COUNTRY. v2's log only has the overall 0.9623 (150K train S1: US 89,969 / India 60,031). If
+   `output_v2_train/oof_pairs.tsv.gz` (or any dump of v2's train-pass OOF pairs) exists, compute OOF F0.5 per country
+   at thr 0.70 + one-to-one on that sample, plus predicted matches/S1 and empty rate per country →
+   `runs/day/v2_oof_by_country.md`. If no dump exists, write that in one line and stop (do NOT retrain v2).
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
    to "north 32" (5% of French addresses); zero-padded house numbers (also 3% of US / 5% of India S2/S3); région vs
