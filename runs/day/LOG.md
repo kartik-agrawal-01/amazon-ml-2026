@@ -429,5 +429,13 @@ Plan (QUEUE 1, P0 fast lane):
   higher), and runs as a fast-lane rescore after v3.
 ### NEXT (session 14+)
 1. Reboot? relaunch sysmon, gpulog, chain4 (cached blocks are skipped), chain8 (BEFORE chain5), chain5, chain7.
-2. Gate A -> gate B -> v3 as in session 13's NEXT (unchanged). After v3: `grep "cascade cap check" runs/v3/stdout.txt`
+2. Gate A -> gate B -> v3 as in session 12's NEXT (session 13+) list (unchanged). After v3: `grep "cascade cap check" runs/v3/stdout.txt`
    -> decide on --cascade-top 8 (rule above) and write it in cascade_cap.md.
+- QUEUE 7 prepared: scripts/day/model_capacity.py <feat-cache> [--variants base,big,deep,seed3] retrains LightGBM
+  variants on a --feat-cache (v3 writes feats_v3) with the pipeline's folds/neg-rate and prints OOF F0.5 per country
+  (thr sweep + global one-to-one, all train S1, vectorised F checked = src.metric.f05 on 40K v2 OOF rows). Saves
+  oof_<variant>.npy next to the cache. HEAVY (LightGBM): run alone in tmux after v3, e.g.
+  `tmux new -d -s cap 'python scripts/day/model_capacity.py feats_v3 --variants base,big,deep,seed3 > runs/day/model_capacity.md 2> runs/day/model_capacity.err'`.
+  A variant that beats base by ≥ 0.0015 OOF on both countries -> rescore test from feats_v3's per-block parquets (not
+  written yet: needs a small script that applies a model to feats_v3/test_*.parquet + the v3 rule).
+3. After v3: run model_capacity.py (above), then the cascade cap check decision.
