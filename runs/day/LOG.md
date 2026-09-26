@@ -383,3 +383,6 @@ Plan (QUEUE 1, P0 fast lane):
   unseen_thr.md §(iii). DONE 19:20: two-sided R3 unstable; lower-only R3n = R2 lower-only (--thr-adapt). No change to code.
   (Peak RSS of the script 1.5-2.0 GB on the slice stores — above the 1 GB light-work target; ran one at a time with
   MemAvailable ≥ 5.9 GB. Don't run it on full-data stores.)
+- QUEUE 6 part 2 (region imputation) evidence DONE 19:40: runs/day/fr_region_impute.md. French test = 3 regions / ~22 cities;
+  74% of the 44% region-less FR S2/S3 imputable at 100% label-free accuracy. Not implemented (can't be scored on Q;
+  would change France's store under v3). HQ decides.

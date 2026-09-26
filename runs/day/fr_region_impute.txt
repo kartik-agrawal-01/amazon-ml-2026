@@ -1,0 +1,4 @@
+S1 France 259452, ending in a region 0.866; cities 8649, usable (>=3 S1, purity>=0.9) 22
+S2 France 703378: with region 0.557; region-less 311751 of which imputable (last comp = known city) 232426 (0.746); table accuracy on region-carrying docs 1.000 (n 369942)
+S3 France 731615: with region 0.571; region-less 313612 of which imputable (last comp = known city) 232373 (0.741); table accuracy on region-carrying docs 1.000 (n 395393)
+RSS 306764 KB 136.25 s

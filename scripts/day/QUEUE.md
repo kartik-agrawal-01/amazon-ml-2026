@@ -92,6 +92,8 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    — PARTIAL 26 Sep 18:55 (loop): adversarial validation only -> runs/day/adv_val.md. AUC 0.997 France vs rest, shift spread
      over address-format + decoy-density features (still 0.985+ after dropping the top 5) -> feature dropping is low-EV;
      the density shift is what --thr-adapt handles. Region imputation part not done.
+   — DONE (evidence) region imputation 26 Sep 19:40 (loop): runs/day/fr_region_impute.md. 74% of region-less FR S2/S3
+     imputable from 22 S1 cities at 100% label-free accuracy; not implemented (unscorable on Q, v3 queued) — HQ's call.
 7. [Accuracy, cheap] Model capacity on the fast lane: more trees/leaves, train S1 150K → 300K, 3-seed average.
 8. [Efficiency] cascade_top 10 → 8 only if the full-density pair recall after the cascade holds PER COUNTRY. Every
    French S1 already sits at the cap, so consider a per-country cap before any global cut.
