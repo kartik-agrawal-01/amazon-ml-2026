@@ -495,3 +495,14 @@ Plan (QUEUE 1, P0 fast lane):
   --variant <w> --thr-adapt --thr-adapt-floor 0.30 --save-probs -> output_v4 -> validator -> submissions/v4 file.
   Then the old chain5/chain7 steps unchanged: n4ph, n3r (placeholder removed first), n3ka_s7.
   tmux chain9, log runs/day/chain9.log. If rebooted: relaunch it after chain4/chain8 (steps skip via .done).
+- 19:52 runs/day/FINAL_DRAFT.md: champion, candidate full-data files, packaging command (make_package.py --output
+  output_v3|output_v4). The freeze session fills the ranking and renames it FINAL.md.
+### NEXT (session 15+) — supersedes session 13's list where they differ
+1. Reboot? relaunch sysmon, gpulog, chain4 (`GATE_DUTY=0.3` if the reboot hit gate A), chain8, then chain9
+   (NOT chain5/chain7: chain9 contains their steps).
+2. Gate B result (chain8.log / gateB.log): PASS -> QUEUE 1 DONE mark with numbers. FAIL -> debug fast lane; chain9 then
+   skips v3 steps and runs the slices; consider SIGSTOPping it while debugging.
+3. v3 done -> runs/v3/NOTES.md + country_table (session 13 NEXT 3), SCOREBOARD row SUBMIT-READY.
+4. chain9 v3rs: `tail runs/day/v3rs.log` (GATE PASS?). cap: runs/day/model_capacity.md -> SCOREBOARD row (QUEUE 7).
+   v4: runs/day/pick_variant.txt, runs/v4/{stdout,validate,vs_v3}.txt -> runs/v4/NOTES.md + SUBMIT-READY row if valid.
+5. cascade cap check (grep "cascade cap check" runs/v3/stdout.txt) -> cascade_cap.md decision (QUEUE 8).
