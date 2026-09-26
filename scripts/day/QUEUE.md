@@ -97,6 +97,8 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
 7. [Accuracy, cheap] Model capacity on the fast lane: more trees/leaves, train S1 150K → 300K, 3-seed average.
 8. [Efficiency] cascade_top 10 → 8 only if the full-density pair recall after the cascade holds PER COUNTRY. Every
    French S1 already sits at the cap, so consider a per-country cap before any global cut.
+   — PARTIAL 26 Sep 19:40 (loop): runs/day/cascade_cap.md. Perfect-ranker bound on v2's full-density OOF: cap 8 ≤ −0.00003
+     F0.5 per country (cands −17%), cap 7 ≤ −0.0002; India = US. Real cascade cost needs --cascade-top 8 on the fast lane.
 9. [Speed] Profile the full-data run by stage; vectorise the slowest stage-B features.
    — PARTIAL 26 Sep 19:24 (loop): stage B profiled; jaro_winkler -> rapidfuzz Jaro (bit-exact, stage B −49%), SCOREBOARD 7.
      Full-data per-stage profile comes from v3's stdout.

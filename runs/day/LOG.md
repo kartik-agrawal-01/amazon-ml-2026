@@ -413,3 +413,21 @@ Plan (QUEUE 1, P0 fast lane):
   q/c record and index them, instead of per pair.
 - Session 12 ends ~19:30. Running unchanged: chain4 (gate A, train/us S1->S3 top-k), chain8 (waits), chain5 (stopped),
   chain7 (waits), sysmon, gpulog. NEXT list above (session 13+) still applies.
+
+## Session 13 — 26 Sep 19:26 (Session 9 of this driver)
+- Start: no reboot (up 6:07). gate A (chain4, DUTY 0.3) finished train/us cand cache at 19:29 (3673 s, peak RSS 6.2 GB)
+  and moved on to test; chain8 waits, chain5 stopped, chain7 waits. MemAvailable ~6 GB. No new QUEUE items, no new
+  Jarvis ISSUES. v2 per-block timing check: test/india block ≈ 1130 s, of which stage B ≈ 1 min (917K pairs) -> another
+  stage-B speed-up is low-EV; top-k dominates, and the fast lane skips it.
+- QUEUE 8 evidence (light, 130 s, RSS 1.0 GB): scripts/day/cascade_cap.py -> runs/day/cascade_cap.md. Perfect-ranker bound on
+  v2's full-density train OOF: cap 8 costs ≤ 0.00003 F0.5 per country (cands/S1 9.2 -> 7.7, −17%), cap 7 ≤ 0.0002, cap 6
+  0.001; India = US. True GT pairs by final-p rank: rank 9-10 hold 0.04% (IN) / 0.08% (US) of GT.
+- Real cascade cost: src/pipeline.py now logs "cascade cap check <country>: share of pre-cascade GT pairs kept -> top6 ...
+  top12" right after the cascade fit (log only, try/except, outputs unchanged; checked on synthetic arrays + py_compile).
+  v3 (from HEAD) will print it at full density at no extra cost. If top8 ≥ top10 − 0.001 for both countries, a
+  `--cascade-top 8` file is a KEEP candidate on the efficiency rule (−17% cands/S1; Amazon ranks smaller candidate sets
+  higher), and runs as a fast-lane rescore after v3.
+### NEXT (session 14+)
+1. Reboot? relaunch sysmon, gpulog, chain4 (cached blocks are skipped), chain8 (BEFORE chain5), chain5, chain7.
+2. Gate A -> gate B -> v3 as in session 13's NEXT (unchanged). After v3: `grep "cascade cap check" runs/v3/stdout.txt`
+   -> decide on --cascade-top 8 (rule above) and write it in cascade_cap.md.

@@ -823,6 +823,15 @@ def main() -> None:
             t = time.time()
             pa, cascade_model = fit_cascade(Xa, y, qg, 3, a.seed, n_jobs=lgb_jobs)
             keep = cascade_keep(qg, pa, a.cascade_top, a.cascade_floor)
+            try:  # QUEUE 8: GT pairs the cascade keeps at lower caps, per country (log only; outputs unchanged)
+                for c, (r0, r1) in country_rows.items():
+                    yc, qc, pc = np.asarray(y[r0:r1]), qg[r0:r1], np.asarray(pa[r0:r1])
+                    npos = max(int(yc.sum()), 1)
+                    log(f"cascade cap check {c}: share of pre-cascade GT pairs kept -> " + ", ".join(
+                        f"top{cap} {int(yc[cascade_keep(qc, pc, cap, a.cascade_floor)].sum()) / npos:.4f}"
+                        for cap in (6, 7, 8, 9, 10, 12)))
+            except Exception as e:  # noqa: BLE001
+                log(f"cascade cap check skipped: {e!r}")
             if "key_sure" in a_cols:  # sure key pairs bypass the top-N cap
                 ks = np.asarray(Xa[:, a_cols.index("key_sure")]) == 1
                 log(f"cascade: {int(ks.sum())} sure key pairs, {int((ks & ~keep).sum())} of them re-added past the cap")
