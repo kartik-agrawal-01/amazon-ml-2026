@@ -10,6 +10,8 @@ set -u
 R=$HOME/amazon-ml-2026
 cd "$R" || exit 1
 mkdir -p runs/day/chain
+# 26 Sep: 3 hard reboots at the start of full-speed GPU top-k on train/us -> v2's host-densify path + 60% GPU duty
+export AML_GPU_HOST_DENSIFY=${AML_GPU_HOST_DENSIFY:-1} AML_GPU_DUTY=${AML_GPU_DUTY:-0.6}
 step() {  # step <name> <cmd...>; success = exit 0 and (for gate steps) the marker line
   local n=$1; shift
   if [ -f runs/day/chain/$n.done ]; then echo "[chain] $n already done"; return 0; fi

@@ -113,6 +113,8 @@ def _topk_fallback(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float, c
     return out_c, out_s
 
 
+_HOST_DENSIFY = os.environ.get("AML_GPU_HOST_DENSIFY", "0") == "1"
+_GPU_DUTY = float(os.environ.get("AML_GPU_DUTY", "1"))
 TOPK_DEVICE = {"device": "auto"}  # 'auto' (cuda when available), 'cuda' or 'cpu' — set by the pipeline (--topk-device)
 
 
@@ -145,14 +147,23 @@ def topk_sparse_gpu(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float =
         # slice IS the C-contiguous transpose (a numpy .T copy of a 400 MB block costs ~0.8 s per chunk)
         # densify on the card: ship the (features x m) chunk as sparse CSR (a few MB) instead of building a
         # ~0.5 GB dense block on the CPU and copying it over PCIe (same values -> same scores)
-        qt = Q[st:en].T.tocsr()
-        qd = torch.sparse_csr_tensor(torch.from_numpy(qt.indptr.astype(np.int64)), torch.from_numpy(qt.indices.astype(np.int64)),
-                                     torch.from_numpy(qt.data.astype(np.float32)), size=qt.shape).cuda().to_dense()
+        # AML_GPU_HOST_DENSIFY=1 -> v2's path (dense block built on the CPU; the GPU idles between chunks).
+        # AML_GPU_DUTY=d (0<d<1) -> sleep after each chunk so the card is busy ~d of the time. Both exist because the
+        # box hard-rebooted 3x (26 Sep) exactly at the start of the full-speed train/us top-k (PSU/power trips).
+        t_chunk = time.time()
+        if _HOST_DENSIFY:
+            qd = torch.from_numpy(Q[st:en].toarray(order="F").T.astype(np.float32, copy=False)).cuda()
+        else:
+            qt = Q[st:en].T.tocsr()
+            qd = torch.sparse_csr_tensor(torch.from_numpy(qt.indptr.astype(np.int64)), torch.from_numpy(qt.indices.astype(np.int64)),
+                                         torch.from_numpy(qt.data.astype(np.float32)), size=qt.shape).cuda().to_dense()
         scores = torch.sparse.mm(Dt, qd)                                              # (docs x m)
         s_, i_ = torch.topk(scores.t().contiguous(), k, dim=1)                        # topk along the last dim is ~10x faster
         out_s[st:en] = s_.cpu().numpy()
         out_c[st:en] = i_.cpu().numpy()
         del qd, scores, s_, i_
+        if 0 < _GPU_DUTY < 1:
+            time.sleep((time.time() - t_chunk) * (1 / _GPU_DUTY - 1))
     del Dt  # the caching allocator keeps the blocks for the next call (no empty_cache: re-allocating 8 GB per call is slow)
     rank = np.broadcast_to(np.arange(k, dtype=np.int16), (n, k))
     row = np.broadcast_to(np.arange(n)[:, None], (n, k))
