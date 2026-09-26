@@ -135,7 +135,8 @@ def _set_rec(q_rec: pd.DataFrame, d_rec: pd.DataFrame) -> None:
             _D[c] = d_rec[c].values
 
 
-_GENERIC_V2 = os.environ.get("AML_GENERIC", "") == "v2"
+_GENERIC_MODE = os.environ.get("AML_GENERIC", "")  # "" = HEAD set, "v2" = v2 set, "v2fr" = v2 + French
+_GENERIC_V2 = _GENERIC_MODE in ("v2", "v2fr")
 
 def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
     n = len(qi)
@@ -200,6 +201,10 @@ def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
                    "holdings", "center", "centre", "services", "service", "the", "and", "of", "international",
                    "enterprises", "solutions", "partners", "associates", "llp", "pc", "pllc", "lp", "trust", "foundation",
                    "india"}
+        if _GENERIC_MODE == "v2fr":  # v2's set + the French words only (no dba/fka/aka/honorific additions)
+            generic |= {"sarl", "sas", "sasu", "eurl", "sa", "sci", "snc", "ei", "compagnie", "cie", "societe", "ste",
+                        "ets", "etablissements", "groupe", "participations", "developpement", "distribution",
+                        "associes", "fils", "freres", "france", "de", "du", "des", "la", "le", "les", "et"}
     tq_ = [set(a.split()) for a in cq]
     tc_ = [set(b.split()) for b in cc]
     f["extra_c"] = np.fromiter((len(b - a) for a, b in zip(tq_, tc_)), np.int8, n)
