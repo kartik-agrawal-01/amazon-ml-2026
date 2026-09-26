@@ -270,6 +270,25 @@ def add_rev_pairs(u: pd.DataFrame, rb: pd.DataFrame) -> pd.DataFrame:
     return m.sort_values(["q", "c"], kind="stable", ignore_index=True)
 
 
+def dump_pool(path: str, q_rid: np.ndarray, d_rid: np.ndarray, qi: np.ndarray, ci: np.ndarray, pa: np.ndarray,
+              keep: np.ndarray, y: Optional[np.ndarray] = None, top: int = 40) -> int:
+    """Jarvis QUEUE 2 pool: per S1 the top-`top` pre-cascade candidates by the cascade score pa (train: OOF pa) plus every
+    kept pair -> parquet (s1, cand, pa, rank, keep[, y]). Returns the number of rows written."""
+    o = np.lexsort((-pa, qi))
+    qs = qi[o]
+    st = np.r_[0, np.flatnonzero(qs[1:] != qs[:-1]) + 1]
+    rank = np.arange(len(o)) - np.repeat(st, np.diff(np.r_[st, len(o)]))
+    sel = o[(rank < top) | keep[o]]
+    rk = rank[(rank < top) | keep[o]]
+    df = pd.DataFrame({"s1": np.asarray(q_rid, dtype=object)[qi[sel]].astype(str),
+                       "cand": np.asarray(d_rid, dtype=object)[ci[sel]].astype(str),
+                       "pa": pa[sel].astype(np.float32), "rank": rk.astype(np.int16), "keep": keep[sel].astype(np.int8)})
+    if y is not None:
+        df["y"] = y[sel].astype(np.int8)
+    df.to_parquet(path, index=False)
+    return len(df)
+
+
 # ------------------------------------------------------- candidate cache (fast lane)
 class CandCache:
     """Pre-cascade candidate union (q, c, <view>_rank, n_views) per (split, country, block), saved as parquet.
@@ -562,6 +581,7 @@ def main() -> None:
                     "top-k S1 of the country per view; pairs join the union (features rev_rank/rev_n/rev_best)")
     ap.add_argument("--reverse-bypass", type=int, default=2, help="reverse pairs where the S1 is the doc's best S1 in >= this "
                     "many views bypass the cascade cap (0 = never)")
+    ap.add_argument("--pool-dir", default="", help="jarvis QUEUE 2: dump the top-40 pre-cascade pool per S1 (by the cascade score; train: OOF) with keep/y to <dir>/{train,test}__<country>*.parquet")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -686,6 +706,7 @@ def main() -> None:
         rec_curves, gp_total = [], 0
         country_rows: Dict[str, tuple] = {}   # country -> (first pair row, last pair row) in the memmaps
         country_q: Dict[str, tuple] = {}      # country -> (q offset, n sampled S1, sample positions)
+        pool_drid: Dict[str, np.ndarray] = {}
         offset = 0
         rng = np.random.default_rng(a.seed)
         for c in countries_tr:
@@ -762,6 +783,8 @@ def main() -> None:
                 del cands, qb, gp
             gp_total += gp_c
             country_rows[c] = (row0, n_pairs_a)
+            if a.pool_dir:
+                pool_drid[c] = ctx.d_rid
             country_q[c] = (offset, len(q), sel)
             qrid_parts.append(ids_bytes(q["rid"]))
             offset += len(q)
@@ -807,6 +830,13 @@ def main() -> None:
                 keep |= ks
                 del ks
             log(f"cascade fitted on {n_pairs_a} pairs x {len(a_cols)} stage-A features in {time.time() - t:.0f}s")
+            if a.pool_dir:
+                os.makedirs(a.pool_dir, exist_ok=True)
+                for c, (r0, r1) in country_rows.items():
+                    n_pool = dump_pool(os.path.join(a.pool_dir, f"train__{c}.parquet"), q_rid_tr, pool_drid[c], qg[r0:r1],
+                                       cl[r0:r1], np.asarray(pa[r0:r1]), keep[r0:r1], y[r0:r1])
+                    log(f"pool: train/{c} {n_pool} pairs -> {a.pool_dir}")
+                del pool_drid
             del pa
         else:
             keep = np.zeros(n_pairs_a, dtype=bool)
@@ -1028,6 +1058,10 @@ def main() -> None:
                     keep_b |= cands["key_sure"].to_numpy() == 1
                 if "rev_sure" in cands:
                     keep_b |= cands["rev_sure"].to_numpy() == 1
+                if a.pool_dir:
+                    os.makedirs(a.pool_dir, exist_ok=True)
+                    dump_pool(os.path.join(a.pool_dir, f"test__{c}__b{bi:03d}.parquet"), qb["rid"].to_numpy(dtype=object),
+                              ctx.d_rid, cands["q"].to_numpy(), cands["c"].to_numpy(), np.asarray(pa), keep_b)
                 del pa
             else:
                 keep_b = prune_score(cands) >= thr_c
