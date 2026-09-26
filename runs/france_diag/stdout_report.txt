@@ -1,0 +1,3 @@
+[   36.8s] reading raw text from the test TSVs ...
+[  117.9s] raw rows found: 7078
+[  157.2s] wrote runs/france_diag/REPORT.md

@@ -1,0 +1,31 @@
+[    2.0s] model: 83 feats, views ['name_c3', 'name_w', 'addr_c3', 'full_w'], rule {'rule': 'thr', 'one2one': True, 'thr': 0.7, 'f05': 0.9623078254314535}, cascade top 10 floor 0.002
+[  214.4s] vectorisers: [('name_c3', 19294), ('name_w', 106274), ('addr_c3', 22727), ('full_w', 287718)]
+[  329.4s] test/france: doc matrices [('name_c3', (1434993, 19294), 9677463), ('name_w', (1434993, 106274), 3414801), ('addr_c3', (1434993, 22727), 11869797), ('full_w', (1434993, 287718), 8213373)] (42s)
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3     996159 pairs (34.5s)
+      S1->S2 name_w      999438 pairs (53.4s)
+      S1->S2 addr_c3     996930 pairs (31.9s)
+      S1->S2 full_w     1000000 pairs (97.5s)
+      S1->S3 name_c3     996155 pairs (31.9s)
+      S1->S3 name_w      999427 pairs (54.4s)
+      S1->S3 addr_c3     996930 pairs (32.9s)
+      S1->S3 full_w     1000000 pairs (100.0s)
+[  947.7s] france: block 0 (100000 S1) scored in 659s: 6154287 cands -> 979199 kept, 94668 S1 with matches
+[ 1029.5s] test/us: doc matrices [('name_c3', (3817031, 19294), 31459340), ('name_w', (3817031, 106274), 9256146), ('addr_c3', (3817031, 22727), 33933735), ('full_w', (3817031, 287718), 21850690)] (81s)
+      S1->S2 name_c3     994330 pairs (76.5s)
+      S1->S2 name_w      993502 pairs (98.7s)
+      S1->S2 addr_c3     999867 pairs (77.2s)
+      S1->S2 full_w     1000000 pairs (149.3s)
+      S1->S3 name_c3     994330 pairs (79.5s)
+      S1->S3 name_w      993622 pairs (102.3s)
+      S1->S3 addr_c3     999870 pairs (80.3s)
+      S1->S3 full_w     1000000 pairs (153.1s)
+[ 2026.6s] us: block 0 (100000 S1) scored in 1078s: 5775042 cands -> 887826 kept, 94574 S1 with matches
+[ 2125.7s] test/india: doc matrices [('name_c3', (4717565, 19294), 33062789), ('name_w', (4717565, 106274), 10290349), ('addr_c3', (4717565, 22727), 56888852), ('full_w', (4717565, 287718), 34730746)] (97s)
+      S1->S2 name_c3     974600 pairs (90.4s)
+      S1->S2 name_w      996106 pairs (113.1s)
+      S1->S2 addr_c3     999070 pairs (93.2s)
+      S1->S2 full_w      999996 pairs (164.4s)
