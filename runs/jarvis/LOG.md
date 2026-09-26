@@ -76,7 +76,6 @@
   If paused: rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (cand-cache skips forward top-k).
 - e025b62 fix(main): reverse pairs cached under --cand-cache (ISSUES.md #1). The running jv1 process has the old code, so
   its train reverse is NOT cached; the test pass (separate invocation, --load-model) will cache.
-<<<<<<< HEAD
 - 08:52 jv1 RESTARTED (commit 8792474) with `--pool-dir /home/pools/jv1` (new flag: top-40 pre-cascade pool per S1 by the
   cascade score, OOF on train, + keep + y; test pool per block) and the reverse cache. Command in runs/jarvis/jv1.cmd.
   Synthetic check: matching_results byte-identical with/without --pool-dir.
@@ -96,8 +95,6 @@
      tmux ce: python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048
      (host RAM: pool 24M rows + texts ~ 6-8 GB; check memory.current + jv1 peak < 56 GB first).
   4. After the test pool exists: jv_ce test (--test-top 40 or 20), jv_ce_feats, src.rescore --feat-cache /home/cache_jv/j2_feats.
-=======
->>>>>>> origin/main
 
 ## Session 3 — 26 Sep 09:11 UTC
 - jv1 (tmux jv1, pid 31319, started 08:52, commit 8792474) alive: train/india reverse top-k (6 views) in progress at 09:11,
@@ -106,3 +103,10 @@
   (old code) writes reverse caches as `*__rev3_<views joined by '-'>_N.parquet`; the merged code looks for views joined
   by '+'. Before any rerun/test pass: `cd /home/cache_jv/j1_cand && for f in *__rev3_*-*.parquet; do mv "$f" "${f//-/+}"; done`
   (check the rename touches only the view list).
+
+## Session 4 — 26 Sep 09:23 UTC
+- QUEUE unchanged (HQ 13:55 IST). origin/main has nothing new to merge. Removed stale conflict markers from LOG.md.
+- jv1 train pass (tmux jv1, pid 31319, 08:52 start) alive at 09:23: India reverse top-3 over 6 views took 1665 s
+  (12.8M pairs), key calibration 71 s (sure rules = 10, same set as smoke), now India forward top-k. RSS 7.4 GB,
+  memory.current 19 GB. Projection: US reverse ~50 min -> pool (/home/pools/jv1/train__*.parquet) ~11:00 UTC,
+  train pass done ~12:00 UTC.
