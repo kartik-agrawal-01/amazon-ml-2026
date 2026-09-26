@@ -1,0 +1,19 @@
+[    3.7s] top-k device: cpu (cuda available: True) | stage-B workers: 2
+== test
+  S1:    35060 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source1.tsv
+  S2:   136902 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source2.tsv
+  S3:   144656 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source3.tsv
+[store] test: staged 316618 raw rows into 1 country files (7s)
+[store] test/'india': normalised 316618 rows -> test__india.parquet (36 MB, 60s)
+[store] test: store complete in 68s
+== train
+  S1:   105820 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:   404082 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:   427411 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+[store] train: staged 937313 raw rows into 1 country files (18s)
+  GT rows=105820 | singletons=5.6% | matches/S1: mean=3.46 max=11 | dist={0: 5953, 1: 5736, 2: 17863, 3: 25470, 4: 50798}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
+/home/kartik/miniforge3/envs/aml/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+KILLSWITCH avail=1879MB
+EXIT=143

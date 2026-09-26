@@ -1,0 +1,32 @@
+[store] test: using store cache/test_meta.json (11702133 rows, countries ['france', 'india', 'us'])
+== train
+  S1:  2206821 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:  5034616 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:  5285603 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+[store] train: staged 12527040 raw rows into 2 country files (239s)
+  GT rows=2206821 | singletons=5.6% | matches/S1: mean=3.46 max=11 | dist={0: 123247, 1: 119157, 2: 375212, 3: 530841, 4: 1058364}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
+[store] train/'india': normalised 5016534 rows -> train__india.parquet (579 MB, 292s)
+[store] train/'us': normalised 7510506 rows -> train__us.parquet (782 MB, 387s)
+[store] train: store complete in 974s
+[  980.3s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[ 1258.4s] vectorisers (fit on 2500000 rows): [('name_c3', 19294), ('name_w', 106274), ('addr_c3', 22727), ('name_ph', 6151), ('full_w', 287718), ('addr_w', 220089)]
+[ 1258.8s] train S1 sample per country: {'india': 24012, 'us': 35988}
+[ 1264.0s] train/india: 24012 S1 sampled of 883188, 4133346 docs (1415 singletons in sample)
+[ 1389.5s] train/india: doc matrices [('name_c3', (4133346, 19294), 28630682), ('name_w', (4133346, 106274), 8711626), ('addr_c3', (4133346, 22727), 49425425), ('name_ph', (4133346, 6151), 13497127), ('full_w', (4133346, 287718), 29870552), ('addr_w', (4133346, 220089), 22006982)] (125s)
+      S1->S2 name_c3     234040 pairs (80.0s)
+      S1->S2 name_w      238903 pairs (20.0s)
+      S1->S2 addr_c3     239940 pairs (277.2s)
+      S1->S2 name_ph     215950 pairs (38.9s)
+      S1->S2 full_w      240110 pairs (110.1s)
+      S1->S2 addr_w      239994 pairs (85.1s)
+      S1->S3 name_c3     234040 pairs (90.3s)
+      S1->S3 name_w      238954 pairs (26.4s)
+      S1->S3 addr_c3     239940 pairs (280.4s)
+      S1->S3 name_ph     215950 pairs (44.7s)
+      S1->S3 full_w      240110 pairs (114.7s)
+      S1->S3 addr_w      239993 pairs (83.6s)
+[ 2682.8s] train/india block 0 (24012 S1): 1885364 cands, 78052/83062 GT pairs found
+[ 2683.4s] train/india: prune at score>=0.541: 1885364->1668630; pair recall after pruning 0.9378
+/home/kartik/miniforge3/envs/aml/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

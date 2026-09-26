@@ -1,0 +1,19 @@
+== train
+  S1:   176603 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:   675403 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:   712731 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+[store] train: staged 1564737 raw rows into 2 country files (31s)
+  GT rows=176603 | singletons=5.6% | matches/S1: mean=3.46 max=11 | dist={0: 9867, 1: 9520, 2: 29911, 3: 42531, 4: 84774}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
+[store] train/'india': normalised 627424 rows -> train__india.parquet (71 MB, 99s)
+[store] train/'us': normalised 937313 rows -> train__us.parquet (95 MB, 116s)
+[store] train: store complete in 249s
+== test
+  S1:    87964 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source1.tsv
+  S2:   342145 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source2.tsv
+  S3:   362330 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source3.tsv
+[store] test: staged 792439 raw rows into 2 country files (16s)
+[store] test/'india': normalised 316618 rows -> test__india.parquet (36 MB, 55s)
+[store] test/'us': normalised 475821 rows -> test__us.parquet (48 MB, 66s)
+[store] test: store complete in 137s
+STORE_OK

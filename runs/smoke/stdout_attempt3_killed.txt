@@ -1,0 +1,6 @@
+== test
+  S1:  1732544 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source1.tsv
+  S2:  4887273 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source2.tsv
+  S3:  5082316 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source3.tsv
+[store] test: 3 countries [('france', 1694445), ('india', 5527551), ('us', 4480137)] (234s)
+[store] test/'france': normalised 1694445 rows -> test__france.parquet (128 MB, 93s)

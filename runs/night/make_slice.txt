@@ -1,0 +1,12 @@
+train: 176603 S1 chosen, 611627 matched S2/S3 ids kept
+  train_source1.tsv: 176603/2206821 rows
+  train_source2.tsv: 675403/5034616 rows
+  train_source3.tsv: 712731/5285603 rows
+  test_source1.tsv: 138179/1732544 rows
+  test_source2.tsv: 391806/4887273 rows
+  test_source3.tsv: 405760/5082316 rows
+holdout-as-test: 87964 S1 chosen, 304405 matched ids kept
+  test_source1.tsv: 87964/2206821 rows
+  test_source2.tsv: 342145/5034616 rows
+  test_source3.tsv: 362330/5285603 rows
+exit 0

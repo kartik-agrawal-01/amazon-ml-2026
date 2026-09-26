@@ -1,0 +1,69 @@
+[    3.7s] top-k device: auto (cuda available: True) | stage-B workers: 4
+[store] test: using store cache/test_meta.json (11702133 rows, countries ['france', 'india', 'us'])
+[store] train: using store cache/train_meta.json (12527040 rows, countries ['india', 'us'])
+[    9.6s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  282.0s] vectorisers (fit on 2500000 rows): [('name_c3', 19294), ('name_w', 106274), ('addr_c3', 22727), ('name_ph', 6151), ('full_w', 287718), ('addr_w', 220089)]
+[  282.4s] train S1 sample per country: {'india': 24012, 'us': 35988}
+[  287.4s] train/india: 24012 S1 sampled of 883188, 4133346 docs (1415 singletons in sample)
+[  412.0s] train/india: doc matrices [('name_c3', (4133346, 19294), 28630682), ('name_w', (4133346, 106274), 8711626), ('addr_c3', (4133346, 22727), 49425425), ('name_ph', (4133346, 6151), 13497127), ('full_w', (4133346, 287718), 29870552), ('addr_w', (4133346, 220089), 22006982)] (125s)
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3     234040 pairs (20.3s)
+      S1->S2 name_w      238903 pairs (25.1s)
+      S1->S2 addr_c3     239940 pairs (20.2s)
+      S1->S2 name_ph     215950 pairs (18.6s)
+      S1->S2 full_w      240110 pairs (37.7s)
+      S1->S2 addr_w      239994 pairs (32.9s)
+      S1->S3 name_c3     234040 pairs (20.3s)
+      S1->S3 name_w      238954 pairs (25.5s)
+      S1->S3 addr_c3     239940 pairs (20.8s)
+      S1->S3 name_ph     215950 pairs (19.0s)
+      S1->S3 full_w      240110 pairs (38.2s)
+      S1->S3 addr_w      239993 pairs (33.4s)
+[  761.7s] train/india block 0 (24012 S1): 1891037 cands, 78092/83062 GT pairs found
+[  762.2s] train/india: prune at score>=0.543: 1891037->1669796; pair recall after pruning 0.9383
+[  905.0s] features (91): ['addr_c3_rank', 'addr_w_rank', 'full_w_rank', 'name_c3_rank', 'name_ph_rank', 'name_w_rank', 'n_views', 'cos_name_c3', 'cos_name_w', 'cos_addr_c3', 'cos_name_ph', 'cos_full_w', 'cos_addr_w', 'c_src', 'r_score', 'gap_score', 'r_name_c3', 'gap_name_c3', 'r_name_w', 'gap_name_w', 'r_addr_c3', 'gap_addr_c3', 'r_name_ph', 'gap_name_ph', 'r_full_w', 'gap_full_w', 'r_addr_w', 'gap_addr_w', 'grp_margin', 'grp_n', 'grp_n_close', 'rq_score', 'rq_gap', 'c_nq', 'mutual_best', 'jw_core', 'jw_name', 'tok_jacc', 'tok_cont', 'tok_nq', 'tok_nc', 'core_eq', 'core_in', 'first_eq', 'acronym', 'len_ratio', 'ph_eq', 'jw_ph', 'ph_jacc', 'nospace_eq', 'jw_nospace', 'indic_q', 'indic_c', 'q_cnt_core_s1', 'c_cnt_core_s1', 'q_cnt_ph_s1', 'c_cnt_ph_s1', 'q_cnt_nsp_s1', 'c_cnt_nsp_s1', 'q_cnt_addr_all', 'c_cnt_addr_all', 'q_cnt_addr_s1', 'c_cnt_addr_s1', 'c_cnt_core_all', 'addr_empty_c', 'addr_len_c', 'addr_len_q', 'extra_c', 'extra_q', 'extra_c_content', 'extra_q_content', 'legal_eq', 'legal_conflict', 'legal_missing', 'num_jacc', 'num_any', 'num_both', 'num_first_eq', 'num_first_jw', 'num_only_q', 'num_only_c', 'zip_eq', 'zip_conflict', 'vague_q', 'vague_c', 'jw_addr', 'city_fld_eq', 'zip_fld_eq', 'state_fld_eq', 'country_fld_eq', 'score']
+[  907.8s] train/india: done in 625s | peak RSS so far 5599 MB
+[  915.7s] train/us: 35988 S1 sampled of 1323633, 6186873 docs (1994 singletons in sample)
+[ 1063.4s] train/us: doc matrices [('name_c3', (6186873, 19294), 50360794), ('name_w', (6186873, 106274), 14531028), ('addr_c3', (6186873, 22727), 54336225), ('name_ph', (6186873, 6151), 28021424), ('full_w', (6186873, 287718), 34781045), ('addr_w', (6186873, 220089), 20948602)] (148s)
+      S1->S2 name_c3     357570 pairs (43.5s)
+      S1->S2 name_w      357781 pairs (52.4s)
+      S1->S2 addr_c3     359830 pairs (43.7s)
+      S1->S2 name_ph     349980 pairs (41.6s)
+      S1->S2 full_w      359880 pairs (72.5s)
+      S1->S2 addr_w      359874 pairs (64.8s)
+      S1->S3 name_c3     357570 pairs (45.4s)
+      S1->S3 name_w      357781 pairs (54.4s)
+      S1->S3 addr_c3     359830 pairs (45.7s)
+      S1->S3 name_ph     349980 pairs (43.6s)
+      S1->S3 full_w      359880 pairs (74.6s)
+      S1->S3 addr_w      359875 pairs (67.3s)
+[ 1779.0s] train/us block 0 (35988 S1): 2862442 cands, 122472/124219 GT pairs found
+[ 1779.6s] train/us: prune at score>=0.647: 2862442->2144399; pair recall after pruning 0.9840
+[ 1957.9s] train/us: done in 1050s | peak RSS so far 6922 MB
+ k     pairs  pairs_per_s1  pair_recall  entity_full_recall
+ 1  427168.0      7.119467     0.689610            0.349530
+ 3 1272884.0     21.214733     0.925222            0.794049
+ 5 2248237.0     37.470617     0.953802            0.872194
+10 4753479.0     79.224650     0.967595            0.908656
+[ 1958.1s] prune thresholds per country: {'india': 0.543, 'us': 0.6469}; train pairs 3814195; pair recall after pruning 0.9657
+    fold 0: fit=1338431 valid=1271398 pos_rate=0.0529 (145s)
+    fold 1: fit=1338072 valid=1271399 pos_rate=0.0522 (175s)
+    fold 2: fit=1338358 valid=1271398 pos_rate=0.0523 (143s)
+[ 2427.9s] OOF (lightgbm): AUC=0.99976 AP=0.99640
+rule  one2one  thr      f05
+ thr     True 0.75 0.962255
+ thr    False 0.75 0.962207
+ thr     True 0.80 0.962040
+ thr    False 0.80 0.962008
+ thr     True 0.70 0.961860
+ thr    False 0.70 0.961805
+ thr     True 0.65 0.961225
+ thr    False 0.65 0.961168
+ thr     True 0.85 0.960943
+ thr    False 0.85 0.960933
+  best global threshold: {'rule': 'thr', 'one2one': True, 'thr': 0.75, 'f05': 0.9622553575522079}
+  expected-F: {'rule': 'expf', 'one2one': True, 'thr': nan, 'f05': 0.9589719387174331}
+[ 2575.3s] OOF macro F0.5 (chosen) = 0.96226 with {'rule': 'thr', 'one2one': True, 'thr': 0.75, 'f05': 0.9622553575522079}

@@ -1,0 +1,26 @@
+[    3.2s] top-k device: cuda (cuda available: True) | stage-B workers: 4
+[store] test: using store cache/test_meta.json (11702133 rows, countries ['france', 'india', 'us'])
+[store] train: using store cache/train_meta.json (12527040 rows, countries ['india', 'us'])
+[    8.6s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  222.8s] vectorisers (fit on 2500000 rows): [('name_c3', 19294), ('name_w', 106274), ('addr_c3', 22727), ('full_w', 287718)]
+[  223.3s] train S1 sample per country: {'india': 60031, 'us': 89969}
+[  232.0s] train/india: 60031 S1 sampled of 883188, 4133346 docs (3399 singletons in sample)
+[  327.6s] train/india: doc matrices [('name_c3', (4133346, 19294), 28630682), ('name_w', (4133346, 106274), 8711626), ('addr_c3', (4133346, 22727), 49425425), ('full_w', (4133346, 287718), 29870552)] (96s)
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3     584670 pairs (49.7s)
+      S1->S2 name_w      597316 pairs (63.1s)
+      S1->S2 addr_c3     599780 pairs (50.1s)
+      S1->S2 full_w      600300 pairs (96.1s)
+      S1->S3 name_c3     584670 pairs (50.5s)
+      S1->S3 name_w      597489 pairs (64.7s)
+      S1->S3 addr_c3     599780 pairs (51.2s)
+      S1->S3 full_w      600300 pairs (107.9s)
+[  924.7s] stage-A features (28): ['addr_c3_rank', 'full_w_rank', 'name_c3_rank', 'name_w_rank', 'n_views', 'cos_name_c3', 'cos_name_w', 'cos_addr_c3', 'cos_full_w', 'c_src', 'score', 'r_score', 'gap_score', 'r_name_c3', 'gap_name_c3', 'r_name_w', 'gap_name_w', 'r_addr_c3', 'gap_addr_c3', 'r_full_w', 'gap_full_w', 'grp_margin', 'grp_n', 'grp_n_close', 'rq_score', 'rq_gap', 'c_nq', 'mutual_best']
+[  926.4s] train/india block 0 (60031 S1): 3588822 cands, 193942/207851 GT pairs found
+[  926.9s] train/india: phase A done in 704s | peak RSS so far 4735 MB
+[  940.6s] train/us: 89969 S1 sampled of 1323633, 6186873 docs (4959 singletons in sample)
+/home/kartik/miniforge3/envs/aml/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

@@ -1,0 +1,6 @@
+[    3.4s] top-k device: cpu (cuda available: True) | stage-B workers: 2
+[store] test: using store cache_slice_mix/test_meta.json (792439 rows, countries ['india', 'us'])
+[store] train: using store cache_slice_mix/train_meta.json (1564737 rows, countries ['india', 'us'])
+[    4.4s] GT: 176603 S1, 611627 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+KILLSWITCH avail=1706MB
+EXIT=143

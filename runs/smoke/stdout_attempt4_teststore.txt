@@ -1,0 +1,10 @@
+== test
+  S1:  1732544 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source1.tsv
+  S2:  4887273 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source2.tsv
+  S3:  5082316 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source3.tsv
+[store] test: staged 11702133 raw rows into 3 country files (250s)
+[store] test/'france': normalised 1694445 rows -> test__france.parquet (128 MB, 94s)
+[store] test/'india': normalised 5527551 rows -> test__india.parquet (609 MB, 353s)
+[store] test/'us': normalised 4480137 rows -> test__us.parquet (439 MB, 244s)
+[store] test: store complete in 941s
+== train

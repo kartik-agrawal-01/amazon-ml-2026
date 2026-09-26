@@ -1,0 +1,25 @@
+[    3.8s] top-k device: cpu (cuda available: True) | stage-B workers: 2
+[store] test: resuming, countries already built: ['us']
+== test
+  S1:    52904 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source1.tsv
+  S2:   205243 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source2.tsv
+  S3:   217674 rows | id='entity_id' name='business_name' addr=['business_address'] | test_source3.tsv
+[store] test: staged 475821 raw rows into 0 country files (8s)
+[store] test: store complete in 8s
+[store] train: resuming, countries already built: ['india']
+== train
+  S1:    70783 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:   271321 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:   285320 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+[store] train: staged 627424 raw rows into 0 country files (13s)
+  GT rows=70783 | singletons=5.5% | matches/S1: mean=3.47 max=11 | dist={0: 3914, 1: 3784, 2: 12048, 3: 17061, 4: 33976}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
+[store] train: store complete in 15s
+[   27.4s] GT: 70783 S1, 245316 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  147.5s] vectorisers (fit on 1103245 rows): [('name_c3', 16989), ('name_w', 68229), ('addr_c3', 19802), ('full_w', 189922)]
+[  147.9s] train S1 sample per country: {'india': 40000}
+[  152.0s] train/india: 40000 S1 sampled of 70783, 556641 docs (2255 singletons in sample)
+/home/kartik/miniforge3/envs/aml/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+KILLSWITCH avail=2221MB
+EXIT=143

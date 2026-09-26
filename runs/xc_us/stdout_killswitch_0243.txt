@@ -1,0 +1,39 @@
+[    3.2s] top-k device: cpu (cuda available: True) | stage-B workers: 2
+[store] test: using store cache_xc_us/test_meta.json (316618 rows, countries ['india'])
+[store] train: resuming, countries already built: ['us']
+== train
+  S1:   105820 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source1.tsv
+  S2:   404082 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source2.tsv
+  S3:   427411 rows | id='entity_id' name='business_name' addr=['business_address'] | train_source3.tsv
+[store] train: staged 937313 raw rows into 0 country files (14s)
+  GT rows=105820 | singletons=5.6% | matches/S1: mean=3.46 max=11 | dist={0: 5953, 1: 5736, 2: 17863, 3: 25470, 4: 50798}
+  GT S1 ids not in source1: 0 | source1 ids not in GT: 0
+[store] train: store complete in 16s
+[   20.5s] GT: 105820 S1, 366311 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  140.2s] vectorisers (fit on 1253931 rows): [('name_c3', 17165), ('name_w', 73562), ('addr_c3', 18211), ('full_w', 187620)]
+[  140.6s] train S1 sample per country: {'us': 40000}
+[  144.8s] train/us: 40000 S1 sampled of 105820, 831493 docs (2243 singletons in sample)
+[  203.0s] train/us: doc matrices [('name_c3', (831493, 17165), 6460311), ('name_w', (831493, 73562), 1911257), ('addr_c3', (831493, 18211), 7042266), ('full_w', (831493, 187620), 4555168)] (58s)
+      S1->S2 name_c3     394388 pairs (28.2s)
+      S1->S2 name_w      396057 pairs (3.3s)
+      S1->S2 addr_c3     399980 pairs (30.6s)
+      S1->S2 full_w      400000 pairs (9.8s)
+      S1->S3 name_c3     394390 pairs (42.0s)
+      S1->S3 name_w      396244 pairs (4.6s)
+      S1->S3 addr_c3     399980 pairs (45.4s)
+      S1->S3 full_w      400000 pairs (12.1s)
+[  418.5s] stage-A features (28): ['addr_c3_rank', 'full_w_rank', 'name_c3_rank', 'name_w_rank', 'n_views', 'cos_name_c3', 'cos_name_w', 'cos_addr_c3', 'cos_full_w', 'c_src', 'score', 'r_score', 'gap_score', 'r_name_c3', 'gap_name_c3', 'r_name_w', 'gap_name_w', 'r_addr_c3', 'gap_addr_c3', 'r_full_w', 'gap_full_w', 'grp_margin', 'grp_n', 'grp_n_close', 'rq_score', 'rq_gap', 'c_nq', 'mutual_best']
+[  419.8s] train/us block 0 (40000 S1): 2404766 cands, 137506/138386 GT pairs found
+[  420.4s] train/us: phase A done in 280s | peak RSS so far 2015 MB
+ k     pairs  pairs_per_s1  pair_recall  entity_full_recall
+ 1  184368.0      4.609200     0.698510            0.350081
+ 3  600063.0     15.001575     0.968378            0.897529
+ 5 1107859.0     27.696475     0.989761            0.966046
+10 2404766.0     60.119150     0.993641            0.978706
+    cascade model: AP=0.95296 on 2404766 pairs, 28 features
+[  836.3s] cascade fitted on 2404766 pairs x 28 stage-A features in 416s
+[  836.3s] cascade: before mean 60.1 / median 60 per S1, after mean 6.6 / median 6, train pair recall 0.9899 (p90 10, max 10, zero-cand share 0.0031)
+/home/kartik/miniforge3/envs/aml/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+KILLSWITCH avail=2273MB
+EXIT=143

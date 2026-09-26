@@ -1,0 +1,4 @@
+[    3.5s] top-k device: auto (cuda available: True) | stage-B workers: 4
+[store] test: using store cache/test_meta.json (11702133 rows, countries ['france', 'india', 'us'])
+[store] train: using store cache/train_meta.json (12527040 rows, countries ['india', 'us'])
+[    9.4s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON

@@ -34,3 +34,687 @@
 00:09:24 avail=7017MB v2_rss=4231MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
 00:10:24 avail=6901MB v2_rss=4354MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
 00:11:24 avail=6791MB v2_rss=4480MB gpu=11960MiB stage=[ 1005.2s] train/us: doc matrices [('name_c3', (6186873, 192
+00:12:24 avail=7715MB v2_rss=4770MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:13:25 avail=7669MB v2_rss=4786MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:14:25 avail=7737MB v2_rss=4786MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:15:25 avail=7728MB v2_rss=4788MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:16:25 avail=7727MB v2_rss=4788MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:17:25 avail=8205MB v2_rss=4331MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:18:26 avail=8189MB v2_rss=4346MB gpu=11960MiB stage=[ 2148.9s] train/us: phase A done in 1258s | peak RSS so far
+00:19:26 avail=5222MB v2_rss=5791MB gpu=11960MiB stage=[ 2599.1s] cascade: before mean 59.3 / median 59 per S1, aft
+00:20:26 avail=4356MB v2_rss=6518MB gpu=11960MiB stage=[ 2658.5s] train/india: stage B on 552891 kept pairs (9.2 pe
+00:21:26 avail=6557MB v2_rss=5079MB gpu=11960MiB stage=[ 2724.5s] train/us: stage B on 829642 kept pairs (9.2 per S
+00:22:26 avail=6557MB v2_rss=5095MB gpu=11960MiB stage=[ 2724.5s] train/us: stage B on 829642 kept pairs (9.2 per S
+00:23:26 avail=6541MB v2_rss=5105MB gpu=11960MiB stage=    fold 0: fit=750782 valid=276507 pos_rate=0.3580 (77s)
+00:24:27 avail=6529MB v2_rss=5129MB gpu=11960MiB stage=    fold 1: fit=750897 valid=276507 pos_rate=0.3565 (94s)
+00:25:27 avail=6530MB v2_rss=5141MB gpu=11960MiB stage=    fold 1: fit=750897 valid=276507 pos_rate=0.3565 (94s)
+00:26:27 avail=6524MB v2_rss=5176MB gpu=11960MiB stage=    fold 2: fit=750788 valid=276507 pos_rate=0.3577 (95s)
+00:27:27 avail=6525MB v2_rss=5194MB gpu=11960MiB stage=    fold 3: fit=750717 valid=276506 pos_rate=0.3586 (94s)
+00:28:27 avail=6520MB v2_rss=5218MB gpu=11960MiB stage=    fold 3: fit=750717 valid=276506 pos_rate=0.3586 (94s)
+00:29:27 avail=6371MB v2_rss=5363MB gpu=11960MiB stage=[ 3180.8s] OOF (lightgbm): AUC=0.99876 AP=0.99796
+00:30:28 avail=6337MB v2_rss=5406MB gpu=11960MiB stage=[ 3180.8s] OOF (lightgbm): AUC=0.99876 AP=0.99796
+00:31:28 avail=6329MB v2_rss=5415MB gpu=11960MiB stage=[ 3180.8s] OOF (lightgbm): AUC=0.99876 AP=0.99796
+00:32:28 avail=6318MB v2_rss=5448MB gpu=11960MiB stage=[ 3180.8s] OOF (lightgbm): AUC=0.99876 AP=0.99796
+00:33:28 avail=6170MB v2_rss=5572MB gpu=11960MiB stage=[ 3437.9s] OOF macro F0.5 (chosen) = 0.96231 with {'rule': '
+00:34:28 avail=6378MB v2_rss=5380MB gpu=11960MiB stage=[ 3437.9s] OOF macro F0.5 (chosen) = 0.96231 with {'rule': '
+00:35:28 avail=5375MB v2_rss=4523MB gpu=11960MiB stage=[ 3555.3s] model fitted | peak RSS so far 7940 MB
+00:36:28 avail=5863MB v2_rss=5387MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:37:29 avail=5819MB v2_rss=5445MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:38:29 avail=4838MB v2_rss=6437MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:39:29 avail=5727MB v2_rss=5541MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:40:29 avail=5735MB v2_rss=5556MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:41:29 avail=4749MB v2_rss=6531MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:42:29 avail=5486MB v2_rss=5600MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:43:29 avail=5437MB v2_rss=5742MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:44:29 avail=5236MB v2_rss=4424MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:45:30 avail=7099MB v2_rss=4164MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:46:30 avail=7429MB v2_rss=3865MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:47:30 avail=7443MB v2_rss=3869MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:48:30 avail=7439MB v2_rss=3879MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:49:30 avail=7437MB v2_rss=3885MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:50:30 avail=7432MB v2_rss=3892MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:51:31 avail=7435MB v2_rss=3907MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:52:31 avail=7421MB v2_rss=3910MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:53:31 avail=7429MB v2_rss=3914MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:54:31 avail=7420MB v2_rss=3920MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:55:31 avail=7415MB v2_rss=3927MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:56:31 avail=7414MB v2_rss=3931MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:57:31 avail=7397MB v2_rss=3951MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:58:32 avail=7404MB v2_rss=3956MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+00:59:32 avail=7403MB v2_rss=3960MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:00:32 avail=7400MB v2_rss=3964MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:01:32 avail=7393MB v2_rss=3974MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:02:32 avail=7404MB v2_rss=3983MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:03:32 avail=7392MB v2_rss=3991MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:04:33 avail=7392MB v2_rss=3991MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:05:33 avail=7353MB v2_rss=4007MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:06:33 avail=7366MB v2_rss=4009MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:07:33 avail=7347MB v2_rss=4026MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:08:33 avail=7342MB v2_rss=4040MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:09:33 avail=7352MB v2_rss=4046MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:10:33 avail=7346MB v2_rss=4050MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:11:34 avail=7321MB v2_rss=4055MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:12:34 avail=7327MB v2_rss=4059MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:13:34 avail=7290MB v2_rss=4062MB gpu=11960MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:14:34 avail=9424MB v2_rss=2137MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:15:34 avail=9348MB v2_rss=2249MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:16:34 avail=8705MB v2_rss=2898MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:17:34 avail=9207MB v2_rss=2387MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:18:35 avail=9198MB v2_rss=1929MB gpu=6844MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:19:35 avail=9569MB v2_rss=1993MB gpu=13344MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:20:35 avail=8971MB v2_rss=2031MB gpu=13344MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:21:35 avail=11404MB v2_rss=0MB gpu=92MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:22:35 avail=9440MB v2_rss=2093MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:23:35 avail=8925MB v2_rss=2668MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:24:35 avail=9200MB v2_rss=2377MB gpu=94MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:25:35 avail=9593MB v2_rss=1886MB gpu=2228MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:26:35 avail=11420MB v2_rss=0MB gpu=92MiB stage=[ 3597.1s] test/france: doc matrices [('name_c3', (1434993, 
+01:27:36 avail=8556MB v2_rss=2803MB gpu=94MiB stage=[    8.8s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked t
+01:28:36 avail=8467MB v2_rss=2886MB gpu=94MiB stage=[    8.8s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked t
+01:29:36 avail=8787MB v2_rss=2595MB gpu=94MiB stage=[    8.8s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked t
+01:30:36 avail=9104MB v2_rss=1939MB gpu=94MiB stage=[  214.4s] model loaded from output_v2_train/model.joblib: 8
+01:31:36 avail=8853MB v2_rss=2600MB gpu=5922MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:32:36 avail=8748MB v2_rss=2672MB gpu=8670MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:33:36 avail=8674MB v2_rss=2712MB gpu=8670MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:34:36 avail=7780MB v2_rss=3672MB gpu=8670MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:35:37 avail=8301MB v2_rss=3153MB gpu=14386MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:36:37 avail=8616MB v2_rss=2821MB gpu=14386MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:37:37 avail=8583MB v2_rss=2854MB gpu=14386MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:38:37 avail=8375MB v2_rss=3095MB gpu=14386MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:39:37 avail=6977MB v2_rss=3816MB gpu=14386MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:40:37 avail=5906MB v2_rss=3765MB gpu=14386MiB stage=[  256.5s] test/france: doc matrices [('name_c3', (1434993, 
+01:41:37 avail=8691MB v2_rss=2760MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:42:37 avail=8823MB v2_rss=3037MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:43:38 avail=8301MB v2_rss=3323MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:44:38 avail=8321MB v2_rss=3842MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:45:38 avail=8752MB v2_rss=2906MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:46:38 avail=8690MB v2_rss=3011MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:47:38 avail=8282MB v2_rss=3412MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:48:38 avail=7902MB v2_rss=3828MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:49:38 avail=8107MB v2_rss=3524MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:50:39 avail=6467MB v2_rss=3535MB gpu=14386MiB stage=[  862.2s] test/france block 0 (100000 S1): 6154287 cands ->
+01:51:39 avail=8872MB v2_rss=2824MB gpu=14386MiB stage=[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands ->
+01:52:39 avail=8561MB v2_rss=3125MB gpu=14386MiB stage=[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands ->
+01:53:39 avail=8767MB v2_rss=2903MB gpu=14386MiB stage=[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands ->
+01:54:39 avail=8752MB v2_rss=2961MB gpu=14386MiB stage=[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands ->
+01:55:39 avail=8373MB v2_rss=3381MB gpu=14386MiB stage=[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands ->
+01:56:39 avail=5966MB v2_rss=3560MB gpu=14386MiB stage=[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands ->
+01:57:40 avail=6264MB v2_rss=4461MB gpu=14386MiB stage=[ 1832.8s] test/france: done in 1618s | peak RSS so far 4132
+01:58:40 avail=3917MB v2_rss=5789MB gpu=14386MiB stage=[ 1832.8s] test/france: done in 1618s | peak RSS so far 4132
+01:59:40 avail=5777MB v2_rss=5618MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:00:40 avail=5740MB v2_rss=5637MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:01:40 avail=5737MB v2_rss=5642MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:02:40 avail=5523MB v2_rss=5882MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:03:40 avail=5532MB v2_rss=5891MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:04:40 avail=5196MB v2_rss=6231MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:05:41 avail=5200MB v2_rss=6230MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:06:41 avail=5511MB v2_rss=5887MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:07:41 avail=5602MB v2_rss=5854MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:08:41 avail=5684MB v2_rss=5747MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:09:41 avail=5687MB v2_rss=5751MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:10:41 avail=5489MB v2_rss=5981MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:11:41 avail=5487MB v2_rss=5981MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:12:41 avail=4931MB v2_rss=6340MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:13:42 avail=5354MB v2_rss=6368MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:14:42 avail=4922MB v2_rss=6380MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:15:42 avail=3843MB v2_rss=6376MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:16:42 avail=3633MB v2_rss=5738MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:17:42 avail=5904MB v2_rss=5527MB gpu=10756MiB stage=[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 1
+02:18:42 avail=5592MB v2_rss=5275MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:19:42 avail=4829MB v2_rss=5292MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:20:42 avail=4772MB v2_rss=5292MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:21:43 avail=3991MB v2_rss=5530MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:22:43 avail=4510MB v2_rss=5538MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:23:43 avail=4586MB v2_rss=5396MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:24:43 avail=4556MB v2_rss=5397MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:25:43 avail=4046MB v2_rss=5867MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:26:43 avail=4462MB v2_rss=5469MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:27:43 avail=4415MB v2_rss=5477MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:28:44 avail=4393MB v2_rss=5534MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:29:44 avail=4444MB v2_rss=5396MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:30:44 avail=4257MB v2_rss=5591MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:31:44 avail=3868MB v2_rss=5979MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:32:44 avail=3172MB v2_rss=5527MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:33:44 avail=4363MB v2_rss=5949MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:34:44 avail=3850MB v2_rss=6109MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:35:45 avail=4124MB v2_rss=5955MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:36:45 avail=3396MB v2_rss=5876MB gpu=10756MiB stage=[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 
+02:37:45 avail=6146MB v2_rss=5279MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:38:45 avail=6146MB v2_rss=5279MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:39:45 avail=6078MB v2_rss=5308MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:40:45 avail=5943MB v2_rss=5478MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:41:45 avail=5869MB v2_rss=5548MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:42:45 avail=5547MB v2_rss=5877MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:43:46 avail=6141MB v2_rss=5405MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:44:46 avail=6134MB v2_rss=5405MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:45:46 avail=6110MB v2_rss=5476MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:46:46 avail=6119MB v2_rss=5476MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:47:46 avail=6207MB v2_rss=5366MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:48:46 avail=6196MB v2_rss=5366MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:49:46 avail=6003MB v2_rss=5589MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:50:46 avail=6037MB v2_rss=5525MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:51:46 avail=6037MB v2_rss=5525MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:52:47 avail=5622MB v2_rss=5975MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:53:47 avail=6040MB v2_rss=5544MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:54:47 avail=4242MB v2_rss=6320MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:55:47 avail=4325MB v2_rss=5776MB gpu=10756MiB stage=[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 
+02:56:47 avail=6232MB v2_rss=5356MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+02:57:47 avail=6216MB v2_rss=5372MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+02:58:47 avail=6171MB v2_rss=5395MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+02:59:47 avail=6163MB v2_rss=5397MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:00:47 avail=5945MB v2_rss=5641MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:01:48 avail=6039MB v2_rss=5503MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:02:48 avail=6008MB v2_rss=5516MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:03:48 avail=6026MB v2_rss=5529MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:04:48 avail=5990MB v2_rss=5616MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:05:48 avail=5926MB v2_rss=5681MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:06:48 avail=6054MB v2_rss=5529MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:07:48 avail=5828MB v2_rss=5753MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:08:48 avail=5876MB v2_rss=5754MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:09:49 avail=5893MB v2_rss=5693MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:10:49 avail=5471MB v2_rss=6150MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:11:49 avail=5900MB v2_rss=5702MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:12:49 avail=5641MB v2_rss=5985MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:13:49 avail=3633MB v2_rss=6311MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:14:49 avail=5714MB v2_rss=5768MB gpu=10756MiB stage=[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 
+03:15:49 avail=6117MB v2_rss=5429MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:16:49 avail=6082MB v2_rss=5464MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:17:49 avail=6049MB v2_rss=5466MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:18:50 avail=5830MB v2_rss=5709MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:19:50 avail=5828MB v2_rss=5709MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:20:50 avail=5923MB v2_rss=5570MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:21:50 avail=5501MB v2_rss=6040MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:22:50 avail=5502MB v2_rss=6027MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:23:50 avail=5906MB v2_rss=5651MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:24:50 avail=5994MB v2_rss=5543MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:25:50 avail=5844MB v2_rss=5715MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:26:51 avail=5789MB v2_rss=5782MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:27:51 avail=5786MB v2_rss=5782MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:28:51 avail=5407MB v2_rss=6169MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:29:51 avail=5824MB v2_rss=5720MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:30:51 avail=5403MB v2_rss=6172MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:31:51 avail=5420MB v2_rss=6149MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:32:51 avail=4040MB v2_rss=6071MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:33:51 avail=5884MB v2_rss=5660MB gpu=10756MiB stage=[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 
+03:34:51 avail=6104MB v2_rss=5458MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:35:52 avail=6035MB v2_rss=5479MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:36:52 avail=6040MB v2_rss=5484MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:37:52 avail=5832MB v2_rss=5726MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:38:52 avail=5832MB v2_rss=5726MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:39:52 avail=5503MB v2_rss=6052MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:40:52 avail=5889MB v2_rss=5632MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:41:52 avail=5861MB v2_rss=5655MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:42:52 avail=5898MB v2_rss=5655MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:43:53 avail=5851MB v2_rss=5710MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:44:53 avail=5992MB v2_rss=5546MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:45:53 avail=5795MB v2_rss=5769MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:46:53 avail=5780MB v2_rss=5777MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:47:53 avail=5796MB v2_rss=5719MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:48:53 avail=5382MB v2_rss=6173MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:49:53 avail=5713MB v2_rss=5789MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:50:53 avail=5333MB v2_rss=6220MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:51:54 avail=3638MB v2_rss=6019MB gpu=10756MiB stage=[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 
+03:52:54 avail=5785MB v2_rss=5742MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:53:54 avail=5886MB v2_rss=5661MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:54:54 avail=5847MB v2_rss=5666MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:55:54 avail=5850MB v2_rss=5666MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:56:54 avail=5756MB v2_rss=5793MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:57:54 avail=5752MB v2_rss=5793MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:58:54 avail=5734MB v2_rss=5765MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+03:59:54 avail=5733MB v2_rss=5765MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:00:55 avail=5826MB v2_rss=5711MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:01:55 avail=5840MB v2_rss=5711MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:02:55 avail=5788MB v2_rss=5727MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:03:55 avail=5792MB v2_rss=5727MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:04:55 avail=5705MB v2_rss=5845MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:05:55 avail=5700MB v2_rss=5820MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:06:55 avail=5689MB v2_rss=5820MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:07:55 avail=5276MB v2_rss=6272MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:08:55 avail=5321MB v2_rss=6192MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:09:56 avail=5352MB v2_rss=6173MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:10:56 avail=4040MB v2_rss=6079MB gpu=10756MiB stage=[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 
+04:11:56 avail=5919MB v2_rss=5614MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:12:56 avail=5922MB v2_rss=5614MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:13:56 avail=5882MB v2_rss=5619MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:14:56 avail=5735MB v2_rss=5793MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:15:56 avail=5792MB v2_rss=5747MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:16:56 avail=5763MB v2_rss=5718MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:17:57 avail=5329MB v2_rss=6188MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:18:57 avail=5741MB v2_rss=5718MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:19:57 avail=5781MB v2_rss=5727MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:20:57 avail=5782MB v2_rss=5727MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:21:57 avail=5649MB v2_rss=5844MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:22:57 avail=5789MB v2_rss=5680MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:23:57 avail=5594MB v2_rss=5903MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:24:57 avail=5758MB v2_rss=5707MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:25:57 avail=5753MB v2_rss=5707MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:26:58 avail=5756MB v2_rss=5707MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:27:58 avail=5565MB v2_rss=5916MB gpu=10761MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:28:58 avail=3894MB v2_rss=6411MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:29:58 avail=3999MB v2_rss=5898MB gpu=10756MiB stage=[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 
+04:30:58 avail=5839MB v2_rss=5622MB gpu=10756MiB stage=[11020.2s] test/india block 7 (100000 S1): 5910840 cands -> 
+04:31:58 avail=5887MB v2_rss=5581MB gpu=10756MiB stage=[11020.2s] test/india block 7 (100000 S1): 5910840 cands -> 
+04:32:58 avail=5454MB v2_rss=5199MB gpu=10756MiB stage=[11151.1s] test/india: done in 9318s | peak RSS so far 6846 
+04:33:58 avail=5104MB v2_rss=6089MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:34:59 avail=5255MB v2_rss=6015MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:35:59 avail=5317MB v2_rss=5981MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:36:59 avail=5274MB v2_rss=6001MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:37:59 avail=5208MB v2_rss=6120MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:38:59 avail=5231MB v2_rss=6090MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:39:59 avail=5193MB v2_rss=6092MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:40:59 avail=5131MB v2_rss=6153MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:41:59 avail=5128MB v2_rss=6179MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:43:00 avail=5017MB v2_rss=6303MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:44:00 avail=5070MB v2_rss=6279MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:45:00 avail=5078MB v2_rss=6285MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:46:00 avail=5056MB v2_rss=6251MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:47:00 avail=5051MB v2_rss=6254MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:48:00 avail=4984MB v2_rss=6369MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:49:00 avail=4620MB v2_rss=5604MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:50:00 avail=6235MB v2_rss=5005MB gpu=10756MiB stage=[11232.1s] test/us: doc matrices [('name_c3', (3817031, 1929
+04:51:00 avail=6817MB v2_rss=4477MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:52:01 avail=6883MB v2_rss=4455MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:53:01 avail=6883MB v2_rss=4463MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:54:01 avail=6761MB v2_rss=4608MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:55:01 avail=6226MB v2_rss=5143MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:56:01 avail=6724MB v2_rss=4591MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:57:01 avail=6717MB v2_rss=4591MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:58:01 avail=6677MB v2_rss=4667MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+04:59:01 avail=6695MB v2_rss=4619MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:00:01 avail=6697MB v2_rss=4628MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:01:02 avail=6603MB v2_rss=4792MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:02:02 avail=6386MB v2_rss=4982MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:03:02 avail=6601MB v2_rss=4760MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:04:02 avail=6197MB v2_rss=5194MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:05:02 avail=6019MB v2_rss=5366MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:06:02 avail=4113MB v2_rss=5070MB gpu=10756MiB stage=[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887
+05:07:02 avail=6600MB v2_rss=4787MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:08:02 avail=6604MB v2_rss=4787MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:09:03 avail=6593MB v2_rss=5005MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:10:03 avail=6578MB v2_rss=4806MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:11:03 avail=5986MB v2_rss=5355MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:12:03 avail=6498MB v2_rss=4823MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:13:03 avail=6500MB v2_rss=4823MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:14:03 avail=6548MB v2_rss=4837MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:15:03 avail=6466MB v2_rss=4850MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:16:03 avail=6324MB v2_rss=5056MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:17:04 avail=6453MB v2_rss=4931MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:18:04 avail=5953MB v2_rss=5419MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:19:04 avail=5970MB v2_rss=5415MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:20:04 avail=6456MB v2_rss=4879MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:21:04 avail=6115MB v2_rss=5269MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:22:04 avail=4630MB v2_rss=5351MB gpu=10756MiB stage=[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887
+05:23:04 avail=6903MB v2_rss=4458MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:24:04 avail=6801MB v2_rss=4543MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:25:05 avail=6871MB v2_rss=4685MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:26:05 avail=6661MB v2_rss=4731MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:27:05 avail=6736MB v2_rss=4661MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:28:05 avail=6758MB v2_rss=4638MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:29:05 avail=6217MB v2_rss=5198MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:30:05 avail=6673MB v2_rss=4710MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:31:05 avail=6675MB v2_rss=4717MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:32:05 avail=6690MB v2_rss=4676MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:33:05 avail=6627MB v2_rss=4821MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:34:06 avail=6624MB v2_rss=4822MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:35:06 avail=6621MB v2_rss=4787MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:36:06 avail=6261MB v2_rss=5147MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:37:06 avail=6446MB v2_rss=4978MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:38:06 avail=4728MB v2_rss=5646MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:39:06 avail=4910MB v2_rss=5128MB gpu=10756MiB stage=[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888
+05:40:06 avail=6817MB v2_rss=4529MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:41:06 avail=6688MB v2_rss=4652MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:42:07 avail=6875MB v2_rss=4498MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:43:07 avail=6751MB v2_rss=4644MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:44:07 avail=6764MB v2_rss=4621MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:45:07 avail=6210MB v2_rss=5186MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:46:07 avail=6700MB v2_rss=4627MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:47:07 avail=6678MB v2_rss=4699MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:48:07 avail=6663MB v2_rss=4675MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:49:07 avail=6668MB v2_rss=4681MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:50:08 avail=6551MB v2_rss=4832MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:51:08 avail=6194MB v2_rss=5202MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:52:08 avail=6276MB v2_rss=5121MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:53:08 avail=6434MB v2_rss=4974MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:54:08 avail=6015MB v2_rss=5438MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:55:08 avail=3498MB v2_rss=5419MB gpu=10756MiB stage=[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887
+05:56:08 avail=6555MB v2_rss=4849MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+05:57:08 avail=6562MB v2_rss=4853MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+05:58:09 avail=6355MB v2_rss=5021MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+05:59:09 avail=6549MB v2_rss=4872MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:00:09 avail=6503MB v2_rss=4872MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:01:09 avail=5607MB v2_rss=5441MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:02:09 avail=5843MB v2_rss=5066MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:03:09 avail=6053MB v2_rss=4911MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:04:09 avail=5916MB v2_rss=4941MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:05:09 avail=5942MB v2_rss=4948MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:06:10 avail=5979MB v2_rss=4961MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:07:10 avail=5392MB v2_rss=5565MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:08:10 avail=5394MB v2_rss=5563MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:09:10 avail=5883MB v2_rss=5562MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:10:10 avail=6136MB v2_rss=5308MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:11:10 avail=3323MB v2_rss=5782MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:12:10 avail=6212MB v2_rss=5187MB gpu=10756MiB stage=[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887
+06:13:10 avail=6752MB v2_rss=4659MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:14:11 avail=6639MB v2_rss=4733MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:15:11 avail=6397MB v2_rss=4978MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:16:11 avail=6701MB v2_rss=4718MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:17:11 avail=6677MB v2_rss=4750MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:18:11 avail=6657MB v2_rss=4698MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:19:11 avail=6571MB v2_rss=4839MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:20:11 avail=6125MB v2_rss=5295MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:21:11 avail=6572MB v2_rss=4827MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:22:12 avail=5187MB v2_rss=4929MB gpu=10756MiB stage=[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887
+06:23:12 avail=11291MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:24:12 avail=7908MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:25:12 avail=9931MB v2_rss=1597MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:26:12 avail=9673MB v2_rss=1865MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:27:12 avail=8924MB v2_rss=1596MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:28:12 avail=9073MB v2_rss=2265MB gpu=5118MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:29:12 avail=8871MB v2_rss=2505MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:30:13 avail=9429MB v2_rss=2191MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:31:13 avail=9445MB v2_rss=2198MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:32:13 avail=9441MB v2_rss=2215MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:33:13 avail=9304MB v2_rss=2079MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:34:13 avail=9292MB v2_rss=2115MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:35:13 avail=9304MB v2_rss=2128MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:36:13 avail=8805MB v2_rss=1971MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:37:14 avail=8636MB v2_rss=2603MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:38:14 avail=8277MB v2_rss=2218MB gpu=8458MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:39:14 avail=8886MB v2_rss=2505MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:40:14 avail=8822MB v2_rss=2588MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:41:14 avail=9091MB v2_rss=2303MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:42:14 avail=9198MB v2_rss=1519MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:43:14 avail=9674MB v2_rss=1714MB gpu=6844MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:44:14 avail=9071MB v2_rss=2211MB gpu=10004MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:45:15 avail=8782MB v2_rss=2554MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:46:15 avail=9403MB v2_rss=2242MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:47:15 avail=9379MB v2_rss=2268MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:48:15 avail=8910MB v2_rss=2550MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:49:15 avail=9162MB v2_rss=2180MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:50:15 avail=9166MB v2_rss=2237MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:51:15 avail=9166MB v2_rss=2239MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:52:16 avail=9188MB v2_rss=2221MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:53:16 avail=8149MB v2_rss=3083MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:54:16 avail=8911MB v2_rss=2330MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:55:16 avail=9217MB v2_rss=2058MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:56:16 avail=8812MB v2_rss=2473MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:57:16 avail=8866MB v2_rss=2401MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:58:16 avail=8974MB v2_rss=2362MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+06:59:17 avail=8889MB v2_rss=2445MB gpu=13344MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:00:17 avail=10064MB v2_rss=1431MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:01:17 avail=9989MB v2_rss=1518MB gpu=94MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:02:17 avail=9861MB v2_rss=1435MB gpu=120MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:03:17 avail=9638MB v2_rss=1755MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:04:17 avail=9489MB v2_rss=2180MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:05:17 avail=9617MB v2_rss=2068MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:06:18 avail=9600MB v2_rss=2069MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:07:18 avail=9377MB v2_rss=2070MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:08:18 avail=9388MB v2_rss=2092MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:09:18 avail=9384MB v2_rss=2103MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:10:18 avail=9368MB v2_rss=2111MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:11:18 avail=9025MB v2_rss=2210MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:12:18 avail=9039MB v2_rss=2954MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:13:18 avail=7648MB v2_rss=2503MB gpu=5770MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:14:19 avail=11253MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:15:19 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:16:19 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:17:19 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:18:19 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:19:19 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:20:19 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:21:19 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:22:19 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:23:20 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:24:20 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:25:20 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:26:20 avail=11268MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:27:20 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:28:20 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:29:20 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:30:20 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:31:20 avail=11282MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:32:20 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:33:21 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:34:21 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:35:21 avail=11267MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:36:21 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:37:21 avail=11259MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:38:21 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:39:21 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:40:21 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:41:21 avail=11255MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:42:22 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:43:22 avail=11273MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:44:22 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:45:22 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:46:22 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:47:22 avail=11273MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:48:22 avail=11260MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:49:22 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:50:22 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:51:22 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:52:23 avail=11268MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:53:23 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:54:23 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:55:23 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:56:23 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:57:23 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:58:23 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+07:59:23 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:00:23 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:01:24 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:02:24 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:03:24 avail=11273MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:04:24 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:05:24 avail=11258MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:06:24 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:07:24 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:08:24 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:09:24 avail=11273MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:10:25 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:11:25 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:12:25 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:13:25 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:14:25 avail=11280MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:15:25 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:16:25 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:17:25 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:18:25 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:19:25 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:20:26 avail=11263MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:21:26 avail=11254MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:22:26 avail=11268MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:23:26 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:24:26 avail=11273MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:25:26 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:26:26 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:27:26 avail=11268MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:28:26 avail=11281MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:29:27 avail=11268MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:30:27 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:31:27 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:32:27 avail=11267MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:33:27 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:34:27 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:35:27 avail=11281MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:36:27 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:37:27 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:38:28 avail=11265MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:39:28 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:40:28 avail=11283MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:41:28 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:42:28 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:43:28 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:44:28 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:45:28 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:46:28 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:47:28 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:48:29 avail=11280MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:49:29 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:50:29 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:51:29 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:52:29 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:53:29 avail=11263MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:54:29 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:55:29 avail=11280MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:56:29 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:57:30 avail=11268MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:58:30 avail=11267MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+08:59:30 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:00:30 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:01:30 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:02:30 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:03:30 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:04:30 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:05:30 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:06:30 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:07:31 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:08:31 avail=11255MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:09:31 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:10:31 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:11:31 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:12:31 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:13:31 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:14:31 avail=11269MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:15:31 avail=11279MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:16:32 avail=11275MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:17:32 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:18:32 avail=11274MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:19:32 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:20:32 avail=11276MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:21:32 avail=11270MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:22:32 avail=11261MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:23:32 avail=11272MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:24:32 avail=11277MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:25:33 avail=11265MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:26:33 avail=11278MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:27:33 avail=11255MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:28:33 avail=11271MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:29:33 avail=11265MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:30:33 avail=11267MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:31:33 avail=11263MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:32:33 avail=11254MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:33:33 avail=10254MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:34:33 avail=11242MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:35:34 avail=11251MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:36:34 avail=11260MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:37:34 avail=11257MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:38:34 avail=11252MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:39:34 avail=11254MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:40:34 avail=11250MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:41:34 avail=11251MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:42:34 avail=11258MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:43:34 avail=11250MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:44:35 avail=11244MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:45:35 avail=11254MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:46:35 avail=11253MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:47:35 avail=11254MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:48:35 avail=11249MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:49:35 avail=11238MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:50:35 avail=11240MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:51:35 avail=11244MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:52:35 avail=11241MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:53:36 avail=11242MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:54:36 avail=10997MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:55:36 avail=11015MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:56:36 avail=11008MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:57:36 avail=10987MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:58:36 avail=8669MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+09:59:36 avail=8687MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:00:36 avail=8921MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:01:36 avail=8961MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:02:37 avail=7843MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:03:37 avail=8223MB v2_rss=0MB gpu=5922MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:04:37 avail=8201MB v2_rss=0MB gpu=8670MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:05:37 avail=8149MB v2_rss=0MB gpu=8670MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:06:37 avail=7391MB v2_rss=0MB gpu=8670MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:07:37 avail=8101MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:08:37 avail=8037MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:09:37 avail=7363MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:10:38 avail=7542MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:11:38 avail=7298MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:12:38 avail=6014MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:13:38 avail=6093MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:14:38 avail=5171MB v2_rss=0MB gpu=14386MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:15:38 avail=6506MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:16:38 avail=6527MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:17:38 avail=6525MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:18:39 avail=6366MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:19:39 avail=6397MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:20:39 avail=5817MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:21:39 avail=5818MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:22:39 avail=6284MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:23:39 avail=6276MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:24:39 avail=6282MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:25:39 avail=6157MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:26:40 avail=5701MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:27:40 avail=6092MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:28:40 avail=5669MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:29:40 avail=5559MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:30:40 avail=3834MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:31:40 avail=4649MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:32:40 avail=4186MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:33:41 avail=4620MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:34:41 avail=4620MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:35:41 avail=4398MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:36:41 avail=4065MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:37:41 avail=4352MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:38:41 avail=4018MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:39:41 avail=4030MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:40:42 avail=4106MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:41:42 avail=3895MB v2_rss=0MB gpu=10720MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:42:42 avail=11110MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:43:42 avail=11123MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:44:42 avail=11124MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:45:42 avail=11118MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:46:42 avail=11120MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:47:42 avail=11117MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:48:42 avail=11121MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:49:43 avail=11123MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:50:43 avail=11128MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:51:43 avail=11108MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:52:43 avail=11126MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:53:43 avail=11122MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:54:43 avail=11124MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:55:43 avail=11040MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:56:43 avail=11105MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:57:43 avail=11098MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:58:44 avail=11109MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+10:59:44 avail=6786MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:00:44 avail=4864MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:01:44 avail=6241MB v2_rss=0MB gpu=8170MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:02:44 avail=6081MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:03:44 avail=6220MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:04:44 avail=6003MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:05:44 avail=6012MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:06:45 avail=6023MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:07:45 avail=5607MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:08:45 avail=5619MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:09:45 avail=6075MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:10:45 avail=6096MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:11:45 avail=6099MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:12:45 avail=5904MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:13:45 avail=5895MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:14:45 avail=5526MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:15:46 avail=5531MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:16:46 avail=5942MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:17:46 avail=5536MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:18:46 avail=4516MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:19:46 avail=5601MB v2_rss=0MB gpu=11982MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:20:46 avail=9179MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:21:46 avail=8432MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:22:46 avail=8482MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:23:47 avail=10740MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:24:47 avail=8566MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:25:47 avail=8367MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:26:47 avail=10813MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:27:47 avail=10627MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:28:47 avail=8198MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:29:47 avail=10887MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:30:47 avail=10897MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:31:48 avail=10889MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:32:48 avail=10888MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:33:48 avail=10892MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:34:48 avail=10897MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:35:48 avail=10899MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
+11:36:48 avail=10901MB v2_rss=0MB gpu=92MiB stage=[17757.3s] done | peak RSS 7263 MB
