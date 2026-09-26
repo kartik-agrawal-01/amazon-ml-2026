@@ -77,3 +77,28 @@ Plan (QUEUE 1, P0 fast lane):
   because deterministic LightGBM changed numerics vs Q0) -> qeval n3 (France fixes, _n3 stores) -> qeval n3k (+ --key-rules 0.96).
   Relaunch: `~/miniforge3/envs/aml/bin/tmux new -d -s chain 'bash scripts/day/chain1.sh > runs/day/chain1.log 2>&1'`
   (check first with pgrep that nothing runs).
+
+## Session 4 — 26 Sep 13:03 (THIRD reboot, ~13:00)
+- Reboot pattern: all 3 hard power-offs (12:15:47, 12:47:40, 12:58:49; no clean shutdown in the journal) happened
+  within seconds of the START of the GPU top-k on train/us (gate A timings match to ~10 s every time). v2 ran 5 h of GPU
+  top-k at night without trouble using the host-densify path; session 1's "densify on the card" keeps the GPU at 100%
+  duty (sparse.mm back to back) -> suspected PSU/power trip under sustained full load (power limit 180 W; no sudo for
+  `nvidia-smi -pl`). Mitigation (commit aed5cf2): env AML_GPU_HOST_DENSIFY=1 (v2's path) + AML_GPU_DUTY=0.6 (sleep
+  after each chunk so the card is busy ~60%); chain1/chain2 export both. Same top-k results (scripts/day/topk_check.py:
+  cpu = card = host, overlap 1.0). GPU power/util logged every 5 s to runs/day/gpu_power.log (tmux `gpulog`).
+  If the box still reboots at train/us: run gate A with `--topk-device cpu` (edit gate.sh C=...) or AML_GPU_DUTY=0.3.
+- 13:04 chain1 relaunched (tmux `chain`): gateA resumes (train/india cached) -> gateB -> base -> n3 -> n3k.
+- QUEUE 5a DONE (previous session's analysis, committed now): runs/day/india_recall.md. India full-density blocking
+  recall 0.933; 55% of misses are Indic-transliterated candidate names (recall 0.795: 'kansaltantsa' = consultants,
+  'bildarsa' = builders); 32% of misses have IDENTICAL phonetic keys (src.translit.phonetic_key maps both spellings to
+  'knsltnts', 'bldrs'). v2 dropped the name_ph view -> QUEUE 5b first try = name_ph back (all countries, one model).
+- 13:10 chain2 (tmux `chain2`, waits for runs/day/chain/n3k.done): n3ph = n3 + `--views ...,name_ph` Q screen.
+  Compare n3ph vs n3 (and cands/S1). If it KEEPs, next: full-density India recall via the candidate-augmentation path
+  (name_ph pass only on cands_v2 train/india, then pair recall after the cascade).
+
+### NEXT
+- After a reboot: check `pgrep -af '^python[0-9.]* (-m src[.]|scripts/)'`, then relaunch BOTH (chain2 waits for chain1):
+  `T=~/miniforge3/envs/aml/bin/tmux; $T new -d -s chain 'bash scripts/day/chain1.sh > runs/day/chain1.log 2>&1';
+   $T new -d -s chain2 'bash scripts/day/chain2.sh > runs/day/chain2.log 2>&1';
+   $T new -d -s gpulog 'nvidia-smi --query-gpu=timestamp,power.draw,utilization.gpu,temperature.gpu,clocks.sm --format=csv,noheader -l 5 >> runs/day/gpu_power.log'`
+- GATE PASS handling: see Session 1 NEXT 1.  Q tables: `python scripts/day/q_table.py <tag>` (base, n3, n3k, n3ph).
