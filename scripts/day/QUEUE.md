@@ -36,6 +36,7 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    `output_v2_train/oof_pairs.tsv.gz` (or any dump of v2's train-pass OOF pairs) exists, compute OOF F0.5 per country
    at thr 0.70 + one-to-one on that sample, plus predicted matches/S1 and empty rate per country →
    `runs/day/v2_oof_by_country.md`. If no dump exists, write that in one line and stop (do NOT retrain v2).
+   — DONE 26 Sep 16:00 (loop): runs/day/v2_oof_by_country.md. OOF India 0.9476 / US 0.9722; India cand recall 0.919 vs US 0.976.
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
    to "north 32" (5% of French addresses); zero-padded house numbers (also 3% of US / 5% of India S2/S3); région vs
