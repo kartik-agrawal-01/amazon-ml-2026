@@ -7,6 +7,11 @@ against all docs of the country, OOF F0.5 per country + pair recall after the ca
 country. (2) Train GT has 3.46 true matches per S1 in both US and India. v2 predicts 3.35 (US), **3.12 (India)**,
 3.30 (France).
 
+UPLOAD POLICY (HQ, 26 Sep 12:30): uploads are spent only on files expected to beat the best LB by ≥ 1 pt. So do
+NOT run a full-data test pass per item: implement and evaluate items 2, 3, 4 (and 5 if ready) separately on the
+full-density train pass / slices, then run ONE full-data test pass with every KEEP → v3 = France fixes + global
+one-to-one + key rules (+ India recall). ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
+
 1. [P0] FAST LANE + correctness gate (see DAY_TASK.md). Nothing else until it passes.
 2. [P0.5, correctness — KEEP without the Q rule] GLOBAL one-to-one. v2 applies one-to-one per 100K-S1 block only. In
    the v2 submission, 13,806 S2/S3 ids are assigned to 2–5 S1s (28,302 pair slots, ≥ 14.5K guaranteed false positives;
@@ -18,7 +23,9 @@ country. (2) Train GT has 3.46 true matches per S1 in both US and India. v2 pred
    pairs? HQ exported them (computed with the NEW normaliser over all test records):
    `scripts/hq_ens/sure_pairs_missed_by_v2.tsv.gz` (130,678 pairs: source1_entity_id, entity_id, country, rule, flags).
    For each pair, look up output_v2/candidate_pairs.tsv and tag it: in v2's candidate set (the model rejected it) or
-   not (blocking/cascade cut it). Write counts by rule and country to `runs/day/keys_check.md`. HQ decides from this
+   not (blocking/cascade cut it). Write counts by rule and country to `runs/day/keys_check.md` (run it as
+   `python scripts/<name>.py` and stream candidate_pairs.tsv, keeping only the listed S1 ids: guard rules in
+   DAY_TASK.md). HQ decides from this
    which rules to force: cut pairs are ~96% true at the train rates, model-rejected ones may be the real negatives.
    The key rows: India `core_eq|num_eq` (29.8K pairs, train rate 0.958) and France `disjoint|a_eq|invented` (24.8K).
    — DONE 26 Sep 12:20 (loop): runs/day/keys_check.md. Cut before the model (blocking/cascade): France 71%, India 48%, US 16%.
@@ -38,7 +45,8 @@ country. (2) Train GT has 3.46 true matches per S1 in both US and India. v2 pred
       `disjoint|a_eq|invented` in France vs 92% in US; target ≥ 85%). SUBMIT-READY if the train-pass OOF holds; HQ
       decides the upload.
    d) Save per-pair test probabilities (P0-c).
-4. [Keys — GATED: HQ writes GO or NO-GO on this line after the LB of submissions LOG #3 (ens2c), ~13:00] Wire
+4. [Keys — GO for (a); (b) force_mask only if item 2b shows the France misses were mostly CUT before the model
+   (not model-rejected). No LB test is coming: ens2c is held.] Wire
    `src/hq_keys.py` (self-contained; `python -m src.hq_keys` self-test). Per country: `record_keys` for ALL S1 (kq_ctx)
    and all docs; per block `key_pairs(kq_block, kd, kq_ctx=kq_all)`.
    a) TRAIN pass: `calibrate(P, y)` per country → store the rule table in model.joblib. Union the pairs of rules with
@@ -58,7 +66,11 @@ country. (2) Train GT has 3.46 true matches per S1 in both US and India. v2 pred
       FP, by category (Indic-script name, empty candidate address, name-token Jaccard bins, address Jaccard bins,
       transliterated legal forms). Write `runs/day/india_recall.md`.
    b) Attack the biggest bucket: India-only k 10 → 20 on the name views (GPU top-k is cheap), the `name_ph` view back
-      for India only, and/or India cascade_top 12. Metric: India pair recall after the cascade + India OOF F0.5 on the
+      for India only, and/or India cascade_top 12. Also try REVERSE blocking (infra's idea): each S2/S3 record
+      queries its top-3 S1 per view, and those pairs join the S1's candidates after the cascade, like the key
+      pairs in item 4. It targets the decoy crowding in France too (~16 same-name decoys per S1, cap 10). Use
+      the candidate-augmentation path (new passes only). Item 2b's cut-vs-rejected counts say which country
+      needs it. Metric: India pair recall after the cascade + India OOF F0.5 on the
       full-density train pass. Promote at India OOF +0.5 pt. Keep final cands/S1 ≤ 12 and report it.
 6. [France] Country-neutral model: adversarial validation (classifier France-vs-US/India pairs on the pair features),
    drop or re-normalise the most country-shifted features (e.g. rank/percentile within country instead of raw
