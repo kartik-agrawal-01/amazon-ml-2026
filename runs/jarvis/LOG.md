@@ -76,3 +76,54 @@
   If paused: rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (cand-cache skips forward top-k).
 - e025b62 fix(main): reverse pairs cached under --cand-cache (ISSUES.md #1). The running jv1 process has the old code, so
   its train reverse is NOT cached; the test pass (separate invocation, --load-model) will cache.
+- 08:52 jv1 RESTARTED (commit 8792474) with `--pool-dir /home/pools/jv1` (new flag: top-40 pre-cascade pool per S1 by the
+  cascade score, OOF on train, + keep + y; test pool per block) and the reverse cache. Command in runs/jarvis/jv1.cmd.
+  Synthetic check: matching_results byte-identical with/without --pool-dir.
+- QUEUE 2 prep: src/jv_ce.py (train/test/report). Fake pool (4K India S1, GT pos + random neg): end-to-end OK.
+  A30 throughput under jv1's CPU load: fine-tune 2.2K pairs/s (bs 256, bf16, max_len 96), predict 21K pairs/s
+  (pre-tokenised unique texts; tokenizer-per-pair was 5K/s). => 3M pairs/fold ~23 min, OOF 24M pool pairs ~20 min,
+  test 1.73M S1 x 40 x 2 folds ~1.8 h (--test-top 20: ~55 min).
+  Run after jv1 train pass: python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048
+- 2b prep: src/jv_ce_feats.py (ce_p, ce_rank, ce_gap over the S1's pool) writes an augmented feat-cache so main's
+  `python -m src.rescore` retrains the matcher with ce features (OOF) and rescores the cached test blocks. Not yet run.
+- NEXT SESSION PLAN (in order):
+  1. jv1 train pass (tmux jv1): if dead w/o "done" -> rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (reverse + forward cached).
+     When done: record per-country recall (union / cascade / +bypass), OOF per country + overall, cands/S1 in SCOREBOARD.
+  2. Gate OOF >= 0.9653 & no country down -> test pass: same command minus --skip-test plus
+     `--load-model /home/out_jv/jv1/model.joblib` (keeps --pool-dir so the test pool is written). Then validator -> SUBMIT-READY.
+  3. As soon as /home/pools/jv1/train__*.parquet exist (after the cascade, before stage B finishes) the GPU is free:
+     tmux ce: python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048
+     (host RAM: pool 24M rows + texts ~ 6-8 GB; check memory.current + jv1 peak < 56 GB first).
+  4. After the test pool exists: jv_ce test (--test-top 40 or 20), jv_ce_feats, src.rescore --feat-cache /home/cache_jv/j2_feats.
+
+## Session 3 — 26 Sep 09:11 UTC
+- jv1 (tmux jv1, pid 31319, started 08:52, commit 8792474) alive: train/india reverse top-k (6 views) in progress at 09:11,
+  RSS 8.4 GB, memory.current 20 GB. GPU idle (waiting for /home/pools/jv1 train pool for QUEUE 2).
+- Merged origin/main (conflict only in CountryContext.reverse: took main's port b28824c of ISSUES #1). NOTE: running jv1
+  (old code) writes reverse caches as `*__rev3_<views joined by '-'>_N.parquet`; the merged code looks for views joined
+  by '+'. Before any rerun/test pass: `cd /home/cache_jv/j1_cand && for f in *__rev3_*-*.parquet; do mv "$f" "${f//-/+}"; done`
+  (check the rename touches only the view list).
+
+## Session 4 — 26 Sep 09:23 UTC
+- QUEUE unchanged (HQ 13:55 IST). origin/main has nothing new to merge. Removed stale conflict markers from LOG.md.
+- jv1 train pass (tmux jv1, pid 31319, 08:52 start) alive at 09:23: India reverse top-3 over 6 views took 1665 s
+  (12.8M pairs), key calibration 71 s (sure rules = 10, same set as smoke), now India forward top-k. RSS 7.4 GB,
+  memory.current 19 GB. Projection: US reverse ~50 min -> pool (/home/pools/jv1/train__*.parquet) ~11:00 UTC,
+  train pass done ~12:00 UTC.
+- 09:40 scripts/jarvis/source_recall.py (GT pairs per candidate source, from --cand-cache). India train block 0 (100K S1,
+  345,808 GT pairs): v2 4 views k10 0.9345 (= v2's 0.933) | 6 views k15 forward 0.9496 (120 cands/S1) | name_ph finds
+  0.300 of GT but only 0.15 pt that no other view finds | reverse top-3 alone 0.9366, +1.00 pt new -> pre-cascade union
+  0.9596 (154/S1) | exact keys: 92 new pairs of 92,667 sure (~0) | reverse-sure (rev_best>=2, bypasses the cap):
+  5.35 pairs/S1, precision 0.54 -> WATCH final cands/S1 (budget <= 12); if too many, --reverse-bypass 3 is a
+  model-only rerun from the cand cache.
+- 09:43 jv1 India train phase A done in 2977 s (peak RSS 14.4 GB); blocks: 331896/345808, 331950/345834, 133974/139479
+  GT found pre-cascade (0.960). US phase A started 09:43 (359,875 S1 sampled, 6.19M docs; reverse first).
+- 09:45 QUEUE 2 PILOT (runs/jarvis/cepilot.log): pseudo-pool from the India block-0 cand cache, first 30K S1, top-40 per
+  S1 by a crude rank proxy (pool holds 95,424 of 103,789 GT = 0.919), jv_ce train 2 folds by S1, 600K pairs/fold,
+  MiniLM-L12 1 epoch: fine-tune 2.17K pairs/s (277 s/fold), predict 25.7K pairs/s. OOF: AUC proxy 0.952 vs CE 0.9994;
+  recall@5 / @10: proxy 0.766 / 0.863, CE 0.880 / 0.919 (= the pool ceiling). The real pool uses the cascade score
+  (much stronger than the proxy), so the gain vs the cascade is still open, but the CE clearly ranks well.
+  Code works end to end on real store texts.
+- 09:56 tmux 'ce' (runs/jarvis/ce_train.cmd, log runs/jarvis/ce_train.log): waits for "pool: train/us" in jv1.log, then
+  `python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048`
+  (projection: 2 x (3M pairs ~23 min + 12M OOF pairs ~8 min) ~ 1.1 h). If paused: rerun `bash runs/jarvis/ce_train.cmd`.
