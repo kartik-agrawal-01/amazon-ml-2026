@@ -583,6 +583,11 @@ def main() -> None:
                     "top-k S1 of the country per view; pairs join the union (features rev_rank/rev_n/rev_best)")
     ap.add_argument("--reverse-bypass", type=int, default=2, help="reverse pairs where the S1 is the doc's best S1 in >= this "
                     "many views bypass the cascade cap (0 = never)")
+    ap.add_argument("--ce-dir", default="", help="jarvis QUEUE 2a: re-rank the cascade pool by w*CE+(1-w)*pa and keep the "
+                    "top --ce-top (+ key/reverse sure); train reads <dir>/train_ce.parquet (OOF), test scores with <dir>/fold*")
+    ap.add_argument("--ce-top", type=int, default=10)
+    ap.add_argument("--ce-w", type=float, default=0.5)
+    ap.add_argument("--ce-floor", type=float, default=0.005, help="CE re-rank: drop pool pairs with blend below this")
     ap.add_argument("--pool-dir", default="", help="jarvis QUEUE 2: dump the top-40 pre-cascade pool per S1 (by the cascade score; train: OOF) with keep/y to <dir>/{train,test}__<country>*.parquet")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
@@ -785,7 +790,7 @@ def main() -> None:
                 del cands, qb, gp
             gp_total += gp_c
             country_rows[c] = (row0, n_pairs_a)
-            if a.pool_dir:
+            if a.pool_dir or a.ce_dir:
                 pool_drid[c] = ctx.d_rid
             country_q[c] = (offset, len(q), sel)
             qrid_parts.append(ids_bytes(q["rid"]))
@@ -838,7 +843,28 @@ def main() -> None:
                     n_pool = dump_pool(os.path.join(a.pool_dir, f"train__{c}.parquet"), q_rid_tr, pool_drid[c], qg[r0:r1],
                                        cl[r0:r1], np.asarray(pa[r0:r1]), keep[r0:r1], y[r0:r1])
                     log(f"pool: train/{c} {n_pool} pairs -> {a.pool_dir}")
-                del pool_drid
+            if a.ce_dir:
+                from .jv_ce_keep import TrainCE, blend, pool_mask, top_by_blend
+                t_ce = time.time()
+                tce = TrainCE(a.ce_dir)
+                keep_ce = np.zeros_like(keep)
+                for c, (r0, r1) in country_rows.items():
+                    pa_c = np.asarray(pa[r0:r1])
+                    pm = pool_mask(qg[r0:r1], pa_c, keep[r0:r1])
+                    ce_p = np.full(r1 - r0, np.nan, np.float32)
+                    ce_p[pm] = tce.lookup(c, q_rid_tr, pool_drid[c], qg[r0:r1][pm], cl[r0:r1][pm])
+                    miss = pm & np.isnan(ce_p)
+                    ce_p[miss] = pa_c[miss]  # pool pair without a CE score (should not happen): fall back to pa
+                    k = top_by_blend(qg[r0:r1], np.where(pm, blend(pa_c, ce_p, a.ce_w), np.nan), a.ce_top, a.ce_floor)
+                    for sc in ("key_sure", "rev_sure"):
+                        if sc in a_cols:
+                            k |= np.asarray(Xa[r0:r1, a_cols.index(sc)]) == 1
+                    log(f"ce re-rank train/{c}: pool {int(pm.sum())} pairs ({int(miss.sum())} without CE), kept "
+                        f"{int(keep[r0:r1].sum())} -> {int(k.sum())}; GT kept {int(y[r0:r1][keep[r0:r1]].sum())} -> {int(y[r0:r1][k].sum())} ({time.time() - t_ce:.0f}s)")
+                    keep_ce[r0:r1] = k
+                keep = keep_ce
+                del tce, keep_ce
+            pool_drid = None
             del pa
         else:
             keep = np.zeros(n_pairs_a, dtype=bool)
@@ -958,7 +984,8 @@ def main() -> None:
             joblib.dump(dict(model=model, feats=feats, a_cols=a_cols, cascade_model=cascade_model,
                              cascade=dict(top=a.cascade_top, floor=a.cascade_floor, enabled=use_cascade),
                              thr_prune=thr_prune, best=best, views=views, key_calib=key_state["calib"] or None,
-                             key_rules=a.key_rules, reverse=dict(k=a.reverse_k, bypass=a.reverse_bypass)),
+                             key_rules=a.key_rules, reverse=dict(k=a.reverse_k, bypass=a.reverse_bypass),
+                             ce=dict(dir=a.ce_dir, top=a.ce_top, w=a.ce_w, floor=a.ce_floor) if a.ce_dir else None),
                         os.path.join(a.out_dir, "model.joblib"))
         except Exception as e:  # noqa: BLE001
             log(f"model not saved: {e}")
@@ -986,6 +1013,11 @@ def main() -> None:
         rv = mdl.get('reverse') or dict(k=0, bypass=2)
         a.reverse_k, a.reverse_bypass = rv['k'], rv['bypass']
         a.cascade_top, a.cascade_floor = mdl['cascade']['top'], mdl['cascade']['floor']
+        if mdl.get('ce'):  # the matcher was trained on the CE re-ranked candidate set -> test must re-rank the same way
+            a.ce_dir, a.ce_top, a.ce_w = a.ce_dir or mdl['ce']['dir'], mdl['ce']['top'], mdl['ce']['w']
+            a.ce_floor = mdl['ce'].get('floor', 0.0)
+        elif a.ce_dir:
+            raise SystemExit("--ce-dir given but the loaded model was trained without the CE re-rank")
         thr_best = best['thr'] if best['rule'] == 'thr' else 0.0
         report['oof'] = dict(chosen=best, loaded_from=a.load_model)
         report['loaded_model'] = a.load_model
@@ -1011,6 +1043,11 @@ def main() -> None:
     per_country, count_parts, test_cands = [], [], {}
     n_s1_te = n_empty = n_pred = n_pairs_te = 0
     pred_for_gt: Dict[str, frozenset] = {}
+    test_ce = None
+    if a.ce_dir and use_cascade:
+        from .jv_ce_keep import TestCE
+        test_ce = TestCE(a.ce_dir)
+        log(f"ce re-rank: {len(test_ce.encs)} fold models from {a.ce_dir}, top {a.ce_top}, w {a.ce_w}")
     for c in countries_te:
         t_c = time.time()
         rec = load_country(meta_te, c, cols)
@@ -1064,6 +1101,22 @@ def main() -> None:
                     os.makedirs(a.pool_dir, exist_ok=True)
                     dump_pool(os.path.join(a.pool_dir, f"test__{c}__b{bi:03d}.parquet"), qb["rid"].to_numpy(dtype=object),
                               ctx.d_rid, cands["q"].to_numpy(), cands["c"].to_numpy(), np.asarray(pa), keep_b)
+                if test_ce is not None:
+                    from .jv_ce_keep import blend, pool_mask, top_by_blend
+                    t_ce = time.time()
+                    pa = np.asarray(pa)
+                    qv, cv = cands["q"].to_numpy(), cands["c"].to_numpy()
+                    pm = pool_mask(qv, pa, keep_b)
+                    ce_p = np.full(len(cands), np.nan, np.float32)
+                    ce_p[pm] = test_ce.score(qb, d, qv[pm], cv[pm])
+                    k = top_by_blend(qv, np.where(pm, blend(pa, ce_p, a.ce_w), np.nan), a.ce_top, a.ce_floor)
+                    for sc in ("key_sure", "rev_sure"):
+                        if sc in cands:
+                            k |= cands[sc].to_numpy() == 1
+                    log(f"ce re-rank test/{c} block {bi}: pool {int(pm.sum())} pairs scored in {time.time() - t_ce:.0f}s, "
+                        f"kept {int(keep_b.sum())} -> {int(k.sum())}")
+                    keep_b = k
+                    del ce_p, pm, k
                 del pa
             else:
                 keep_b = prune_score(cands) >= thr_c
