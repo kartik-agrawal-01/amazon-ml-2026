@@ -176,13 +176,13 @@ def key_extra(kp: pd.DataFrame, rule_p: Dict[str, float], p_min: float) -> pd.Da
     from .hq_keys import apply_rules
     kp = kp[kp["rule"].isin(list(rule_p))].reset_index(drop=True)
     sure = apply_rules(kp.rename(columns={"c": "ci"}), rule_p, p_min) if len(kp) else np.zeros(0, bool)
-    return pd.DataFrame({"q": kp["q"].to_numpy(), "c": kp["c"].to_numpy(),
+    return pd.DataFrame({"q": kp["q"].to_numpy(), "c": kp["c"].to_numpy(), "rule": kp["rule"].to_numpy(),
                          "key_p": kp["rule"].map(rule_p).to_numpy().astype(np.float32), "key_sure": sure.astype(np.int8)})
 
 
 def add_key_pairs(u: pd.DataFrame, extra: pd.DataFrame, views: List[str]) -> pd.DataFrame:
     """Annotate the union with key_p/key_sure and append the sure pairs top-k did not find (ranks 99, n_views 0)."""
-    extra = extra.sort_values("key_p", ascending=False).drop_duplicates(["q", "c"])
+    extra = extra.drop(columns=["rule"], errors="ignore").sort_values("key_p", ascending=False).drop_duplicates(["q", "c"])
     new = extra[extra["key_sure"] == 1]
     m = u.merge(extra, on=["q", "c"], how="left")
     new = new.merge(u[["q", "c"]], on=["q", "c"], how="left", indicator=True)
@@ -807,7 +807,7 @@ def main() -> None:
             from .hq_keys import rules_for_country, s1_vocab
             kq_te = record_keys_chunked(q)
             kt = dict(kq=kq_te, kd=record_keys_chunked(d), vocab=s1_vocab(kq_te),
-                      rule_p=rules_for_country(key_state["calib"], c), n_sure=0, n_sure_dec=0)
+                      rule_p=rules_for_country(key_state["calib"], c), sure=[])
             log(f"test/{c}: key rules {'(unseen country: min over train countries) ' if c not in key_state['calib'] else ''}"
                 f"sure: {sorted(r for r, v in kt['rule_p'].items() if v >= key_state['p_min'])}")
         c_sets: Dict[str, frozenset] = {}
@@ -815,9 +815,10 @@ def main() -> None:
         c_s1 = c_empty = c_pred = c_pairs = 0
         c_counts = []
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
-            extra = None
+            extra = ksure = None
             if kt is not None:
                 extra = key_extra(block_key_pairs(kt["kq"], q_idx, kt["kd"], kt["vocab"]), kt["rule_p"], key_state["p_min"])
+                ksure = extra.loc[extra["key_sure"] == 1, ["q", "c", "rule"]].drop_duplicates(["q", "c"])
             cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi, extra=extra)
             del extra
             n_before = len(cands)
@@ -851,11 +852,10 @@ def main() -> None:
             cand_rows = [""] * len(qb)
             for qq, grp in cands.groupby("q")["c"]:
                 cand_rows[qq] = ",".join(ctx.d_rid[grp.values])
-            if kt is not None:
-                ks = cands[cands["key_sure"] == 1]
-                kt["n_sure"] += len(ks)
-                kt["n_sure_dec"] += int(sum(r in sets[q] for q, r in zip(qb_rid[ks["q"].to_numpy()], ctx.d_rid[ks["c"].to_numpy()])))
-                del ks
+            if ksure is not None:  # sure key pairs of the block (S1 rid, record rid, rule) -> coverage after global o2o
+                kt["sure"].append(pd.DataFrame({"s1": qb_rid[ksure["q"].to_numpy()], "rec": ctx.d_rid[ksure["c"].to_numpy()],
+                                                "rule": ksure["rule"].to_numpy()}))
+            del ksure
             if not a.no_global_o2o:
                 dp_parts.append(decided_pairs(sets, cands, qb_rid, ctx.d_rid))
             c_sets.update(sets)
@@ -879,6 +879,16 @@ def main() -> None:
                 c_empty += not m
                 if a.test_gt:
                     pred_for_gt[r] = m
+        key_cov = (0, 0)
+        if kt is not None and kt["sure"]:  # QUEUE 3c: coverage of the sure key pairs by rule (final sets)
+            ks = pd.concat(kt["sure"], ignore_index=True)
+            ks["dec"] = [r in c_sets.get(s, ()) for s, r in zip(ks["s1"].to_numpy(), ks["rec"].to_numpy())]
+            tab = ks.groupby("rule")["dec"].agg(n="size", covered="mean").reset_index()
+            tab["rule_p"] = tab["rule"].map(kt["rule_p"])
+            tab.to_csv(os.path.join(a.out_dir, f"key_coverage_{c}.csv"), index=False)
+            log(f"test/{c}: sure key pairs {len(ks)}, covered {ks['dec'].mean():.3f}; by rule:\n{tab.to_string(index=False)}")
+            key_cov = (len(ks), int(ks["dec"].sum()))
+            del ks, tab
         del c_sets, c_order, c_cand_rows, dp_parts
         fh_m.flush()
         fh_c.flush()
@@ -890,7 +900,7 @@ def main() -> None:
         test_cands[c] = stats_from_counts(counts_c)
         per_country.append(dict(country=c, n_s1=c_s1, empty_rate=c_empty / max(c_s1, 1), mean_matches=c_pred / max(c_s1, 1),
                                 cand_mean=test_cands[c]["mean"], cand_median=test_cands[c]["median"], o2o_removed=n_o2o,
-                                key_sure=kt["n_sure"] if kt else 0, key_sure_decided=kt["n_sure_dec"] if kt else 0,
+                                key_sure=key_cov[0], key_sure_decided=key_cov[1],
                                 prune_threshold=thr_c if thr_c is not None else np.nan))
         n_s1_te += c_s1
         n_empty += c_empty

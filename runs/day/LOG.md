@@ -66,3 +66,14 @@ Plan (QUEUE 1, P0 fast lane):
 - Found uncommitted WIP from the previous session in src/pipeline.py: QUEUE 4a key rules (`--key-rules 0.96`:
   calibrate hq_keys rules per train country on ALL S1 context, inject sure pairs into the union, bypass the cascade cap,
   features key_p/key_sure; test pass: unseen country gets the min over train countries). Reviewed; smoke-testing it.
+
+## Session 3 — 26 Sep 12:53 (second REBOOT ~12:51; gate A died again right after train/india)
+- Git auth still missing (pull/push fail) -> commits stay local.
+- Committed the key-rules WIP (5b8720f, flag default off). Added per-rule coverage of the sure key pairs in the test
+  pass (after global o2o): log table + <out>/key_coverage_<country>.csv, report per_country key_sure/_decided (QUEUE 3c).
+- Heavy work now runs as ONE resumable chain: `scripts/day/chain1.sh` (tmux `chain`, log runs/day/chain1.log;
+  finished steps leave runs/day/chain/<step>.done, so after a reboot just relaunch the same command):
+  gateA (cands_v2) -> gateB (rescore v2 + compare, runs/day/gateB.log) -> qeval base (HEAD, v2 stores; new baseline
+  because deterministic LightGBM changed numerics vs Q0) -> qeval n3 (France fixes, _n3 stores) -> qeval n3k (+ --key-rules 0.96).
+  Relaunch: `~/miniforge3/envs/aml/bin/tmux new -d -s chain 'bash scripts/day/chain1.sh > runs/day/chain1.log 2>&1'`
+  (check first with pgrep that nothing runs).
