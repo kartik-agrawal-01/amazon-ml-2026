@@ -153,16 +153,17 @@ def global_o2o(sets: Dict[str, frozenset], s1: np.ndarray, rec: np.ndarray, p: n
 
 
 def adapt_threshold(sets: Dict[str, frozenset], s1: np.ndarray, rec: np.ndarray, p: np.ndarray, thr: float,
-                    src_empty: float) -> float:
+                    src_empty: float, floor: float = 0.02) -> float:
     """QUEUE 2d rule 'R2 lower-only' (label-free, per test country): the threshold t <= thr (0.01 grid) whose
     predicted-empty rate over the country's S1s is closest to the source OOF empty rate; then drops pairs with p < t
     from `sets` (in place; sets were decided at the p floor). A seen country usually keeps ~thr; an unseen one, where
-    the model is less confident, gets a lower t (xc_us US->India: hidden F 0.9321 -> 0.9480)."""
+    the model is less confident, gets a lower t (xc_us US->India: hidden F 0.9321 -> 0.9480). `floor` bounds t from
+    below: at full density a low t costs ~2x more precision than on the slices (runs/day/floor_evidence.md)."""
     live = np.fromiter((r in sets[q] for q, r in zip(s1, rec)), bool, len(s1))
     s1, rec, p = s1[live], rec[live], p[live]
     maxp = pd.Series(p).groupby(s1).max().to_numpy() if len(p) else np.zeros(0)
     n = len(sets)
-    grid = np.round(np.arange(0.02, thr + 1e-9, 0.01), 2)
+    grid = np.round(np.arange(max(0.02, floor), thr + 1e-9, 0.01), 2)
     empty = np.array([1.0 - (maxp >= t).sum() / max(n, 1) for t in grid])
     t_c = float(min(thr, grid[int(np.argmin(np.abs(empty - src_empty)))])) if len(grid) else thr
     drop: Dict[str, set] = {}
@@ -587,6 +588,7 @@ def main() -> None:
                     "many views bypass the cascade cap (0 = never)")
     ap.add_argument("--thr-adapt", action="store_true", help="QUEUE 2d: per test country, lower the threshold until "
                     "the predicted-empty rate matches the OOF one (never raises it; needs rule thr + global o2o)")
+    ap.add_argument("--thr-adapt-floor", type=float, default=0.02, help="lowest threshold --thr-adapt may pick")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -1106,7 +1108,7 @@ def main() -> None:
         thr_cty = thr_best
         if adapt:
             thr_cty = adapt_threshold(c_sets, *(np.concatenate([d[i] for d in dp_parts]) for i in range(3)),
-                                  thr=thr_best, src_empty=best["src_empty"])
+                                  thr=thr_best, src_empty=best["src_empty"], floor=a.thr_adapt_floor)
             log(f"test/{c}: --thr-adapt threshold {thr_cty:.2f} (OOF-chosen {thr_best:.2f}, OOF empty {best['src_empty']:.4f})")
         for qb_rid, cand_rows in zip(c_order, c_cand_rows):
             for i, r in enumerate(qb_rid):
