@@ -250,6 +250,8 @@ Plan (QUEUE 1, P0 fast lane):
   xc_us + slice_mix. Compare it with n3ph.
 - ph_check (runs/day/ph_check.md): AML_PH=2 exact ph agreement on Indic-candidate GT pairs 39.4% -> 43.3%, decoy
   merge +2.9%. Modest; n4ph decides.
+- 16:11 n3k xc_us DONE (key rules 0.96 on _n3): 0.9321 vs n3 0.9273 (+0.0048; ≈ +0.0014 on Q), cands/S1 5.31 (n3 5.26).
+  India test: 49,183 sure key pairs, only 104 new to the union. slice_mix running.
 ### NEXT (session 8+)
 1. After a reboot: relaunch sysmon, gpulog, chain4 and chain5 (both skip steps that have a .done marker).
 2. n3k / n3ph / n3r: after each one, run q_table + `PYTHONPATH=. python scripts/day/thr_sweep.py data_xc_us output_day_<tag>_xc_us`
