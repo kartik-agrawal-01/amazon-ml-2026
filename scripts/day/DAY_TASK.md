@@ -6,6 +6,9 @@ allowed (and expected) to change modelling logic (features, blocking, model, dec
 Memory between sessions: `runs/day/SCOREBOARD.md` + `runs/day/LOG.md` (create if missing).
 Every session: `cd ~/amazon-ml-2026 && git pull --no-edit`, read SCOREBOARD.md, LOG.md, `scripts/day/QUEUE.md`
 (humans/HQ may add items there — respect its order), CONTEXT.md, `runs/day/guard.log`.
+Ownership: QUEUE.md, CONTEXT.md, submissions/LOG.md and docs/ belong to HQ (the modelling chat). In QUEUE.md you
+only append DONE/FAILED marks to items; never reword, reorder or delete them. If `git pull` conflicts on QUEUE.md,
+keep the remote version and re-apply your marks. Never edit the other HQ files.
 
 ## Detecting running jobs
 Use ONLY `pgrep -af '^python[0-9.]* (-m src[.]|scripts/)'`. Plain `pgrep -f src.pipeline` also matches your own
@@ -54,6 +57,13 @@ a) `--reuse-candidates <dir>` (or a new `src/rescore.py`): take a FIXED full-dat
    cache train/test pair FEATURES as parquet so feature/model/rule changes only recompute what changed.
 b) Correctness gate: rescoring v2's candidates with v2's model must reproduce ≥ 99.9% of v2's
    matching_results rows exactly. Record full-data runtime per stage.
+   HQ's France fixes (QUEUE item 2) change `src/normalize.py` + `src/features.py` ON PURPOSE, so HEAD cannot
+   reproduce v2. Run the gate on v2's versions of those two files: commit the fast-lane code, then
+   `git worktree add ~/aml_gate HEAD && git -C ~/aml_gate checkout 48bc4e7 -- src/normalize.py src/features.py`,
+   run the gate from ~/aml_gate against the main tree's data and v2's stores/caches by absolute path (read-only:
+   never rebuild or delete them; the gate's own outputs go to ~/aml_gate_out and are deleted after it passes),
+   then `git worktree remove --force ~/aml_gate`. A failure there is a fast-lane bug, not HQ's. After the gate,
+   everything runs on HEAD in ~/amazon-ml-2026.
 c) Save per-pair probabilities for test (needed for the France diagnosis).
 Also add a "candidate augmentation" path for blocking changes: run only NEW view passes (per affected
 country), union with cached candidates, re-apply the cascade, rescore.
