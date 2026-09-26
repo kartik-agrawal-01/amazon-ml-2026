@@ -334,3 +334,15 @@ Plan (QUEUE 1, P0 fast lane):
 - 18:26 n3ka xc_in DONE: 0.9818 (n3 0.9819), OOF 0.97067, adapt keeps US at 0.85 (as the offline check said), cands/S1 7.97,
   17.4 min, 3.1 GB. **n3ka Q = 0.9726 confirmed (row 6) = champion.** chain6 exited, chain4 resumed: n3ph.done touched,
   n3r skipped by the placeholder, gateA started 18:26 (DUTY 0.3). Appended to chain7: n3ka_s7 (seed 7, xc_us) for NEXT 4.
+- 18:43 gate A alive past the old reboot point (train/us top-k): name_c3 356 s at DUTY 0.3 (178 s at 0.6 in session 2) ->
+  gate A may take ~6-8 h in total (test = 3 countries). The cand cache is per block, so a reboot only loses the current block.
+- Session 10 ends ~18:45. Running: chain4 (gateA -> gateB), chain5 (n4ph after chain4), chain7 (n3r, n3ka_s7 after chain4/5/6),
+  sysmon, gpulog.
+### NEXT (session 11+)
+1. Gate A/B: watch runs/day/gate.log / gateB.log. If the box rebooted: relaunch sysmon, gpulog, chain4 (with
+   AML_GPU_DUTY=0.6 is fine: cached blocks are skipped), chain5, chain7. If gate A crashes twice: NOTES + stop the gate.
+2. Gate B PASS (>= 99.9% rows identical): move ~/aml_gate_out/test_probs_*.parquet -> output_v2_probs/, rm -rf ~/aml_gate_out,
+   `git worktree remove --force ~/aml_gate`, QUEUE 1 DONE, then launch v3 (tmux v3: scripts/day/v3.sh) BEFORE chain5/7
+   continue if possible (chain5/7 steps are slices; v3 is the fallback file HQ needs). v3 -> runs/v3/NOTES.md with the
+   France table (QUEUE 3c) -> submissions/v3_matching_results.tsv -> SCOREBOARD SUBMIT-READY.
+3. n4ph (chain5), n3r and n3ka_s7 (chain7) -> SCOREBOARD rows vs row 6 (n3r uses the champion flags; n4ph compares with n3ph).
