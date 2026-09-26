@@ -156,3 +156,16 @@
   Check this on the real pool (cascade pa) first; if it holds, jv2 uses --ce-w 1.0 (maybe --ce-floor 0.01-0.02).
   Rerun the sweep any time: python -m src.jv_ce report --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce
 - SESSION 4 END 10:27 UTC. Running: tmux jv1 (train pass, US reverse), tmux ce (waits for the jv1 pool, then CE train).
+
+## Session 5 — 26 Sep 10:23 UTC
+- QUEUE (HQ 16:00 IST): item 1 gate is now DENSITY-MATCHED: (b) OOF on v2's 150K S1 subset >= 0.9623 overall -> GO test.
+  Merged origin/main clean (box 2c: v2 OOF per country India 0.9476 / US 0.9722; 5a India recall decomposition).
+- jv1 train pass alive (pid 31319): US reverse top-k since 09:44 UTC.
+- scripts/jarvis/jv1_gate.py: (a) all sampled S1, (b) v2's 150K subset (pandas-sample prefix; checks containment and
+  that the permutation reproduces the run's sample), (c) cand recall + cands/S1, (d) pred/S1 + empty vs GT, per country.
+  Synth check (/home/synth_ce/o1): 0.90388 = the pipeline's logged OOF.
+- tmux 'chain' (scripts/jarvis/chain_jv1.sh, log runs/jarvis/chain_jv1.log): waits for "skip-test: done", renames the
+  old-code reverse caches ('-' -> '+'), writes runs/jarvis/jv1_train.md via the gate, and on GO starts the test pass
+  (runs/jarvis/jv1_test.cmd -> runs/jarvis/jv1_test.log, out /home/out_jv/jv1_test). Checked: old model.joblib loads with
+  HEAD code; features.py diff since 8792474 = AML_GENERIC ablation only (default off) -> same features.
+  If paused: rerun train `bash -c "$(cat runs/jarvis/jv1.cmd)"` (rename rev caches first), then `bash scripts/jarvis/chain_jv1.sh`.
