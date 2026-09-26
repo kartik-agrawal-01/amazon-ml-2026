@@ -76,6 +76,7 @@
   If paused: rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (cand-cache skips forward top-k).
 - e025b62 fix(main): reverse pairs cached under --cand-cache (ISSUES.md #1). The running jv1 process has the old code, so
   its train reverse is NOT cached; the test pass (separate invocation, --load-model) will cache.
+<<<<<<< HEAD
 - 08:52 jv1 RESTARTED (commit 8792474) with `--pool-dir /home/pools/jv1` (new flag: top-40 pre-cascade pool per S1 by the
   cascade score, OOF on train, + keep + y; test pool per block) and the reverse cache. Command in runs/jarvis/jv1.cmd.
   Synthetic check: matching_results byte-identical with/without --pool-dir.
@@ -95,3 +96,9 @@
      tmux ce: python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048
      (host RAM: pool 24M rows + texts ~ 6-8 GB; check memory.current + jv1 peak < 56 GB first).
   4. After the test pool exists: jv_ce test (--test-top 40 or 20), jv_ce_feats, src.rescore --feat-cache /home/cache_jv/j2_feats.
+=======
+>>>>>>> origin/main
+
+## Session 3 — 26 Sep 09:11 UTC
+- jv1 (tmux jv1, pid 31319, started 08:52, commit 8792474) alive: train/india reverse top-k (6 views) in progress at 09:11,
+  RSS 8.4 GB, memory.current 20 GB. GPU idle (waiting for /home/pools/jv1 train pool for QUEUE 2).

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+import os
+
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
@@ -133,6 +135,8 @@ def _set_rec(q_rec: pd.DataFrame, d_rec: pd.DataFrame) -> None:
             _D[c] = d_rec[c].values
 
 
+_GENERIC_V2 = os.environ.get("AML_GENERIC", "") == "v2"
+
 def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
     n = len(qi)
     f = {}
@@ -191,6 +195,11 @@ def _stage_b_block(qi: np.ndarray, ci: np.ndarray) -> dict:
                "sarl", "sas", "sasu", "eurl", "sa", "sci", "snc", "ei", "compagnie", "cie", "societe", "ste", "ets",
                "etablissements", "groupe", "participations", "developpement", "distribution", "associes", "fils",
                "freres", "france", "de", "du", "des", "la", "le", "les", "et"}
+    if _GENERIC_V2:  # ablation (day loop): v2's generic set (48bc4e7), to split normalize.py vs features.py effects
+        generic = {"co", "company", "inc", "llc", "ltd", "limited", "pvt", "private", "corp", "corporation", "group",
+                   "holdings", "center", "centre", "services", "service", "the", "and", "of", "international",
+                   "enterprises", "solutions", "partners", "associates", "llp", "pc", "pllc", "lp", "trust", "foundation",
+                   "india"}
     tq_ = [set(a.split()) for a in cq]
     tc_ = [set(b.split()) for b in cc]
     f["extra_c"] = np.fromiter((len(b - a) for a, b in zip(tq_, tc_)), np.int8, n)

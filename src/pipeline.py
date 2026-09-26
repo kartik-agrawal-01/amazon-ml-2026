@@ -454,25 +454,27 @@ class CountryContext:
 
     def reverse(self, q_all: pd.DataFrame, r: int, q_of_all: Optional[np.ndarray] = None,
                 cache: Optional["CandCache"] = None) -> pd.DataFrame:
+        """cache (Jarvis ISSUES 1): the raw all-S1 x docs reverse pairs are saved in the --cand-cache and reused."""
         t = time.time()
         n_all = len(q_all)
         path = None
-        if cache is not None:  # all-S1 x docs reverse pairs do not depend on the train sample: cache them per country
-            path = os.path.join(cache.root, f"{cache._fname(self.tag)}__rev{r}_{'-'.join(self.views)}_{n_all}.parquet")
+        if cache is not None and cache._drid_map.get(self.tag) is None:
+            path = os.path.join(cache.root, f"{cache._fname(self.tag)}__rev{r}_{'+'.join(self.views)}_{n_all}.parquet")
         if path is not None and os.path.exists(path):
             raw = pd.read_parquet(path)
-            log(f"{self.tag}: reverse pairs loaded from {path}")
+            src = "loaded from the candidate cache"
         else:
             q_all = q_all[view_cols(self.views)].copy()  # view_text may add n_full: never on the caller's table
             qm = {v: transform(self.vecs[v], view_text(q_all, v), self.n_jobs) for v in self.views}
             del q_all
             raw = reverse_pairs(qm, self.d_mats, self.views, r, self.n_jobs)
             del qm
+            src = "computed"
             if path is not None:
                 raw.to_parquet(path + ".tmp", index=False)
                 os.replace(path + ".tmp", path)
         rev = rev_by_query(raw, q_of_all)
-        log(f"{self.tag}: reverse blocking top-{r}: {len(rev)} pairs for {len(self.q)} S1 "
+        log(f"{self.tag}: reverse blocking top-{r} {src}: {len(rev)} pairs for {len(self.q)} S1 "
             f"({n_all} S1 queried, {time.time() - t:.0f}s)")
         return rev
 

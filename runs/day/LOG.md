@@ -144,3 +144,56 @@ Plan (QUEUE 1, P0 fast lane):
   runs of them belong to the Jarvis lane; port fixes from runs/jarvis/ISSUES.md — file does not exist yet) and pushed
   everything (e05b148). The gate A/B at the end of chain3 is still needed for the box's fallback v3 (France fixes +
   global o2o only, per the new UPLOAD POLICY).
+- 14:25 n3 xc_us DONE: hidden F 0.9273 vs base 0.9344 (-0.0071) although the train OOF rose (0.98395 vs 0.98365).
+  India test: empty 8.0% (base 7.6%), mean matches 2.93 (2.98), losses in every GT bucket (1-true 0.822 vs 0.838,
+  3+ 0.937 vs 0.944); cands/S1 5.3 vs 5.1, train cascade recall same (0.990). So the US-trained model transfers WORSE
+  to India with HQ's France fixes (normalize.py + features.py of 7defba7) - exactly the unseen-country situation of
+  France. slice_mix running (n3), then n3k/n3ph/n3r (all on the _n3 stores).
+### NEXT (adds to the list above)
+5. If n3 slice_mix also does not beat base (0.9808): n3 is NOT a clear KEEP -> write runs/day/n3_NOTES.md for HQ with
+   both tables, and run the ablation once the chain is idle: (a) `n3f` = n3 stores + v2's features.py
+   (`git show 48bc4e7:src/features.py`) to split normalisation vs feature effects; (b) xc_in for n3 (train India ->
+   test US) for the full Q. n3k/n3ph/n3r then need to be compared against n3 AND re-run on base stores if n3 is reverted.
+- 14:30 Ported Jarvis ISSUES 1 to main: CountryContext.reverse(..., cache=CandCache) saves/loads the raw reverse pairs
+  as <cand-cache>/<tag>__rev<r>_<views>_<nS1>.parquet (only with --cand-cache and no doc remap). Unit test still OK.
+  Jarvis note: reverse top-k on --topk-device cuda is ~5x slower than CPU sparse_dot_topn at full density (docs as
+  queries); slices are small enough that n3r keeps cuda.
+- Session 5 ends 14:31: chain3 running n3 slice_mix; nothing else of ours running besides sysmon/gpulog.
+
+## Session 6 — 26 Sep 14:27 (Session 2 of this driver)
+- chain3 running n3 slice_mix (started 14:25; store build first).
+- n3 xc_us drop analysis (scripts/day/diff_runs.py; output runs/day/n3_vs_base_xc_us.txt): n3 vs base on India test
+  loses 2965 TP and gains 1443. Only 62 of the lost TPs were NOT n3 candidates, so blocking is not the cause (n3's
+  candidate recall is actually higher, 0.9534 vs 0.9516). The model now rejects them: 67% of lost TPs have an
+  Indic-script candidate name (1998 lost vs 290 gained). TP count on Indic-name GT pairs drops 19478 -> 17770 (-9%);
+  ASCII names are net +148. scripts/day/norm_diff.py: for 759 of 800 lost-pair records the v2 and HEAD normalisers
+  give IDENTICAL name/core/legal/address (the other 41 are only leading-zero or "tg" -> "telangan"). So the change
+  comes from the model trained on US with the new features, not from the Indic records' own features. The only
+  features.py diff vs v2 is the larger `generic` token set (dba/fka/aka/shri/sri/dr/mr + French words).
+- Plan: ablation n3f = n3 stores + v2's generic set (new env switch AML_GENERIC=v2 in src/features.py; default = HEAD
+  behaviour, so the running job is not affected). If n3f recovers xc_us -> the generic set is the cause (US-trained
+  extra_*_content shifts the decision surface for India transliterations); if not -> the normalisation (US training
+  pairs look different) is. Then n3 xc_in (never run) for a full Q.
+- scripts/day/chain4.sh (tmux `chain4`) waits for chain3 to exit. chain3's remaining steps n3k/n3ph/n3r/gateA/gateB are
+  skipped via placeholder .done markers (listed in runs/day/chain/.chain4_placeholders; chain4 removes them at start).
+  chain3 will print "ALL DONE" even though it skipped them; ignore that. chain4 order: n3f (xc_us, slice_mix) ->
+  n3xin -> n3k -> n3ph -> n3r -> gateA -> gateB.
+### NEXT (session 7+)
+1. After a reboot: relaunch sysmon + gpulog and **chain4** (not chain3). If .chain4_placeholders still exists and n3.done
+   exists, just start chain4. If n3.done is missing: remove the placeholders listed there, then start chain3.
+2. n3f vs n3 on xc_us (n3 0.9273, base 0.9344), then on slice_mix. Decide the generic set. If AML_GENERIC=v2 wins on
+   xc_us with no mix loss: make v2's set the default (only for India/US? the France words matter only for France,
+   which the slices can't measure. Option: generic = v2 set + French words only, dropping dba/fka/aka/shri/sri/dr/mr/
+   ta/as/www). Write the result for HQ in runs/day/n3_NOTES.md.
+- Where GT pairs are lost, by candidate-name script (diff_runs.py section "A: where GT pairs are lost"):
+  | run (base) | tag | GT | not candidate | cand. but rejected | TP rate |
+  |---|---|---|---|---|---|
+  | xc_us (US-trained -> India) | Indic-script name | 28491 | 3720 (13.1%) | 5293 (18.6%) | 68.4% |
+  | xc_us | ASCII name | 88662 | 1258 (1.4%) | 4981 (5.6%) | 93.0% |
+  | slice_mix (US+IN trained) | Indic-script name | 42167 | 3181 (7.5%) | 819 (1.9%) | 90.5% |
+  | slice_mix | ASCII name | 249939 | 1643 (0.7%) | 4609 (1.8%) | 97.5% |
+  | slice_mix | empty cand. address | 12299 | 1126 (9.2%) | 3423 (27.8%) | 63.0% |
+  With India in training, the Indic-name loss is mostly BLOCKING (10x the ASCII miss rate, at 8% density -> worse at
+  full density) -> n3ph (name_ph view) is the right screen. Without a country in training (xc_us, the France
+  situation) the model rejects 19% of that country's script-variant pairs. Empty-address candidates are the other
+  big hole (37% lost, mostly model rejections): candidate for a per-feature look later (QUEUE 6-ish).
