@@ -251,7 +251,12 @@ Plan (QUEUE 1, P0 fast lane):
 - ph_check (runs/day/ph_check.md): AML_PH=2 exact ph agreement on Indic-candidate GT pairs 39.4% -> 43.3%, decoy
   merge +2.9%. Modest; n4ph decides.
 - 16:11 n3k xc_us DONE (key rules 0.96 on _n3): 0.9321 vs n3 0.9273 (+0.0048; ≈ +0.0014 on Q), cands/S1 5.31 (n3 5.26).
-  India test: 49,183 sure key pairs, only 104 new to the union. slice_mix running.
+  India test: 49,183 sure key pairs, only 104 new to the union.
+- 16:38 n3k slice_mix DONE: 0.9815 (n3 0.9812), OOF 0.97727, cands/S1 6.04 (n3 6.33, −4.6%). n3k Q = 0.9668 with n3's
+  xc_in -> ΔQ +0.0016 vs n3 = KEEP on the n3 line (SCOREBOARD row 4). It only ties base (0.9669), and base lacks the
+  France fixes (which the slices cannot measure). Recommendation for v3: n3 + key rules 0.96. An xc_in run of n3k is
+  still needed for a clean Q (queue it after chain5 if nothing better).
+- Session 7 ends 16:40. Running: chain4 (n3ph next, then n3r, gateA, gateB), chain5 (waits for chain4, then n4ph), sysmon, gpulog.
 ### NEXT (session 8+)
 1. After a reboot: relaunch sysmon, gpulog, chain4 and chain5 (both skip steps that have a .done marker).
 2. n3k / n3ph / n3r: after each one, run q_table + `PYTHONPATH=. python scripts/day/thr_sweep.py data_xc_us output_day_<tag>_xc_us`
