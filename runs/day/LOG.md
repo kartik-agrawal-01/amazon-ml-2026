@@ -479,3 +479,19 @@ Plan (QUEUE 1, P0 fast lane):
        --thr-adapt-floor 0.30 --save-probs --out-dir output_v4` -> validator -> submissions/v4 SUBMIT-READY;
    (d) cascade cap check top8 ≥ top10 − 0.001 per country -> note in cascade_cap.md (a --cascade-top 8 file needs a
        pipeline run from cands_v2, ~v3's runtime; only if time before the freeze).
+
+## Session 14 (26 Sep 19:45)
+- State: gate A running at DUTY 0.6 (test/france block 0 passes), chain8 waiting for gate B -> v3. MemAvailable 6 GB.
+  Jarvis ISSUES: nothing new since #1 (ported 14:30).
+- Plan: make the post-v3 work (NEXT 4 a-c) run unattended overnight/morning, ahead of the slice screens, since only
+  a fast-lane v4 can still become a full-data file before the 20:00 Sun freeze (n4ph/n3r need full-density top-k).
+- 19:47 scripts/day/chain9.sh replaces chain5 + chain7 (SIGKILLed their bash wait loops, killed tmux chain5/chain7;
+  both were idle, chain5 was SIGSTOPped by chain8 — chain8's exit-trap CONT now hits a dead pid, harmless). This removes
+  the race where chain8's exit resumes chain5 and n4ph grabs the machine before the fast-lane steps. chain9 waits for
+  chain4 + chain8, then (if chain/v3.done): v3rs = rescore sanity (src.rescore --load-model output_v3/model.joblib
+  vs output_v3, compare_matches >= 99.9%, log runs/day/v3rs.log) -> cap = model_capacity.py feats_v3
+  base,big,deep,seed3 -> runs/day/model_capacity.md (runs even if v3rs fails) -> v4 (only if v3rs passed) =
+  scripts/day/pick_variant.py winner (>= +0.0015 OOF in every country; tested on a mock table) -> src.rescore
+  --variant <w> --thr-adapt --thr-adapt-floor 0.30 --save-probs -> output_v4 -> validator -> submissions/v4 file.
+  Then the old chain5/chain7 steps unchanged: n4ph, n3r (placeholder removed first), n3ka_s7.
+  tmux chain9, log runs/day/chain9.log. If rebooted: relaunch it after chain4/chain8 (steps skip via .done).
