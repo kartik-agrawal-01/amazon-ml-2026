@@ -360,3 +360,18 @@ Plan (QUEUE 1, P0 fast lane):
   (47d7c89), so gate B's block-local one-to-one matches v2; no --no-global-o2o needed.
 - ETA: test S1 US 663K / IN 810K / FR 259K = 19 blocks x 8 top-k passes x ~6 min at DUTY 0.3 ≈ 15 h -> gate A ~10:00
   Sun, gate B ~+1.5 h, v3 ~+2.5 h -> v3 file ≈ 14:00-15:00 Sun (freeze 20:00). Slices are blocked meanwhile (by design).
+- 18:56 tmux chain8 (scripts/day/chain8.sh, log runs/day/chain8.log): SIGSTOPs chain5's bash (pid 113874; chain7 waits
+  for chain[456] so it stays queued), waits for chain4 (gate A -> gate B) to exit; on "GATE PASS" it moves v2's test probs
+  to output_v2_probs/, removes ~/aml_gate_out + the ~/aml_gate worktree, runs scripts/day/v3.sh, and after
+  VALIDATE_EXIT=0 copies submissions/v3_matching_results.tsv (touch runs/day/chain/v3.done). Then SIGCONTs chain5.
+  If a reboot leaves chain5 stopped: `kill -CONT $(pgrep -xf 'bash scripts/day/chain5.sh')`.
+- Session 11 ends ~19:00. Running: chain4 (gate A train/us full_w, then test), chain8, chain5 (stopped), chain7 (waits),
+  sysmon, gpulog.
+### NEXT (session 12+)
+1. Reboot? relaunch sysmon, gpulog, chain4 (cached blocks are skipped), chain8 (BEFORE chain5), chain5, chain7.
+2. Gate A crashes twice -> NOTES + stop gate; else wait. After gate B: check runs/day/chain8.log. PASS -> mark QUEUE 1 DONE
+   (gate numbers from gateB.log), commit. FAIL -> debug the fast lane (compare_matches by country), v3 not started.
+3. v3 done (chain/v3.done): runs/v3/NOTES.md (cmd, runtime by stage from stdout, OOF per country, thr-adapt t per country,
+   France table: `python scripts/hq_ens/score_sub.py output_v3/matching_results.tsv --name v3`), SCOREBOARD row
+   SUBMIT-READY (as a blend partner / fallback: Soha-2 LB 0.9808 is the best), git add runs/v3 submissions/v3_matching_results.tsv.
+   Per-pair probs output_v3/test_probs_*.parquet are what HQ needs for a blend: tell HQ in LOG (too big for git).
