@@ -127,3 +127,32 @@
 - 09:56 tmux 'ce' (runs/jarvis/ce_train.cmd, log runs/jarvis/ce_train.log): waits for "pool: train/us" in jv1.log, then
   `python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048`
   (projection: 2 x (3M pairs ~23 min + 12M OOF pairs ~8 min) ~ 1.1 h). If paused: rerun `bash runs/jarvis/ce_train.cmd`.
+- 10:20 QUEUE 2a implemented in main's pipeline (jarvis branch): `--ce-dir DIR --ce-top 10 --ce-w 0.5 --ce-floor 0.005`
+  (src/jv_ce_keep.py + hooks in src/pipeline.py). After the cascade, the S1's pool (top-40 by pa + cascade-kept, same set as
+  --pool-dir) is ranked by blend = w*sigmoid(CE) + (1-w)*pa; keep = top ce-top with blend >= floor, OR key-sure/rev-sure.
+  train: CE = OOF logits of <dir>/train_ce.parquet (matched by s1,cand); test: fold models <dir>/fold* score each block
+  in-process on the GPU. Settings are saved in model.joblib; --load-model re-applies them. Without --ce-dir: unchanged.
+  Synthetic check (/home/synth_ce): baseline train recall after cascade 0.824 @ 9.9/S1, OOF 0.9039, test 6.5 cands/S1 ->
+  CE re-rank 0.854 @ 8.4/S1, OOF 0.9231, test 5.1 cands/S1 (toy data; only proves the plumbing).
+- jv1 status 10:20: US train reverse top-k running since 09:44 (India took 28 min for 4.1M docs; US has 6.2M docs).
+
+### NEXT SESSION PLAN
+1. jv1 (tmux jv1): wait for "skip-test: done". Record per country from jv1.log/report.json: blocking recall table,
+   "cascade: before/after" (recall + cands/S1; watch reverse-sure bypass: 5.35/S1 in India block 0, precision 0.54),
+   OOF F0.5 per country + overall. Run `python scripts/jarvis/source_recall.py --cand /home/cache_jv/j1_cand --store /home/cache_jv/store`.
+   SCOREBOARD row. Gate OOF >= 0.9653, no country down.
+2. Rename the reverse caches written by the old code before ANY rerun: see Session 3 note ('-' -> '+').
+3. jv1 test pass: `bash -c "$(cat runs/jarvis/jv1_test.cmd)"` in tmux jv1t (out /home/out_jv/jv1_test) -> validator ->
+   submissions/jv1_matching_results.tsv -> SUBMIT-READY (if gate passed).
+   CPU contention: jv1 test (CPU) + ce train (GPU, ~1 CPU) is fine.
+4. tmux ce: after ce train finishes, read the report lines (recall@10 by pa/ce/blend per country vs the "kept set").
+   If blend recall@10 > kept-set recall by >= 0.5 pt (India) -> jv2 = train pass with the same jv1 flags +
+   `--ce-dir /home/pools/jv1_ce --out-dir /home/out_jv/jv2 --run-name jv2 --feat-cache /home/cache_jv/j2_feats` (no --pool-dir;
+   cand-cache reused, top-k skipped), then test with --load-model /home/out_jv/jv2/model.joblib (CE scoring ~46-90 min on GPU).
+   Pick ce-w from the report (0.5 default; try the blend recall per w in a quick script on train_ce.parquet).
+- 10:25 jv_ce report now sweeps --ce-w (0.3..1.0) x top 8/10 with the 0.005 floor. Pilot (India 30K S1, crude proxy pa):
+  w 0.5 top 10: 0.9175 @ 10.0/S1 | w 0.85: 0.9188 @ 10.0 | w 1.0 (pure CE + floor): 0.9187 @ 4.33 cands/S1 (pool ceiling
+  0.9194). => pure-CE ranking + floor could HALVE cands/S1 at equal recall (organisers rank smaller candidate sets higher).
+  Check this on the real pool (cascade pa) first; if it holds, jv2 uses --ce-w 1.0 (maybe --ce-floor 0.01-0.02).
+  Rerun the sweep any time: python -m src.jv_ce report --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce
+- SESSION 4 END 10:27 UTC. Running: tmux jv1 (train pass, US reverse), tmux ce (waits for the jv1 pool, then CE train).
