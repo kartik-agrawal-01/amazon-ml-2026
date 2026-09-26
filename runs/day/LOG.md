@@ -154,3 +154,8 @@ Plan (QUEUE 1, P0 fast lane):
    both tables, and run the ablation once the chain is idle: (a) `n3f` = n3 stores + v2's features.py
    (`git show 48bc4e7:src/features.py`) to split normalisation vs feature effects; (b) xc_in for n3 (train India ->
    test US) for the full Q. n3k/n3ph/n3r then need to be compared against n3 AND re-run on base stores if n3 is reverted.
+- 14:30 Ported Jarvis ISSUES 1 to main: CountryContext.reverse(..., cache=CandCache) saves/loads the raw reverse pairs
+  as <cand-cache>/<tag>__rev<r>_<views>_<nS1>.parquet (only with --cand-cache and no doc remap). Unit test still OK.
+  Jarvis note: reverse top-k on --topk-device cuda is ~5x slower than CPU sparse_dot_topn at full density (docs as
+  queries); slices are small enough that n3r keeps cuda.
+- Session 5 ends 14:31: chain3 running n3 slice_mix; nothing else of ours running besides sysmon/gpulog.
