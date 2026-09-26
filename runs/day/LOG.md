@@ -402,3 +402,9 @@ Plan (QUEUE 1, P0 fast lane):
    --rules-from runs/v3/stdout.txt > runs/v3/country_table.md` — needs MemAvailable >= 5 GB; if chain5's slice job is
    running, wait for a gap or SIGSTOP chain5's python only if you started it). SCOREBOARD row SUBMIT-READY (blend
    partner / fallback), git add runs/v3 submissions/v3_matching_results.tsv. Tell HQ where output_v3/test_probs_*.parquet are.
+- Cycle 7 (19:24, QUEUE 9): profiled stage B (scripts/day/profile_stage_b.py -> runs/day/profile_stage_b.txt): the
+  pure-Python jaro_winkler = ~65% of it (jw_addr 27%, jw_name 19%). src/features.py now uses rapidfuzz's C++ Jaro + our
+  own Winkler term (always applied; rapidfuzz's JaroWinkler has a 0.7 boost threshold -> not used). Bit-exact: jw on 5.6M
+  real pairs IN/US/FR, all 55 stage-B features bitwise equal on 150K India + 300K France pairs; stage B −49%. KEEP
+  (runtime rule, ΔQ 0 by construction). v3 (launched by chain8 from HEAD) gets it; gate B runs in ~/aml_gate (own src)
+  so it is unaffected. rapidfuzz 3.14.6 was already in the env (MIT).

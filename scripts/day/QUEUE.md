@@ -98,3 +98,5 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
 8. [Efficiency] cascade_top 10 → 8 only if the full-density pair recall after the cascade holds PER COUNTRY. Every
    French S1 already sits at the cap, so consider a per-country cap before any global cut.
 9. [Speed] Profile the full-data run by stage; vectorise the slowest stage-B features.
+   — PARTIAL 26 Sep 19:24 (loop): stage B profiled; jaro_winkler -> rapidfuzz Jaro (bit-exact, stage B −49%), SCOREBOARD 7.
+     Full-data per-stage profile comes from v3's stdout.

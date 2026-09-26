@@ -1,0 +1,17 @@
+n_core: 100000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 1.59s vs rapidfuzz 0.14s (11.7x)
+n_name: 100000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 3.16s vs rapidfuzz 0.14s (22.2x)
+n_nospace: 100000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 1.38s vs rapidfuzz 0.12s (11.7x)
+n_ph: 100000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 0.87s vs rapidfuzz 0.11s (7.9x)
+n_addr[:40]: 100000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 4.44s vs rapidfuzz 0.13s (35.0x)
+RSS 619420 KB 19.90 s
+us: n_core: 29980 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 0.56s vs rapidfuzz 0.04s (13.6x)
+us: n_name: 29980 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 0.67s vs rapidfuzz 0.04s (17.4x)
+us: n_nospace: 29980 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 0.44s vs rapidfuzz 0.03s (13.2x)
+us: n_ph: 29980 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 0.29s vs rapidfuzz 0.03s (8.9x)
+us: n_addr[:40]: 29980 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 0.99s vs rapidfuzz 0.04s (26.9x)
+france(v2 store): n_core: 1000000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 14.18s vs rapidfuzz 1.13s (12.6x)
+france(v2 store): n_name: 1000000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 20.47s vs rapidfuzz 1.29s (15.8x)
+france(v2 store): n_nospace: 1000000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 12.75s vs rapidfuzz 1.11s (11.5x)
+france(v2 store): n_ph: 1000000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 8.18s vs rapidfuzz 1.11s (7.4x)
+france(v2 store): n_addr[:40]: 1000000 pairs, exact-equal 1.000000, max |diff| 0.00e+00, py 49.32s vs rapidfuzz 1.47s (33.5x)
+france(v2 store): RSS 2161336 KB 161.26 s

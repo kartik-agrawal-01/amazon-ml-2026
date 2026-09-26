@@ -1,0 +1,3 @@
+cache_slice_n3/test__india.parquet: 150000 pairs, 55 features, differing: none; stage B 32.9s -> 16.9s (49% less)
+cache/test__france.parquet: 300000 pairs, 55 features, differing: none; stage B 63.3s -> 32.5s (49% less)
+RSS 2574392 KB 122.33 s

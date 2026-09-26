@@ -20,12 +20,31 @@ import scipy.sparse as sp
 
 
 # ----------------------------------------------------------------- string sims
+try:  # C++ Jaro (MIT); + our Winkler term = bit-exact with _jaro_py on 5.6M real pairs (runs/day/jw_rapidfuzz_check.txt)
+    from rapidfuzz.distance import Jaro as _RFJaro
+    _jaro = _RFJaro.similarity
+except ImportError:  # pragma: no cover
+    _jaro = None
+
+
 def jaro_winkler(s1: str, s2: str, p: float = 0.1) -> float:
+    """Jaro-Winkler with the prefix bonus always applied (no 0.7 boost threshold, unlike rapidfuzz's JaroWinkler)."""
     if s1 == s2:
         return 1.0
-    l1, l2 = len(s1), len(s2)
-    if not l1 or not l2:
+    if not s1 or not s2:
         return 0.0
+    jaro = _jaro(s1, s2) if _jaro is not None else _jaro_py(s1, s2)
+    pre = 0
+    for a, b in zip(s1[:4], s2[:4]):
+        if a != b:
+            break
+        pre += 1
+    return jaro + pre * p * (1.0 - jaro)
+
+
+def _jaro_py(s1: str, s2: str) -> float:
+    """Reference pure-Python Jaro (the pre-rapidfuzz implementation; non-empty, unequal strings)."""
+    l1, l2 = len(s1), len(s2)
     dist = max(max(l1, l2) // 2 - 1, 0)
     m1, m2 = [False] * l1, [False] * l2
     m = 0
@@ -47,13 +66,7 @@ def jaro_winkler(s1: str, s2: str, p: float = 0.1) -> float:
                 t += 1
             j += 1
     t //= 2
-    jaro = (m / l1 + m / l2 + (m - t) / m) / 3.0
-    pre = 0
-    for a, b in zip(s1[:4], s2[:4]):
-        if a != b:
-            break
-        pre += 1
-    return jaro + pre * p * (1.0 - jaro)
+    return (m / l1 + m / l2 + (m - t) / m) / 3.0
 
 
 def _initials(s: str) -> str:
