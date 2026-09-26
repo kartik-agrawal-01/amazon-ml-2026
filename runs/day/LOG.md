@@ -303,3 +303,5 @@ Plan (QUEUE 1, P0 fast lane):
   just under the KEEP bar and below n3k (0.9668) -> NO KEEP on the slices (SCOREBOARD row 5). The +0.0037 xc_us is inside
   the ±0.007 noise; name_ph's India value is a full-density question (Jarvis item 1 runs it).
 - 17:25 chain6 started n3ka (xc_us -> slice_mix -> xc_in, unfloored --thr-adapt). Expect ~18:30.
+- 17:42 n3ka xc_us DONE: **0.9507** (n3k 0.9321, +0.0186), India t 0.07 (OOF 0.85, src_empty 0.0564), OOF 0.98415, 16.3 min,
+  3.1 GB. Offline with floor (key forcing ignored): floor 0.15 -> 0.9511, floor 0.30 -> 0.9497.
