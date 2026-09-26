@@ -513,3 +513,9 @@ Plan (QUEUE 1, P0 fast lane):
   S1->S3 passes (~55-160 s per pass at DUTY 0.6), MemAvailable 7.9 GB, GPU 50 W / 14.4 GB, no guard kills.
   chain8 + chain9 waiting (chain9.log empty = still in its wait loop). No new Jarvis ISSUES (#1 only, ported).
 - NEXT: unchanged — session 14's list.
+
+## Session 12' (26 Sep 20:00; driver numbering restarted, follows session 15)
+- Health check only. gate A: test/france block 0 cached (6.15M union pairs, 1009 s at DUTY 0.6), now on block 1.
+  MemAvailable ~8 GB, GPU 53 W / 14.4 GB, no guard kills, chain8 + chain9 waiting. QUEUE/CONTEXT unchanged since 19:31.
+  No src/ edits while chain8/chain9 are queued (they run HEAD code at launch).
+- NEXT: unchanged, session 14's list.
