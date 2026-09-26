@@ -150,3 +150,28 @@ third voter. A 2-of-3 vote is Soha's file with small v2 tie-breaks (vs Soha −0
 ≈ Soha's 0.948, and the ens1 result says the v2-only pairs it would drop are ~73% true. Not uploaded (1-pt bar). Voting
 between these three files is closed. Gains have to come from the shared misses (candidate generation, India recall,
 France), which all three pipelines have.
+
+## 9. Exact phonetic-key join (follow-up to box QUEUE 5a, 26 Sep 14:00)
+
+5a found that 32% of India's full-density blocking misses have an identical phonetic key (`src.translit.phonetic_key`:
+'shakti kansaltantsa' and 'shakti consultants' both give 'skt knsltnts'). Full-train calibration of pairs with the
+SAME phonetic key but a different core / no-space name (2.37M pairs). Context: ph_other = another S1 has the same
+phonetic key; addr_other = another S1 has the candidate's exact address.
+
+| address relation | US P(match) | India P(match) |
+|---|---|---|
+| exact address | 0.91–0.92 | 0.96 (ph unique) / 0.90 (shared) |
+| same first number, street text differs | 0.90–0.91 | 0.89 (ph unique) / 0.40 (shared) |
+| same street, number missing | 1.00 | 0.44 |
+| same street, different number | 0.34 | 0.41–0.54 |
+| other address, ph unique | 0.13 | 0.21 |
+| other address, ph shared | ≤ 0.005 | ≤ 0.003 |
+| candidate address empty, ph unique / shared | 0.70 / 0.04 | 0.54 / 0.01 |
+
+Verdict: not precise enough for 'sure' rules (≥ 0.96). As extra **model candidates** it is cheap: excluding
+(other address | empty address) × shared phonetic key leaves 0.07–0.12 pairs/S1, ~50–60% of them true on train,
+≈ 0.049 true pairs/S1 in India. v2 predicts only 46% of the India same-number bucket and 12% of the French one.
+Expected value after name_ph comes back as a view (Jarvis item 1): small, ≈ +0.1–0.2 pt. It is parked until Jarvis
+reports how many India misses with identical phonetic keys remain after item 1. Wiring it would need a separate
+injection threshold in the box's `--key-rules` code (inject at rule P ≥ ~0.4 with key_p as the feature, keep
+key_sure at 0.96). Data: HQ sandbox ens/ph_train_pairs.pkl, ens/ph_test_pairs.pkl.
