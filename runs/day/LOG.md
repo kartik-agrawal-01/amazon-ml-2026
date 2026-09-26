@@ -506,3 +506,10 @@ Plan (QUEUE 1, P0 fast lane):
 4. chain9 v3rs: `tail runs/day/v3rs.log` (GATE PASS?). cap: runs/day/model_capacity.md -> SCOREBOARD row (QUEUE 7).
    v4: runs/day/pick_variant.txt, runs/v4/{stdout,validate,vs_v3}.txt -> runs/v4/NOTES.md + SUBMIT-READY row if valid.
 5. cascade cap check (grep "cascade cap check" runs/v3/stdout.txt) -> cascade_cap.md decision (QUEUE 8).
+
+## Session 15 (26 Sep 19:49)
+- Health check only (session 14 ended minutes ago; nothing new to screen: the box is committed to gate A -> gate B -> v3
+  -> chain9 v3rs/cap/v4, and a slice screen would compete with gate A for RAM/GPU). State: gate A test/france block 0,
+  S1->S3 passes (~55-160 s per pass at DUTY 0.6), MemAvailable 7.9 GB, GPU 50 W / 14.4 GB, no guard kills.
+  chain8 + chain9 waiting (chain9.log empty = still in its wait loop). No new Jarvis ISSUES (#1 only, ported).
+- NEXT: unchanged — session 14's list.
