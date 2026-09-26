@@ -299,3 +299,7 @@ Plan (QUEUE 1, P0 fast lane):
   than on the slice (t 0.03: −0.105 vs −0.047). Transferred to xc_us, the unfloored t 0.03 could be ≈ −0.04 at full
   density; floor 0.30 ≈ +0.013. New flag `--thr-adapt-floor` (default 0.02 = unchanged). Slice xc_us with floor 0.30:
   0.9497 (unfloored 0.9480, best 0.9511). RECOMMEND `--thr-adapt --thr-adapt-floor 0.30` for full-data files (HQ / jv1).
+- 17:25 n3ph slice_mix DONE: 0.9819 (n3 0.9812), OOF 0.97714, cands/S1 6.27. n3ph Q = 0.9666 (n3 xc_in) -> ΔQ +0.0014 vs n3:
+  just under the KEEP bar and below n3k (0.9668) -> NO KEEP on the slices (SCOREBOARD row 5). The +0.0037 xc_us is inside
+  the ±0.007 noise; name_ph's India value is a full-density question (Jarvis item 1 runs it).
+- 17:25 chain6 started n3ka (xc_us -> slice_mix -> xc_in, unfloored --thr-adapt). Expect ~18:30.
