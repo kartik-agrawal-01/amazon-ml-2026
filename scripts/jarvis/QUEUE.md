@@ -1,5 +1,5 @@
 # Jarvis queue — top = next. HQ (modelling chat) owns this file; the Jarvis loop only reads it (from main).
-# HQ version 26 Sep 16:00 (13:55 version + a density-matched gate for jv1, item 1). Machine: A30 (24 GB GPU, 16 vCPU, ~503 GB RAM);
+# HQ version 26 Sep 16:30 (16:00 version + item 1 (e) and item 1b: per-country thresholds). Machine: A30 (24 GB GPU, 16 vCPU, ~503 GB RAM);
 # it can be resumed on an RTX PRO 6000 (96 GB) — items marked [RTX] only after that switch.
 
 ## Read first (5 min)
@@ -66,12 +66,22 @@
        per-country counts. Re-run decide + one-to-one on the subset's pairs only. Report per country and overall;
    (c) per country: pair recall of the kept candidates (GT pairs present in oof_pairs / GT pairs of the sampled S1)
        and cands/S1;
-   (d) per country: predicted matches/S1 and empty rate at the chosen rule vs the GT (3.46; singletons 5.6%).
-   Write (a)–(d) to `runs/jarvis/jv1_train.md` + a SCOREBOARD row. **Go:** (b) overall ≥ 0.9623 (no regression) →
+   (d) per country: predicted matches/S1 and empty rate at the chosen rule vs the GT (3.46; singletons 5.6%);
+   (e) per country: the best threshold on the OOF (0.40–0.90, step 0.05) and its F gain over the global one.
+   Write (a)–(e) to `runs/jarvis/jv1_train.md` + a SCOREBOARD row. **Go:** (b) overall ≥ 0.9623 (no regression) →
    start the test pass at once (`--load-model`, add `--save-probs`) → validator →
    `submissions/jv1_matching_results.tsv` + test stats (per-country matches/S1, empty rate, key_coverage_<c>.csv,
    records under 2+ S1 = 0) → SUBMIT-READY. The +1 pt upload call is HQ's, from (b) − 0.9623 per country + the test
    stats. **Stop** and write why if (b) < 0.9623. Record the jarvis-branch commit.
+1b. [Cheap, right after the jv1 test pass; needs its --save-probs files] Threshold per country, esp. France. The box
+   found that an unseen country loses recall at the threshold tuned on the train countries (the model is less
+   confident there; runs/day/LOG.md 15:13). Write `scripts/jarvis/redecide.py`: from `test_probs_<country>.parquet`
+   re-decide a country at threshold t with the pipeline's own decide + one-to-one + global one-to-one
+   (candidate_pairs.tsv unchanged). Then write `runs/jarvis/jv1_thr.md`: for France, t = 0.40, 0.45, …, 0.85 →
+   predicted matches/S1, empty rate, coverage of the 'sure' key pairs (key_coverage rules), pairs removed by global
+   one-to-one; for US/India the same at the global t and at their OOF-best t from (e). Don't upload-build yet: HQ picks
+   t_US / t_IN (OOF) and t_FR (a label-free rule the box validates on its cross-country screens, box QUEUE 2d), then
+   you write `submissions/jv1t_matching_results.tsv` with redecide.py (validator + stats as for jv1).
 2. [B, GPU pair model on the pool → jv2] Fine-tune a cross-encoder: start from paraphrase-multilingual-MiniLM-L12-v2
    (Apache-2.0; a bi-encoder checkpoint, so train it with a pair-classification head on (text_a, text_b));
    xlm-roberta-base or intfloat/multilingual-e5-base (MIT) only if throughput allows. Text per side

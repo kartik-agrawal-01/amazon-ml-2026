@@ -175,3 +175,31 @@ Expected value after name_ph comes back as a view (Jarvis item 1): small, ≈ +0
 reports how many India misses with identical phonetic keys remain after item 1. Wiring it would need a separate
 injection threshold in the box's `--key-rules` code (inject at rule P ≥ ~0.4 with key_p as the feature, keep
 key_sure at 0.96). Data: HQ sandbox ens/ph_train_pairs.pkl, ens/ph_test_pairs.pkl.
+
+## 10. Label-free LB estimate: back-test fails for model-vs-model files (26 Sep 16:20)
+
+`scripts/hq_ens/score_sub.py` gives every pair of v2 ∪ X a P(true): exact-key join pairs get the full-train rate of
+their cell (name relation × address relation × context × invented/realword; France = mean of US and India), and the
+other disagreements get an assumed precision. It then computes the expected per-S1 F0.5 of both files, with P capped
+to sum 1 per record. Back-test on the files with a known LB (dLB vs v2, pt):
+
+| file | key cells only | + other disagreements (0.80 / 0.72) | actual |
+|---|---|---|---|
+| Soha | −0.73 (worst case) / −0.44 (cell rate) | −0.44 / −0.18 | **+0.10** |
+| ens1 (v2 ∩ Soha) | −0.30 | −0.31 | **−0.21** |
+| Atharv | −0.60 / −0.31 | −0.16 / +0.10 | **−0.30** |
+| ens2c (held) | +0.19 / +0.28 | +0.26 / +0.35 | — |
+
+It gets the ranking wrong. When a competent model leaves out a pair from a 96–100% cell, the pair is far less likely
+true than the cell rate (selection). To match the actual LBs, Soha's extra pairs would need ~85% precision and
+Atharv's ~75%, so that precision depends on the model and can't be known without labels. **Model changes must be
+judged on the OOF** (density-matched, see Jarvis QUEUE item 1). Label-free estimates stay valid only for mechanism-
+based changes: pairs one file never scored (cut before the model), duplicate owners (one-to-one), as in ens2c.
+The script's descriptive tables remain the sanity check for any new file: counts vs the GT per country, records under
+2+ S1, coverage of the 'sure' key pairs by rule.
+
+`scripts/hq_ens/augment_keys.py <in.tsv> <out.tsv>`: the ens2c step 2 for any file. For each (rule, country) it
+measures the file's own coverage and adds the 'sure' pairs it misses only where the worst-case precision of those
+misses, (P − cov)/(1 − cov), is ≥ 0.80 and the record isn't assigned to another S1. On v2: 37.0K pairs (France 30.9K,
+mostly `disjoint|eq|invented` 24.4K), +0.17 pt worst case. A file that already covers a rule at ~P gets nothing
+there.

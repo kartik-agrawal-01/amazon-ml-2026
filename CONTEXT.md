@@ -40,29 +40,35 @@
 - Submission flow: log row in `submissions/LOG.md` -> push file to `submissions/` ->
   leader pulls + validates + uploads -> leader reports LB score -> fill LOG.md.
 
-## Current state (26 Sep ~12:50 IST)
+## Current state (26 Sep ~16:30 IST)
 - **Public LB: v2 = 0.947** (09:45) · ens1 consensus v2∩Soha = **0.9449** (11:07) · Atharv's own pipeline = **0.944**
-  (LOG #3) · Soha's own pipeline 0.948. Target 98.4+. Uploads used: **Day2 3/5** (2 left). ens2c (v2 + global
-  one-to-one + exact-key pairs, expected +0.3 to +0.5 pt) is HELD: uploads only for files expected ≥ +1 pt over the best LB.
-  Two compute lanes: the box day loop (scripts/day/QUEUE.md) and the Jarvis A30 lane (scripts/jarvis/QUEUE.md).
-- v2 = commit 48bc4e7: 4 TF-IDF views, GPU top-k, cascade top-10 (9.2 cands/S1), LightGBM on 150K train S1, thr 0.70
-  + one-to-one; OOF 0.9623 (full-density train pass) -> LB gap -1.5. Test: empty 6.0% (FR 5.2 / IN 6.7 / US 5.5).
-- **Where the loss is (docs/ENSEMBLE_AND_KEYS.md):** (1) the disagreement set with Soha is ~73% true pairs, so it isn't the
-  problem (ens1 fell). (2) v2's one-to-one is block-local: 13,806 test records sit under 2–5 S1s (≥ 14.5K guaranteed
-  FPs, 48% French). (3) France recall hole: different trade/domain names at the same exact address are 96–98% matches
-  on the full train; v2 finds 92% of them in the US but 34% in France. They are cut before the model among France's
-  dense same-name decoys, and the old normaliser also broke French addresses. (4) **India recall**: v2 predicts 3.12
-  matches/S1 vs 3.465 in the train GT (US 3.35 vs 3.459), about 0.3 true pairs/S1 missing on 47% of test, and it is
-  fuzzy (not exact-key). The box France diagnostic (runs/france_diag) found France's accepted-pair profile US-like;
-  that is consistent, since its FNs (trade names) and FPs (look-alikes, duplicate owners) cancel in the counts.
-- Cross-country proxy (slice, hidden holdout): train US+IN 0.9805 (IN 0.9717 / US 0.9863); train US only -> India
-  0.9339; train India only -> US 0.9810. **Slices hold ~12x fewer decoys than the full data**: blocking/cascade/
-  one-to-one/key-rule changes must be judged on the full-density train pass, not the slice Q alone.
-- Best local CV on the 8% slice: 0.9768 OOF / 0.9826 holdout (runs/slice_v3); France fixes on the slice (US/India
-  regression check): 0.9777 / 0.9825 (runs/slice_frnorm).
-- **Box = Claude Code day loop** (scripts/day/DAY_TASK.md, QUEUE.md, runs/day/) until 27 Sep 20:00 IST; it never
-  submits. Order now: P0 fast lane → global one-to-one → France fixes → v3 → hq_keys wiring (gated on the ens2c LB) →
-  India recall.
+  (LOG #3) · Soha's own pipeline 0.948. Target 98.4+. Uploads used: **Day2 3/5** (2 left, they expire at midnight).
+  **Upload bar (Gaurav 12:30): only files expected to beat the best LB by ≥ 1 pt.** ens2c (v2 + global one-to-one +
+  exact-key pairs, expected +0.3 to +0.5) is HELD for that reason.
+- v2 = commit 48bc4e7: 4 TF-IDF views, GPU top-k, cascade top-10 (9.2 cands/S1), LightGBM on 150K train S1 (6.8% of
+  train S1), thr 0.70 + one-to-one; OOF 0.9623 overall (60% US / 40% India; no per-country split logged) -> LB gap
+  -1.5. Test: empty 6.0% (FR 5.2 / IN 6.7 / US 5.5), matches/S1 US 3.35 / IN 3.12 / FR 3.30 vs train GT 3.46.
+- **Where the loss is (docs/ENSEMBLE_AND_KEYS.md):** (1) the disagreement set with Soha is ~73% true pairs (ens1 fell).
+  (2) v2's one-to-one is block-local: 13,806 test records under 2–5 S1s (≥ 14.5K guaranteed FPs, 48% French); global
+  one-to-one is now the default on main (+~0.13 pt, test-only: v2's OOF never had the bug). (3) France recall hole:
+  different trade/domain names at the same exact address (96–98% matches on train) — v2 finds 92% in the US, 34% in
+  France; cut before the model + the old normaliser broke French addresses. (4) **India recall**: 3.12 matches/S1 vs
+  3.465 GT, fuzzy (Indic scripts); blocking recall 0.933 at k 10.
+- **Jarvis lane (A30, branch jarvis): jv1** = main's pipeline, new normaliser (France fixes), 6 views k 15, 600K train
+  S1, `--key-rules 0.96 --reverse-k 3 --reverse-bypass 2`, global one-to-one. India train phase A: pre-cascade GT
+  recall **0.960** (v2 0.933): reverse top-3 +1.0 pt, name_ph +0.15, exact keys ~0 in India. Reverse-'sure' pairs
+  bypass the cascade cap: 5.35 cands/S1 at 54% precision -> watch final cands/S1 (official: smaller candidate sets
+  rank higher). Train pass ETA ~17:30, test pass ~21:00–22:30. **Gate changed 16:00 (density-matched):** jv1's OOF is
+  also scored on v2's 150K S1 subset (one-to-one recomputed) — 600K vs 150K OOFs are not comparable. Cross-encoder
+  pilot (MiniLM-L12, 2 folds) ranks well (recall@10 0.919 vs 0.863 for a crude proxy); jv2 = CE features, next.
+- **Box day loop** (scripts/day/QUEUE.md): base (HEAD code, v2 stores) Q 0.9669. **n3 = France fixes: HOLD** — slice_mix
+  +0.04, but the unseen-country screen xc_us (US-trained -> India) −0.71; ablation n3f (v2 generic set) −1.39 vs base,
+  so the generic set is not the cause. xc_us swings ±0.7 pt under small changes, largely through the threshold picked
+  on the train country's OOF (an unseen country is less confident -> needs a lower threshold). This matters for France.
+  Box 2c (v2 OOF per country) and 2d (label-free threshold rules for an unseen country, scored on xc_us / xc_in) queued.
+- HQ sandbox tools (scripts/hq_ens/ prototypes): `score_sub.py` (label-free sanity per country: counts vs GT, records
+  under 2+ S1, coverage of the 'sure' key pairs); `augment_keys.py` (adds 'sure' key pairs a file misses where the
+  worst-case precision of its misses is ≥ 0.80; on v2: +0.17 pt worst case, mostly French trade names).
 
 ## Decisions
 - 25 Sep — Pipeline-first: blocking -> candidate_pairs -> pairwise model -> per-entity
@@ -85,14 +91,23 @@
   (F0.5 break-even ≈ 70%). Stricter thresholds / intersections won't help; a plain union is expected to be ~neutral.
 - Calibrating exact-key/context rules on the 8% slice: ff-rule rates drop to 0.86 vs 0.96 on the full train (decoy S1s
   missing from the slice). Always calibrate context rules at full density.
+- **Label-free LB estimate for model-vs-model files** (HQ score_sub.py: calibrated exact-key cells + assumed precision
+  of the other disagreements): back-test predicted Soha −0.2/−0.4, ens1 −0.3, Atharv +0.1/−0.2 vs actual +0.10, −0.21,
+  −0.30 (wrong ranking). When two models disagree on a pair from a 96–100% key cell, the pair is far less likely true
+  than the cell rate. Only mechanism-based changes (pairs one file never scored, duplicate owners) are estimable
+  label-free; model changes need the OOF.
 
 ## Open / next up
-1. Upload LOG #3 ens2c → fill its LB. If ≥ +0.15: write GO on QUEUE item 4 (hq_keys wiring); else NO-GO.
-2. Box: P0 fast lane → global one-to-one (QUEUE 2) → France fixes + v3 (QUEUE 3) → hq_keys (QUEUE 4) → India recall
-   (QUEUE 5, the largest measured loss).
-3. Day 3: final choice by robustness (private LB = the rest of test), Documentation_template.md numbers,
-   scripts/make_package.py (candidate_pairs.tsv must contain every submitted match; the key pairs are part of the
-   candidate set when wired in the pipeline), final upload.
+1. ~17:30–18:00: jv1 train pass → Jarvis QUEUE 1 (a)–(e) (density-matched OOF per country, recall, cands/S1, counts,
+   per-country OOF thresholds). Test pass starts at once if (b) ≥ 0.9623.
+2. ~21:30: box 2d (unseen-country threshold rule) → France threshold for jv1 (Jarvis 1b: redecide.py → jv1t).
+3. ~22:00–22:30: jv1 test file → HQ: score_sub sanity (0 records under 2+ S1, counts, France key coverage ≥ 85%),
+   augment_keys, threshold variant. Upload tonight only if expected ≥ +1 pt:
+   E[dLB] ≈ +0.13 (global one-to-one, test-only) + 0.38·dOOF_US + 0.47·dOOF_IN (density-matched, vs v2) + 0.15·dF_FR
+   (France: fixes + keys + threshold, not measurable; assume small).
+4. Day 3: jv2 (cross-encoder features) if it KEEPs; final choice by robustness (private LB = rest of test);
+   Documentation_template.md numbers; scripts/make_package.py (candidate_pairs.tsv = exactly the pairs fed to the
+   model, keep cands/S1 low); final upload before the 27 Sep 20:00 freeze.
 - Real-data facts: ~24% of Indian S2 names in Indic scripts (rule-based transliteration + phonetic key); ALL-CAPS,
   "null" tokens, leet typos, domain names, @handles, DBA names, state names vs codes, house-number labels, zero-padded
   numbers, 3.8% empty addresses in S2/S3. All GT matches are same-country; GT strictly one-to-one. France: 13
