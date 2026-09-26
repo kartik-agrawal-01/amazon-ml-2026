@@ -110,3 +110,9 @@
   (12.8M pairs), key calibration 71 s (sure rules = 10, same set as smoke), now India forward top-k. RSS 7.4 GB,
   memory.current 19 GB. Projection: US reverse ~50 min -> pool (/home/pools/jv1/train__*.parquet) ~11:00 UTC,
   train pass done ~12:00 UTC.
+- 09:40 scripts/jarvis/source_recall.py (GT pairs per candidate source, from --cand-cache). India train block 0 (100K S1,
+  345,808 GT pairs): v2 4 views k10 0.9345 (= v2's 0.933) | 6 views k15 forward 0.9496 (120 cands/S1) | name_ph finds
+  0.300 of GT but only 0.15 pt that no other view finds | reverse top-3 alone 0.9366, +1.00 pt new -> pre-cascade union
+  0.9596 (154/S1) | exact keys: 92 new pairs of 92,667 sure (~0) | reverse-sure (rev_best>=2, bypasses the cap):
+  5.35 pairs/S1, precision 0.54 -> WATCH final cands/S1 (budget <= 12); if too many, --reverse-bypass 3 is a
+  model-only rerun from the cand cache.
