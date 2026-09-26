@@ -128,6 +128,74 @@ def stats_from_counts(counts: np.ndarray, n_kept: int = None, n_true: int = None
     return out
 
 
+# ------------------------------------------------------- candidate cache (fast lane)
+class CandCache:
+    """Pre-cascade candidate union (q, c, <view>_rank, n_views) per (split, country, block), saved as parquet.
+
+    Everything downstream of top-k (stage A cosines + group/rank context, cascade, stage B, model, rule) is a pure
+    function of this union and the store, so a cached union makes feature/model/rule changes cheap (the GPU top-k
+    is ~80% of a full-data run). The union is keyed by record ids: q rows are checked against the block's S1 ids,
+    doc rows are remapped by id if the store was rebuilt (e.g. new normalisation) and rows moved."""
+
+    def __init__(self, root: str):
+        self.root = root
+        os.makedirs(root, exist_ok=True)
+        self._drid_map = {}
+
+    @staticmethod
+    def _fname(tag: str) -> str:
+        return "".join(ch if ch.isalnum() else "_" for ch in tag)
+
+    def _paths(self, tag: str, bi: int):
+        b = os.path.join(self.root, f"{self._fname(tag)}__b{bi:03d}")
+        return b + ".parquet", b + "_qrid.npy"
+
+    def ensure_docs(self, tag: str, d_rid: np.ndarray) -> None:
+        """Doc id order of the country the cache was built on (written once); remap table if the store differs."""
+        p = os.path.join(self.root, f"{self._fname(tag)}__docs.npy")
+        cur = np.asarray(d_rid, dtype=ID_DTYPE)
+        if not os.path.exists(p):
+            np.save(p, cur)
+            self._drid_map[tag] = None
+            return
+        old = np.load(p)
+        if len(old) == len(cur) and np.array_equal(old, cur):
+            self._drid_map[tag] = None
+            return
+        idx = pd.Index(cur).get_indexer(old)  # old doc row -> current doc row (-1: doc gone)
+        log(f"cand-cache {tag}: doc order differs from the cached store -> remapping ({int((idx < 0).sum())} docs missing)")
+        self._drid_map[tag] = idx
+
+    def load(self, tag: str, bi: int, q_rid: np.ndarray) -> Optional[pd.DataFrame]:
+        pq, pr = self._paths(tag, bi)
+        if not (os.path.exists(pq) and os.path.exists(pr)):
+            return None
+        if not np.array_equal(np.load(pr), np.asarray(q_rid, dtype=ID_DTYPE)):
+            raise RuntimeError(f"cand-cache {tag} block {bi}: S1 ids differ from the cached block (block size / sample changed?)")
+        u = pd.read_parquet(pq)
+        u["q"] = u["q"].astype(np.int64)
+        c = u["c"].to_numpy().astype(np.int64)
+        m = self._drid_map.get(tag)
+        if m is not None:
+            c = m[c]
+            ok = c >= 0
+            if not ok.all():
+                u, c = u[ok].reset_index(drop=True), c[ok]
+        u["c"] = c
+        return u
+
+    def save(self, tag: str, bi: int, q_rid: np.ndarray, union: pd.DataFrame) -> None:
+        pq, pr = self._paths(tag, bi)
+        if self._drid_map.get(tag) is not None:
+            return  # built on another store layout; never overwrite the reference cache
+        out = union.copy()
+        out["q"] = out["q"].astype(np.int32)
+        out["c"] = out["c"].astype(np.int32)
+        out.to_parquet(pq + ".tmp", index=False)
+        np.save(pr, np.asarray(q_rid, dtype=ID_DTYPE))
+        os.replace(pq + ".tmp", pq)
+
+
 # --------------------------------------------------------------- block step
 class CountryContext:
     """Doc matrices (+ dense embeddings) of ONE country's S2/S3 records, plus candidates + stage A per query block."""
@@ -151,21 +219,34 @@ class CountryContext:
                 dense_text(q), dense_model, cache_path=os.path.join(cache_dir, f"{fname}_s1_emb.npy"))
             log(f"{tag}: dense embeddings ready (docs {self.d_emb.shape}, S1 {self.q_emb_all.shape})")
 
-    def block(self, q_idx: np.ndarray, k: int, verbose=False):
-        """Candidates + stage A for one query block. Returns (cands, q_block, q_emb)."""
+    def block(self, q_idx: np.ndarray, k: int, verbose=False, cache: Optional[CandCache] = None, bi: int = 0,
+              union_only: bool = False):
+        """Candidates + stage A for one query block. Returns (cands, q_block, q_emb).
+        cache: load the pre-cascade union from the candidate cache (top-k skipped) or fill it after top-k.
+        union_only: return the union without stage A (cache building)."""
         qb = self.q.iloc[q_idx].reset_index(drop=True)
         q_mats = {v: transform(self.vecs[v], view_text(qb, v), self.n_jobs) for v in self.views}
-        parts = lexical_candidates(q_mats, self.d_mats, self.d_src, k, self.views, verbose=verbose,
-                                   n_threads=self.n_jobs)  # shared box: 20 OpenMP threads under load only add contention
         q_emb = None
         views = list(self.views)
         if self.d_emb is not None:
-            from .dense import dense_candidates
             q_emb = np.asarray(self.q_emb_all[q_idx])
-            parts += dense_candidates(q_emb, self.d_emb, self.d_src, k, device=self.device, verbose=verbose)
             views.append("dense")
-        cands = union_candidates(parts, views)
-        del parts
+        q_rid = qb["rid"].to_numpy(dtype=object)
+        cands = cache.load(self.tag, bi, q_rid) if cache is not None else None
+        if cands is None:
+            parts = lexical_candidates(q_mats, self.d_mats, self.d_src, k, self.views, verbose=verbose,
+                                       n_threads=self.n_jobs)  # shared box: 20 OpenMP threads under load only add contention
+            if self.d_emb is not None:
+                from .dense import dense_candidates
+                parts += dense_candidates(q_emb, self.d_emb, self.d_src, k, device=self.device, verbose=verbose)
+            cands = union_candidates(parts, views)
+            del parts
+            if cache is not None:
+                cache.save(self.tag, bi, q_rid, cands)
+        elif verbose:
+            log(f"{self.tag} block {bi}: union loaded from the candidate cache ({len(cands)} pairs, top-k skipped)")
+        if union_only:
+            return cands, qb, q_emb
         cands = stage_a(cands, self.d_src, q_mats, self.d_mats, self.views, q_emb, self.d_emb)
         return cands, qb, q_emb
 
@@ -232,6 +313,11 @@ def main() -> None:
     ap.add_argument("--run-name", default="")
     ap.add_argument("--load-model", default=None, help="path of a model.joblib from a previous run with the same --views/--seed/--vec-sample: skip training and go straight to the test pass")
     ap.add_argument("--skip-test", action="store_true")
+    ap.add_argument("--cand-cache", default="", help="fast lane: dir of cached pre-cascade candidate unions per block "
+                    "(filled on the first run, top-k skipped on later runs with the same views/k/block size/train sample)")
+    ap.add_argument("--cands-only", action="store_true", help="only build the --cand-cache (train sample + test), then stop")
+    ap.add_argument("--vec-cache", default="", help="joblib file of the fitted vectorisers (loaded if present, else fitted + saved)")
+    ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
     from . import blocking as _blocking
@@ -266,11 +352,57 @@ def main() -> None:
     header = tuple(meta_tr["gt"].get("header") or ("source1_id", "matched_ids"))
 
     # 2. vectorisers on a text sample across splits + countries (all sources; no labels)
-    sample = text_sample([meta_tr, meta_te], a.vec_sample, a.seed)
-    vecs = fit_vectorizers(sample, views, max_df=a.max_df, seed=a.seed)
-    log(f"vectorisers (fit on {len(sample)} rows): {[(v, len(vec.vocabulary_)) for v, vec in vecs.items()]}")
-    del sample
+    vecs = None
+    vec_key = dict(views=views, max_df=a.max_df, seed=a.seed, vec_sample=a.vec_sample, store=os.path.abspath(a.cache_dir))
+    if a.vec_cache and os.path.exists(a.vec_cache):
+        import joblib
+        vc = joblib.load(a.vec_cache)
+        if vc.get("key") == vec_key:
+            vecs = vc["vecs"]
+            log(f"vectorisers loaded from {a.vec_cache}")
+        else:
+            log(f"vec-cache {a.vec_cache} was fitted with {vc.get('key')} != {vec_key} -> refitting")
+    if vecs is None:
+        sample = text_sample([meta_tr, meta_te], a.vec_sample, a.seed)
+        vecs = fit_vectorizers(sample, views, max_df=a.max_df, seed=a.seed)
+        log(f"vectorisers (fit on {len(sample)} rows): {[(v, len(vec.vocabulary_)) for v, vec in vecs.items()]}")
+        del sample
+        if a.vec_cache:
+            import joblib
+            joblib.dump(dict(key=vec_key, vecs=vecs), a.vec_cache)
     release_memory()
+    cache = CandCache(a.cand_cache) if a.cand_cache else None
+
+    if a.cands_only:
+        if cache is None:
+            raise SystemExit("--cands-only needs --cand-cache")
+        alloc = allocate({c: meta_tr["countries"][c]["n_s1"] for c in sorted(meta_tr["countries"])}, a.train_s1)
+        jobs = [("train", c) for c in sorted(meta_tr["countries"]) if alloc.get(c, 0) > 0] + \
+               [("test", c) for c in sorted(meta_te["countries"])]
+        for split, c in jobs:
+            t_c = time.time()
+            if split == "train":
+                q, d, _, q_emb_all = load_train_country(meta_tr, c, cols, alloc[c], a.seed, dense_model, a.cache_dir)
+            else:
+                rec = load_country(meta_te, c, cols)
+                q, d = split_tables(rec)
+                del rec
+                q_emb_all = None
+                if a.test_limit:
+                    q = q[q["pos"].to_numpy() < a.test_limit].reset_index(drop=True)
+            ctx = CountryContext(f"{split}/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
+            ctx.d = None
+            del d
+            cache.ensure_docs(ctx.tag, ctx.d_rid)
+            for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
+                u, _, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi, union_only=True)
+                log(f"{split}/{c} block {bi}: {len(u)} union pairs cached")
+                del u
+            del ctx, q
+            release_memory()
+            log(f"{split}/{c}: cand cache done in {time.time() - t_c:.0f}s | peak RSS so far {peak_rss_mb()} MB")
+        log("cands-only: done")
+        return
 
     def _train():
         nonlocal gt_pairs
@@ -298,13 +430,15 @@ def main() -> None:
             log(f"train/{c}: {len(q)} S1 sampled of {meta_tr['countries'][c]['n_s1']}, {len(d)} docs "
                 f"({sum(1 for v in gt_c.values() if not v)} singletons in sample)")
             ctx = CountryContext(f"train/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
+            if cache is not None:
+                cache.ensure_docs(ctx.tag, ctx.d_rid)
             del d  # phase A never touches the doc strings again (ctx keeps d_src/d_rid); phase B reloads the table
             ctx.d = None
             release_memory()
             row0 = n_pairs_a
             gp_c = 0
             for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
-                cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0))
+                cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi)
                 gp = gt_pairs_block(qb["rid"].to_numpy(dtype=object), ctx.d_rid, gt_c)
                 gp_c += len(gp)
                 rec_curves.append(blocking_recall(cands, gp, len(qb), ks=sorted({1, 3, 5, a.k})).assign(n=len(gp)))
@@ -537,10 +671,13 @@ def main() -> None:
                 thr_c = thr_min
                 log(f"test/{c}: country unseen in training -> using the smallest train prune threshold {thr_c:.3f}")
         ctx = CountryContext(f"test/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device)
+        if cache is not None:
+            cache.ensure_docs(ctx.tag, ctx.d_rid)
+        prob_parts = []
         c_s1 = c_empty = c_pred = c_pairs = 0
         c_counts = []
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
-            cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0))
+            cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi)
             n_before = len(cands)
             if use_cascade:
                 pa = predict_chunked(cascade_model, cands, a_cols)
@@ -555,6 +692,9 @@ def main() -> None:
             cands = stage_b(cands, qb, d, sb_jobs)
             cands["p"] = predict_chunked(model, cands, feats)
             qb_rid = qb["rid"].to_numpy(dtype=object)
+            if a.save_probs:
+                prob_parts.append(pd.DataFrame({"s1": qb_rid[cands["q"].to_numpy()], "cand": ctx.d_rid[cands["c"].to_numpy()],
+                                                "p": cands["p"].to_numpy(), "score": cands["score"].to_numpy()}))
             sets = decide(cands, qb_rid, ctx.d_rid, best["rule"], thr_best, bool(best["one2one"]))
             cand_rows = [""] * len(qb)
             for qq, grp in cands.groupby("q")["c"]:
@@ -574,6 +714,9 @@ def main() -> None:
             del cands, sets, cand_rows, qb
         fh_m.flush()
         fh_c.flush()
+        if prob_parts:
+            pd.concat(prob_parts, ignore_index=True).to_parquet(os.path.join(a.out_dir, f"test_probs_{c}.parquet"), index=False)
+        del prob_parts
         counts_c = np.concatenate(c_counts)
         count_parts.append(counts_c)
         test_cands[c] = stats_from_counts(counts_c)

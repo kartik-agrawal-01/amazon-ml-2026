@@ -143,7 +143,11 @@ def topk_sparse_gpu(Q: sp.csr_matrix, D: sp.csr_matrix, k: int, min_sim: float =
         en = min(st + chunk, n)
         # (features x m) dense block built directly in that layout: toarray(order="F") of the (m x features)
         # slice IS the C-contiguous transpose (a numpy .T copy of a 400 MB block costs ~0.8 s per chunk)
-        qd = torch.from_numpy(Q[st:en].toarray(order="F").T).cuda()
+        # densify on the card: ship the (features x m) chunk as sparse CSR (a few MB) instead of building a
+        # ~0.5 GB dense block on the CPU and copying it over PCIe (same values -> same scores)
+        qt = Q[st:en].T.tocsr()
+        qd = torch.sparse_csr_tensor(torch.from_numpy(qt.indptr.astype(np.int64)), torch.from_numpy(qt.indices.astype(np.int64)),
+                                     torch.from_numpy(qt.data.astype(np.float32)), size=qt.shape).cuda().to_dense()
         scores = torch.sparse.mm(Dt, qd)                                              # (docs x m)
         s_, i_ = torch.topk(scores.t().contiguous(), k, dim=1)                        # topk along the last dim is ~10x faster
         out_s[st:en] = s_.cpu().numpy()
