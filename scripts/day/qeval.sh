@@ -8,7 +8,7 @@ set -u
 TAG=${1:?tag}; SUF=${2-}; RUNS=${3:-"xc_us slice_mix"}; shift 3 || shift $#
 cd ~/amazon-ml-2026 || exit 1
 source ~/miniforge3/etc/profile.d/conda.sh && conda activate aml
-COMMON="--n-jobs 8 --stage-b-jobs 4 --topk-device cuda --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w"
+COMMON="--n-jobs ${QE_NJOBS:-8} --stage-b-jobs 4 --topk-device cuda --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w"
 for run in $RUNS; do
   case $run in xc_us) dd=data_xc_us; cd_=cache_xc_us;; slice_mix) dd=data_slice; cd_=cache_slice;; xc_in) dd=data_xc_in; cd_=cache_xc_in;; esac
   name=day_${TAG}_$run; mkdir -p runs/$name

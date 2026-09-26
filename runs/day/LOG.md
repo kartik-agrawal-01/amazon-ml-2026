@@ -55,3 +55,92 @@ Plan (QUEUE 1, P0 fast lane):
   name_c3 49->47 s, name_w 63->46 s, addr_c3 50->46 s, full_w 94->48 s (train/india phase 575 s -> ~390 s).
 - NEXT addition for step 3 (v3 full data): add `--feat-cache feats_v3` to the v3 command -> later model/rule
   experiments on full data via src.rescore in minutes.
+
+## Session 2 — 26 Sep 12:44 (driver restarted after a REBOOT)
+- Box rebooted ~12:15-12:42 (uptime 2 min at 12:44; power). Gate A died in train/us top-k (gate log -> runs/day/gate_try1.log).
+  cands_v2/ kept train_india b000 + vecs.joblib -> 12:45 gate restarted (tmux `gate`, same script); it reuses the cached
+  vectorisers and the train/india union, recomputes the rest.
+- GIT AUTH LOST with the reboot: the credential cache (credential.helper cache) is empty, no ssh key / gh on the box ->
+  `git pull`/`git push` fail ("could not read Username"). Commits stay LOCAL until a human re-authenticates
+  (e.g. `git push` once interactively in tmux). HQ cannot see this session's results until then.
+- Found uncommitted WIP from the previous session in src/pipeline.py: QUEUE 4a key rules (`--key-rules 0.96`:
+  calibrate hq_keys rules per train country on ALL S1 context, inject sure pairs into the union, bypass the cascade cap,
+  features key_p/key_sure; test pass: unseen country gets the min over train countries). Reviewed; smoke-testing it.
+
+## Session 3 — 26 Sep 12:53 (second REBOOT ~12:51; gate A died again right after train/india)
+- Git auth still missing (pull/push fail) -> commits stay local.
+- Committed the key-rules WIP (5b8720f, flag default off). Added per-rule coverage of the sure key pairs in the test
+  pass (after global o2o): log table + <out>/key_coverage_<country>.csv, report per_country key_sure/_decided (QUEUE 3c).
+- Heavy work now runs as ONE resumable chain: `scripts/day/chain1.sh` (tmux `chain`, log runs/day/chain1.log;
+  finished steps leave runs/day/chain/<step>.done, so after a reboot just relaunch the same command):
+  gateA (cands_v2) -> gateB (rescore v2 + compare, runs/day/gateB.log) -> qeval base (HEAD, v2 stores; new baseline
+  because deterministic LightGBM changed numerics vs Q0) -> qeval n3 (France fixes, _n3 stores) -> qeval n3k (+ --key-rules 0.96).
+  Relaunch: `~/miniforge3/envs/aml/bin/tmux new -d -s chain 'bash scripts/day/chain1.sh > runs/day/chain1.log 2>&1'`
+  (check first with pgrep that nothing runs).
+
+## Session 4 — 26 Sep 13:03 (THIRD reboot, ~13:00)
+- Reboot pattern: all 3 hard power-offs (12:15:47, 12:47:40, 12:58:49; no clean shutdown in the journal) happened
+  within seconds of the START of the GPU top-k on train/us (gate A timings match to ~10 s every time). v2 ran 5 h of GPU
+  top-k at night without trouble using the host-densify path; session 1's "densify on the card" keeps the GPU at 100%
+  duty (sparse.mm back to back) -> suspected PSU/power trip under sustained full load (power limit 180 W; no sudo for
+  `nvidia-smi -pl`). Mitigation (commit aed5cf2): env AML_GPU_HOST_DENSIFY=1 (v2's path) + AML_GPU_DUTY=0.6 (sleep
+  after each chunk so the card is busy ~60%); chain1/chain2 export both. Same top-k results (scripts/day/topk_check.py:
+  cpu = card = host, overlap 1.0). GPU power/util logged every 5 s to runs/day/gpu_power.log (tmux `gpulog`).
+  If the box still reboots at train/us: run gate A with `--topk-device cpu` (edit gate.sh C=...) or AML_GPU_DUTY=0.3.
+- 13:04 chain1 relaunched (tmux `chain`): gateA resumes (train/india cached) -> gateB -> base -> n3 -> n3k.
+- QUEUE 5a DONE (previous session's analysis, committed now): runs/day/india_recall.md. India full-density blocking
+  recall 0.933; 55% of misses are Indic-transliterated candidate names (recall 0.795: 'kansaltantsa' = consultants,
+  'bildarsa' = builders); 32% of misses have IDENTICAL phonetic keys (src.translit.phonetic_key maps both spellings to
+  'knsltnts', 'bldrs'). v2 dropped the name_ph view -> QUEUE 5b first try = name_ph back (all countries, one model).
+- 13:10 chain2 (tmux `chain2`, waits for runs/day/chain/n3k.done): n3ph = n3 + `--views ...,name_ph` Q screen.
+  Compare n3ph vs n3 (and cands/S1). If it KEEPs, next: full-density India recall via the candidate-augmentation path
+  (name_ph pass only on cands_v2 train/india, then pair recall after the cascade).
+
+### NEXT
+- After a reboot: check `pgrep -af '^python[0-9.]* (-m src[.]|scripts/)'`, then relaunch BOTH (chain2 waits for chain1):
+  `T=~/miniforge3/envs/aml/bin/tmux; $T new -d -s chain 'bash scripts/day/chain1.sh > runs/day/chain1.log 2>&1';
+   $T new -d -s chain2 'bash scripts/day/chain2.sh > runs/day/chain2.log 2>&1';
+   $T new -d -s gpulog 'nvidia-smi --query-gpu=timestamp,power.draw,utilization.gpu,temperature.gpu,clocks.sm --format=csv,noheader -l 5 >> runs/day/gpu_power.log'`
+- GATE PASS handling: see Session 1 NEXT 1.  Q tables: `python scripts/day/q_table.py <tag>` (base, n3, n3k, n3ph).
+
+## Session 5 — 26 Sep 13:21 (FOURTH reboot, 13:18:17; driver restarted, "Session 1" in its prompt)
+- Gate A died again in train/us top-k (name_c3/name_w/addr_c3 done, inside full_w). This time the GPU was throttled
+  (host densify + 60% duty): gpu_power.log max 64 W, 44 W / 0% util at the last sample 13:18:15 -> NOT a GPU power
+  trip. journalctl: boots -4/-3 at 12:48:44 and 12:49:24 lasted ~1 s each (power flapping), no kernel error before any
+  power-off -> hard power loss.
+- SECURITY/LOAD NOTE for humans: at boot a process `postgres: user dbname 127.0.0.1 idle` (user `user`, pid 1542)
+  burns ~975% CPU (10 cores, 23 CPU-min in the first 2.5 min) with 2.3 GB RSS. An *idle* postgres backend should not
+  do that; together with the sshd brute-force attempts in the journal (invalid users from 188.168.86.6) it looks like
+  a possible cryptominer disguised as postgres. Not our process -> not touched. It also doubles the box's CPU/power
+  load while our jobs run (possible reason for the power trips). Please have the machine owner check it.
+- Committed the previous session's uncommitted candidate-augmentation WIP (f4fd6f1; only active with --cand-cache /
+  --vec-cache when views are missing from the cache; py_compile OK, not yet exercised).
+- New order (scripts/day/chain3.sh, tmux `chain`, log runs/day/chain3.log): slice screens base -> n3 -> n3k -> n3ph
+  first (they never triggered a reboot and give the Q decisions HQ needs), then gate A (AML_GPU_DUTY=0.3) -> gate B.
+  Slice screens use --n-jobs 6 (QE_NJOBS) to lower the box load next to the 10-core postgres process.
+  tmux `sysmon` logs MemAvailable/load/max CPU temp/top process every 5 s (fsync'd) to runs/day/sysmon.log.
+- 13:23 chain3 started (base).
+- 13:26 QUEUE 5b reverse blocking implemented (628591f): `--reverse-k 3 --reverse-bypass 2`. Per country, every S2/S3
+  doc queries its top-3 S1 among ALL S1 of the country (train: all train S1, then mapped to the sample, so the
+  competition matches the test pass) per view; pairs are unioned pre-cascade with features rev_rank (best rank over
+  views), rev_n (#views), rev_best (#views where the S1 is the doc's #1) and rev_sure = rev_best >= 2, which bypasses
+  the cascade cap (like key_sure). Stored in model.joblib (`reverse`), restored by --load-model. Unit test vs brute force:
+  scripts/day/test_reverse.py (exact). Not yet run end-to-end -> first real run is the chain step n3r.
+- Chain restarted 13:26 with n3r inserted after n3ph: base -> n3 -> n3k -> n3ph -> n3r -> gateA -> gateB.
+- 14:07 base DONE: Q=0.9669 (mix 0.9808, xc_us 0.9344, xc_in not run -> Q0 value). Within noise of Q0 (+0.0003); this
+  is the reference for n3/n3k/n3ph/n3r (compare to it, not to Q0). Runtimes with --n-jobs 6: xc_us 15.5 min,
+  slice_mix 25.1 min; peak RSS 3.3 GB. No reboot during base (sysmon: CPU max ~72 C, MemAvailable ~8.6 GB).
+- 14:07 n3 started (builds the cache_*_n3 stores first).
+
+### NEXT (session 6+)
+1. Chain3 (tmux `chain`) runs n3 -> n3k -> n3ph -> n3r -> gateA -> gateB unattended. After each step:
+   `python scripts/day/q_table.py <tag>`, compare to base (0.9669), SCOREBOARD row, KEEP/REVERT decision.
+   n3 (France fixes) is KEEP-without-Q-rule per QUEUE 3 unless OOF drops. n3k / n3ph / n3r are measured against n3.
+2. If n3r crashes (first end-to-end run of --reverse-k): runs/day_n3r_*/stdout.txt, fix, rerun n3r alone.
+3. After a reboot: pgrep check, then relaunch sysmon, gpulog and chain (see Session 4 NEXT; chain3.sh instead of
+   chain1/chain2 - it is resumable via runs/day/chain/*.done). Check runs/day/sysmon.log tail for the moments before.
+4. Git auth still missing -> everything is committed locally only (HQ can't see it). Humans: please `git push` once.
+- 14:12 GIT AUTH WORKS AGAIN: pulled HQ a7b2489 (QUEUE 4/5b: box only slice-screens keys/reverse/name_ph; full-density
+  runs of them belong to the Jarvis lane; port fixes from runs/jarvis/ISSUES.md — file does not exist yet) and pushed
+  everything (e05b148). The gate A/B at the end of chain3 is still needed for the box's fallback v3 (France fixes +
+  global o2o only, per the new UPLOAD POLICY).

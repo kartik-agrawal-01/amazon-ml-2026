@@ -135,3 +135,18 @@ may well be the rule's ~3–5% negatives. Consequences (26 Sep 13:40): key pairs
 post-cascade candidates (Jarvis lane item 1b; box QUEUE item 4 moved there). No forcing for US rules. An ens2c
 variant restricted to the CUT pairs would add France ~40K + India ~24K + US ~4K pairs, estimated +0.45–0.5 pt with
 the one-to-one fix, still below the 1-pt upload bar.
+
+## 8. Atharv's file (LB 0.944) and a 2-of-3 vote (26 Sep 13:30)
+
+| country | Atharv = Soha (identical sets) | Atharv = v2 | Soha = v2 | vote = Soha | vote vs v2: pairs removed / added per S1 |
+|---|---|---|---|---|---|
+| US | 91.5% | 78.6% | 78.7% | 95.6% | −0.141 / +0.077 |
+| India | 84.9% | 65.6% | 65.7% | 91.9% | −0.211 / +0.186 |
+| France | 77.9% | 56.2% | 56.3% | 88.2% | −0.267 / +0.243 |
+| all | 86.4% | 69.2% | 69.2% | 92.8% | −0.193 / +0.153 |
+
+Atharv's pipeline is close to Soha's (pseudo-F0.5 of Atharv against Soha 0.968, against v2 0.919), so it's a weak
+third voter. A 2-of-3 vote is Soha's file with small v2 tie-breaks (vs Soha −0.037 / +0.044 pairs per S1). Expected LB
+≈ Soha's 0.948, and the ens1 result says the v2-only pairs it would drop are ~73% true. Not uploaded (1-pt bar). Voting
+between these three files is closed. Gains have to come from the shared misses (candidate generation, India recall,
+France), which all three pipelines have.

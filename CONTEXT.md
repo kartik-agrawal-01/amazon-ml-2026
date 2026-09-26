@@ -40,10 +40,11 @@
 - Submission flow: log row in `submissions/LOG.md` -> push file to `submissions/` ->
   leader pulls + validates + uploads -> leader reports LB score -> fill LOG.md.
 
-## Current state (26 Sep ~12:00 IST)
-- **Public LB: v2 = 0.947** (09:45) · ens1 consensus v2∩Soha = **0.9449** (11:07) · Soha's own pipeline 0.948.
-  Target 98.4+. Uploads used: Day2 2/5. **Pending: LOG #3 ens2c** (v2 + global one-to-one + exact-key 'sure' pairs,
-  expected +0.2 to +0.5 pt; submissions/ens2c.zip.part000-002).
+## Current state (26 Sep ~12:50 IST)
+- **Public LB: v2 = 0.947** (09:45) · ens1 consensus v2∩Soha = **0.9449** (11:07) · Atharv's own pipeline = **0.944**
+  (LOG #3) · Soha's own pipeline 0.948. Target 98.4+. Uploads used: **Day2 3/5** (2 left). ens2c (v2 + global
+  one-to-one + exact-key pairs, expected +0.3 to +0.5 pt) is HELD: uploads only for files expected ≥ +1 pt over the best LB.
+  Two compute lanes: the box day loop (scripts/day/QUEUE.md) and the Jarvis A30 lane (scripts/jarvis/QUEUE.md).
 - v2 = commit 48bc4e7: 4 TF-IDF views, GPU top-k, cascade top-10 (9.2 cands/S1), LightGBM on 150K train S1, thr 0.70
   + one-to-one; OOF 0.9623 (full-density train pass) -> LB gap -1.5. Test: empty 6.0% (FR 5.2 / IN 6.7 / US 5.5).
 - **Where the loss is (docs/ENSEMBLE_AND_KEYS.md):** (1) the disagreement set with Soha is ~73% true pairs, so it isn't the

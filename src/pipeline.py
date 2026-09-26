@@ -32,9 +32,10 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 
-from .blocking import (DEFAULT_VIEWS, blocking_recall, fit_vectorizers, gt_pairs_block, lexical_candidates,
-                       transform, union_candidates, view_text)
+from .blocking import (DEFAULT_VIEWS, VIEWS, blocking_recall, fit_vectorizers, gt_pairs_block, lexical_candidates,
+                       topk_sparse, transform, union_candidates, view_text)
 from .cascade import candidate_stats, cascade_keep, fit_cascade, stage_a_columns
 from .features import calibrate_prune, feature_columns, prune_score, stage_a, stage_b
 from .metric import macro_f05, read_matches_tsv
@@ -151,6 +152,124 @@ def global_o2o(sets: Dict[str, frozenset], s1: np.ndarray, rec: np.ndarray, p: n
     return int((~keep).sum())
 
 
+# ------------------------------------------------------- exact-key 'sure' pairs (QUEUE 4a, src/hq_keys.py)
+def record_keys_chunked(rec: pd.DataFrame, chunk: int = 500_000) -> pd.DataFrame:
+    """hq_keys.record_keys in chunks (its per-address token lists would cost GBs on a 5M-doc country at once)."""
+    from .hq_keys import record_keys
+    cols = [c for c in ("rid", "src", "country", "n_core", "n_nospace", "n_addr") if c in rec]
+    parts = [record_keys(rec[cols].iloc[st:st + chunk]) for st in range(0, len(rec), chunk)]
+    out = pd.concat(parts, ignore_index=True) if parts else record_keys(rec[cols])
+    return out.drop(columns=[c for c in ("rid", "src", "country") if c in out])
+
+
+def block_key_pairs(kq_all: pd.DataFrame, q_pos: np.ndarray, kd: pd.DataFrame, vocab: set) -> pd.DataFrame:
+    """Exact-key pairs of one query block: columns q (block row), c (doc row), rule. q_pos = rows of the block in kq_all."""
+    from .hq_keys import key_pairs
+    kp = key_pairs(kq_all.iloc[q_pos].reset_index(drop=True), kd, vocab=vocab, kq_ctx=kq_all)
+    kp = kp[kp["rule"] != ""]
+    return pd.DataFrame({"q": kp["qi"].to_numpy().astype(np.int64), "c": kp["ci"].to_numpy().astype(np.int64),
+                         "rule": kp["rule"].to_numpy()})
+
+
+def key_extra(kp: pd.DataFrame, rule_p: Dict[str, float], p_min: float) -> pd.DataFrame:
+    """Key pairs with a calibrated rule -> (q, c, key_p, key_sure). key_sure: rule P >= p_min and the record is not
+    'sure' for several S1 of the block (hq_keys.apply_rules); sure pairs are injected into the union + bypass the cascade."""
+    from .hq_keys import apply_rules
+    kp = kp[kp["rule"].isin(list(rule_p))].reset_index(drop=True)
+    sure = apply_rules(kp.rename(columns={"c": "ci"}), rule_p, p_min) if len(kp) else np.zeros(0, bool)
+    return pd.DataFrame({"q": kp["q"].to_numpy(), "c": kp["c"].to_numpy(), "rule": kp["rule"].to_numpy(),
+                         "key_p": kp["rule"].map(rule_p).to_numpy().astype(np.float32), "key_sure": sure.astype(np.int8)})
+
+
+def add_key_pairs(u: pd.DataFrame, extra: pd.DataFrame, views: List[str]) -> pd.DataFrame:
+    """Annotate the union with key_p/key_sure and append the sure pairs top-k did not find (ranks 99, n_views 0)."""
+    extra = extra.drop(columns=["rule"], errors="ignore").sort_values("key_p", ascending=False).drop_duplicates(["q", "c"])
+    new = extra[extra["key_sure"] == 1]
+    m = u.merge(extra, on=["q", "c"], how="left")
+    new = new.merge(u[["q", "c"]], on=["q", "c"], how="left", indicator=True)
+    new = new[new["_merge"] == "left_only"].drop(columns="_merge")
+    if len(new):
+        add = pd.DataFrame({"q": new["q"].to_numpy(), "c": new["c"].to_numpy()})
+        for col in u.columns:
+            if col.endswith("_rank"):
+                add[col] = np.int16(99)
+        add["n_views"] = np.int8(0)
+        add["key_p"], add["key_sure"] = new["key_p"].to_numpy(), new["key_sure"].to_numpy()
+        m = pd.concat([m, add[m.columns]], ignore_index=True).sort_values(["q", "c"], ignore_index=True)
+    m["key_p"] = m["key_p"].fillna(0).astype(np.float32)
+    m["key_sure"] = m["key_sure"].fillna(0).astype(np.int8)
+    return m
+
+
+def reverse_pairs(q_mats_all: Dict[str, sp.csr_matrix], d_mats: Dict[str, sp.csr_matrix], views: List[str],
+                  r: int, n_jobs: int) -> pd.DataFrame:
+    """QUEUE 5b reverse blocking: every S2/S3 doc queries its top-r S1 (among ALL S1 of the country) per view.
+    Returns one row per (qa = S1 row in q_mats_all, c = doc row): rev_rank (best rank over views), rev_n (#views with the
+    pair in the doc's top r), rev_best (#views where this S1 is the doc's best S1). Targets decoy crowding: an S1 with
+    many same-name decoys loses its true docs at the cascade cap, but the true doc still ranks that S1 first."""
+    n_d = next(iter(d_mats.values())).shape[0]
+    keys, ranks = [], []
+    for v in views:
+        rr, cc, _, rk = topk_sparse(d_mats[v], q_mats_all[v], r, n_threads=n_jobs)
+        keys.append(cc.astype(np.int64) * n_d + rr)
+        ranks.append(rk.astype(np.int16))
+    key, rank = np.concatenate(keys), np.concatenate(ranks)
+    del keys, ranks
+    o = np.argsort(key, kind="stable")
+    key, rank = key[o], rank[o]
+    del o
+    st = np.flatnonzero(np.r_[True, key[1:] != key[:-1]])
+    uk = key[st]
+    return pd.DataFrame({"qa": uk // n_d, "c": uk % n_d,
+                         "rev_rank": np.minimum.reduceat(rank, st).astype(np.int16),
+                         "rev_n": np.diff(np.r_[st, len(key)]).astype(np.int8),
+                         "rev_best": np.add.reduceat((rank == 0).astype(np.int8), st).astype(np.int8)})
+
+
+def view_cols(views: List[str]) -> List[str]:
+    cols = {VIEWS[v]["col"] for v in views}
+    return sorted((cols - {"n_full"}) | ({"n_core", "n_addr"} if "n_full" in cols else set()))
+
+
+def rev_by_query(rev: pd.DataFrame, q_of_all: Optional[np.ndarray]) -> pd.DataFrame:
+    """Map reverse pairs from S1-of-country rows to rows of the query table q (q_of_all[qa], -1 = not in q), sorted by q."""
+    qa = rev["qa"].to_numpy()
+    qq = qa if q_of_all is None else q_of_all[qa]
+    ok = qq >= 0
+    out = rev.loc[ok, ["c", "rev_rank", "rev_n", "rev_best"]].assign(q=qq[ok])
+    return out.sort_values(["q", "c"], kind="stable", ignore_index=True)
+
+
+def rev_block(rev_q: Optional[pd.DataFrame], q_idx: np.ndarray, bypass: int) -> Optional[pd.DataFrame]:
+    """Reverse pairs of one contiguous query block (q relative to the block) + rev_sure (rev_best >= bypass)."""
+    if rev_q is None:
+        return None
+    qv = rev_q["q"].to_numpy()
+    lo, hi = np.searchsorted(qv, q_idx[0]), np.searchsorted(qv, q_idx[-1], side="right")
+    b = rev_q.iloc[lo:hi].copy()
+    b["q"] = b["q"].to_numpy() - q_idx[0]
+    b["rev_sure"] = ((b["rev_best"] >= bypass) if bypass > 0 else np.zeros(len(b), bool)).astype(np.int8)
+    return b
+
+
+def add_rev_pairs(u: pd.DataFrame, rb: pd.DataFrame) -> pd.DataFrame:
+    """Annotate the union with the reverse-blocking columns and append the reverse pairs top-k did not find."""
+    m = u.merge(rb, on=["q", "c"], how="outer")
+    for col in u.columns:
+        if col.endswith("_rank"):
+            m[col] = m[col].fillna(99).astype(np.int16)
+    m["n_views"] = m["n_views"].fillna(0).astype(np.int8)
+    for col in ("key_p",):
+        if col in m:
+            m[col] = m[col].fillna(0).astype(np.float32)
+    if "key_sure" in m:
+        m["key_sure"] = m["key_sure"].fillna(0).astype(np.int8)
+    m["rev_rank"] = m["rev_rank"].fillna(99).astype(np.int16)
+    for col in ("rev_n", "rev_best", "rev_sure"):
+        m[col] = m[col].fillna(0).astype(np.int8)
+    return m.sort_values(["q", "c"], kind="stable", ignore_index=True)
+
+
 # ------------------------------------------------------- candidate cache (fast lane)
 class CandCache:
     """Pre-cascade candidate union (q, c, <view>_rank, n_views) per (split, country, block), saved as parquet.
@@ -207,6 +326,31 @@ class CandCache:
         u["c"] = c
         return u
 
+    def _aug_path(self, tag: str, bi: int, view: str) -> str:
+        return os.path.join(self.root, f"{self._fname(tag)}__b{bi:03d}__aug_{view}.parquet")
+
+    def load_aug(self, tag: str, bi: int, view: str) -> Optional[pd.DataFrame]:
+        """Long-format top-k part (q, c, view, rank) of an extra view computed on top of the cached union."""
+        p = self._aug_path(tag, bi, view)
+        if not os.path.exists(p):
+            return None
+        a = pd.read_parquet(p)
+        q, c = a["q"].to_numpy().astype(np.int64), a["c"].to_numpy().astype(np.int64)
+        m = self._drid_map.get(tag)
+        if m is not None:
+            c = m[c]
+            ok = c >= 0
+            q, c, a = q[ok], c[ok], a[ok]
+        return pd.DataFrame({"q": q, "c": c, "view": view, "rank": a["rank"].to_numpy()})
+
+    def save_aug(self, tag: str, bi: int, view: str, part: pd.DataFrame) -> None:
+        if self._drid_map.get(tag) is not None:
+            return
+        p = self._aug_path(tag, bi, view)
+        pd.DataFrame({"q": part["q"].astype(np.int32), "c": part["c"].astype(np.int32),
+                      "rank": part["rank"].astype(np.int16)}).to_parquet(p + ".tmp", index=False)
+        os.replace(p + ".tmp", p)
+
     def save(self, tag: str, bi: int, q_rid: np.ndarray, union: pd.DataFrame) -> None:
         pq, pr = self._paths(tag, bi)
         if self._drid_map.get(tag) is not None:
@@ -243,7 +387,7 @@ class CountryContext:
             log(f"{tag}: dense embeddings ready (docs {self.d_emb.shape}, S1 {self.q_emb_all.shape})")
 
     def block(self, q_idx: np.ndarray, k: int, verbose=False, cache: Optional[CandCache] = None, bi: int = 0,
-              union_only: bool = False):
+              union_only: bool = False, extra: Optional[pd.DataFrame] = None, rev: Optional[pd.DataFrame] = None):
         """Candidates + stage A for one query block. Returns (cands, q_block, q_emb).
         cache: load the pre-cascade union from the candidate cache (top-k skipped) or fill it after top-k.
         union_only: return the union without stage A (cache building)."""
@@ -266,12 +410,60 @@ class CountryContext:
             del parts
             if cache is not None:
                 cache.save(self.tag, bi, q_rid, cands)
-        elif verbose:
-            log(f"{self.tag} block {bi}: union loaded from the candidate cache ({len(cands)} pairs, top-k skipped)")
+        else:
+            if verbose:
+                log(f"{self.tag} block {bi}: union loaded from the candidate cache ({len(cands)} pairs, top-k skipped)")
+            missing = [v for v in self.views if f"{v}_rank" not in cands.columns]
+            if missing:  # candidate augmentation: top-k only for the views the cached union lacks
+                cands = self._augment(cands, cache, bi, missing, q_mats, k, verbose)
         if union_only:
             return cands, qb, q_emb
+        if extra is not None:
+            n0 = len(cands)
+            cands = add_key_pairs(cands, extra, self.views)
+            if verbose:
+                log(f"{self.tag} block {bi}: key pairs: {int(cands['key_sure'].sum())} sure ({len(cands) - n0} new to the union)")
+        if rev is not None:
+            n0 = len(cands)
+            cands = add_rev_pairs(cands, rev)
+            if verbose:
+                log(f"{self.tag} block {bi}: reverse pairs: {len(rev)} ({len(cands) - n0} new to the union, "
+                    f"{int(cands['rev_sure'].sum())} bypass the cascade cap)")
         cands = stage_a(cands, self.d_src, q_mats, self.d_mats, self.views, q_emb, self.d_emb)
         return cands, qb, q_emb
+
+
+    def reverse(self, q_all: pd.DataFrame, r: int, q_of_all: Optional[np.ndarray] = None) -> pd.DataFrame:
+        t = time.time()
+        q_all = q_all[view_cols(self.views)].copy()  # view_text may add n_full: never on the caller's table
+        qm = {v: transform(self.vecs[v], view_text(q_all, v), self.n_jobs) for v in self.views}
+        del q_all
+        rev = rev_by_query(reverse_pairs(qm, self.d_mats, self.views, r, self.n_jobs), q_of_all)
+        log(f"{self.tag}: reverse blocking top-{r}: {len(rev)} pairs for {len(self.q)} S1 "
+            f"({next(iter(qm.values())).shape[0]} S1 queried, {time.time() - t:.0f}s)")
+        return rev
+
+    def _augment(self, cands, cache, bi, missing, q_mats, k, verbose):
+        parts = []
+        for v in missing:
+            a = cache.load_aug(self.tag, bi, v)
+            if a is None:
+                a_parts = lexical_candidates(q_mats, self.d_mats, self.d_src, k, [v], verbose=verbose,
+                                             n_threads=self.n_jobs)
+                a = pd.concat(a_parts, ignore_index=True) if a_parts else pd.DataFrame(
+                    {"q": np.zeros(0, np.int64), "c": np.zeros(0, np.int64), "view": v, "rank": np.zeros(0, np.int16)})
+                cache.save_aug(self.tag, bi, v, a)
+            parts.append(a)
+        new = union_candidates(parts, missing).drop(columns="n_views")
+        n0 = len(cands)
+        u = cands.drop(columns="n_views").merge(new, on=["q", "c"], how="outer")
+        rank_cols = [f"{v}_rank" for v in self.views if f"{v}_rank" in u.columns]
+        u[rank_cols] = u[rank_cols].fillna(99).astype(np.int16)
+        u["n_views"] = (u[rank_cols] < 99).sum(axis=1).astype(np.int8)
+        u = u.sort_values(["q", "c"], kind="stable").reset_index(drop=True)
+        if verbose:
+            log(f"{self.tag} block {bi}: augmented with {missing}: {len(u) - n0} new pairs ({len(u)} total)")
+        return u
 
 
 def need_cols(dense: bool) -> List[str]:
@@ -279,11 +471,17 @@ def need_cols(dense: bool) -> List[str]:
     return [c for c in KEEP_COLS if c != "n_full"] + (RAW_COLS if dense else [])
 
 
-def load_train_country(meta, c, cols, n_c, seed, dense_model, cache_dir):
-    """One train country: (sampled S1 table, doc table, sample positions, S1 embeddings of the sample or None)."""
+def load_train_country(meta, c, cols, n_c, seed, dense_model, cache_dir, keys_out: Optional[list] = None,
+                       qall_out: Optional[list] = None, qall_cols: Optional[List[str]] = None):
+    """One train country: (sampled S1 table, doc table, sample positions, S1 embeddings of the sample or None).
+    keys_out: if given, the exact-key table of ALL S1 of the country is appended to it (context for hq_keys)."""
     rec = load_country(meta, c, cols)
     q_all, d = split_tables(rec)
     del rec
+    if keys_out is not None:
+        keys_out.append(record_keys_chunked(q_all))
+    if qall_out is not None:  # reverse blocking queries ALL S1 of the country (same competition as in the test pass)
+        qall_out.append(q_all[[col for col in qall_cols if col in q_all]].copy())
     q_emb_all = None
     if n_c < len(q_all):
         q = q_all.sample(n_c, random_state=seed)
@@ -343,6 +541,13 @@ def main() -> None:
     ap.add_argument("--feat-cache", default="", help="keep the final pair features: train_X.f32 + train_meta.npz/json and "
                     "one parquet per test block (s1, cand, features, p) -> model/rule changes without stage A/B")
     ap.add_argument("--no-global-o2o", action="store_true", help="one-to-one per block only (v2 behaviour)")
+    ap.add_argument("--key-rules", type=float, default=0.0, help="QUEUE 4a: >0 = calibrate hq_keys rules per train country "
+                    "and inject pairs of rules with P >= this (e.g. 0.96) into the candidates, bypassing the cascade cap; "
+                    "adds features key_p / key_sure")
+    ap.add_argument("--reverse-k", type=int, default=0, help="QUEUE 5b: >0 = reverse blocking, every S2/S3 doc queries its "
+                    "top-k S1 of the country per view; pairs join the union (features rev_rank/rev_n/rev_best)")
+    ap.add_argument("--reverse-bypass", type=int, default=2, help="reverse pairs where the S1 is the doc's best S1 in >= this "
+                    "many views bypass the cascade cap (0 = never)")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -385,9 +590,27 @@ def main() -> None:
     if a.vec_cache and os.path.exists(a.vec_cache):
         import joblib
         vc = joblib.load(a.vec_cache)
+        base_key = {k: v for k, v in (vc.get("key") or {}).items() if k != "views"}
+        missing = [v for v in views if v not in vc["vecs"]]
         if vc.get("key") == vec_key:
             vecs = vc["vecs"]
             log(f"vectorisers loaded from {a.vec_cache}")
+        elif base_key == {k: v for k, v in vec_key.items() if k != "views"}:
+            # views are fitted independently -> reuse the cached ones, fit only the new views; the reference file is
+            # never overwritten (the extended set goes to <vec_cache>+<views>.joblib)
+            ext = a.vec_cache.replace(".joblib", "") + "+" + "+".join(sorted(missing)) + ".joblib"
+            if missing and os.path.exists(ext):
+                vecs = {v: joblib.load(ext)["vecs"][v] for v in views}
+                log(f"vectorisers loaded from {a.vec_cache} + {ext}")
+            else:
+                vecs = {v: vc["vecs"][v] for v in views if v in vc["vecs"]}
+                if missing:
+                    sample = text_sample([meta_tr, meta_te], a.vec_sample, a.seed)
+                    vecs.update(fit_vectorizers(sample, missing, max_df=a.max_df, seed=a.seed))
+                    del sample
+                    joblib.dump(dict(key=vec_key, vecs=vecs), ext)
+                vecs = {v: vecs[v] for v in views}
+                log(f"vectorisers loaded from {a.vec_cache}; fitted {missing}")
         else:
             log(f"vec-cache {a.vec_cache} was fitted with {vc.get('key')} != {vec_key} -> refitting")
     if vecs is None:
@@ -397,6 +620,7 @@ def main() -> None:
         del sample
         if a.vec_cache:
             import joblib
+            os.makedirs(os.path.dirname(os.path.abspath(a.vec_cache)), exist_ok=True)
             joblib.dump(dict(key=vec_key, vecs=vecs), a.vec_cache)
     release_memory()
     cache = CandCache(a.cand_cache) if a.cand_cache else None
@@ -432,6 +656,8 @@ def main() -> None:
         log("cands-only: done")
         return
 
+    key_state: Dict[str, object] = dict(calib={}, p_min=a.key_rules)  # QUEUE 4a: per-country rule tables
+
     def _train():
         nonlocal gt_pairs
         # 3a. TRAIN phase A: blocking + stage A per country -> stage-A memmap + labels
@@ -453,20 +679,54 @@ def main() -> None:
             if n_c <= 0:
                 continue
             t_c = time.time()
-            q, d, sel, q_emb_all = load_train_country(meta_tr, c, cols, n_c, a.seed, dense_model, a.cache_dir)
+            keys_list = [] if a.key_rules > 0 else None
+            qall_list = [] if a.reverse_k > 0 else None
+            q, d, sel, q_emb_all = load_train_country(meta_tr, c, cols, n_c, a.seed, dense_model, a.cache_dir, keys_list,
+                                                      qall_list, view_cols(views))
             gt_c = gt_dict(gt_pairs, q["rid"].tolist())
             log(f"train/{c}: {len(q)} S1 sampled of {meta_tr['countries'][c]['n_s1']}, {len(d)} docs "
                 f"({sum(1 for v in gt_c.values() if not v)} singletons in sample)")
             ctx = CountryContext(f"train/{c}", q, d, vecs, views, dense_model, a.cache_dir, a.n_jobs, device, q_emb_all)
             if cache is not None:
                 cache.ensure_docs(ctx.tag, ctx.d_rid)
+            rev_q = None
+            if qall_list is not None:
+                q_of_all = None
+                if sel is not None:
+                    q_of_all = np.full(len(qall_list[0]), -1, np.int64)
+                    q_of_all[sel] = np.arange(len(q))
+                rev_q = ctx.reverse(qall_list[0], a.reverse_k, q_of_all)
+                del qall_list, q_of_all
+            kp_blocks, rule_p = None, None
+            if keys_list is not None:  # calibrate the key rules on this country's train sample (context: ALL its S1)
+                from .hq_keys import calibrate, s1_vocab
+                t_k = time.time()
+                kq_all, kd = keys_list[0], record_keys_chunked(d)
+                vocab = s1_vocab(kq_all)
+                q_pos = sel if sel is not None else np.arange(len(q))
+                kp_blocks, ys = [], []
+                for q_idx in blocks(len(q), a.block_size):
+                    kp = block_key_pairs(kq_all, q_pos[q_idx], kd, vocab)
+                    gp = gt_pairs_block(q["rid"].to_numpy(dtype=object)[q_idx], ctx.d_rid, gt_c)
+                    ys.append(kp.merge(gp.assign(y=1), on=["q", "c"], how="left")["y"].fillna(0).to_numpy())
+                    kp_blocks.append(kp)
+                cal = calibrate(pd.concat(kp_blocks, ignore_index=True), np.concatenate(ys))
+                key_state["calib"][c] = cal
+                rule_p = dict(zip(cal.rule, cal.p))
+                print(cal.sort_values("p", ascending=False).to_string(index=False))
+                log(f"train/{c}: key rules calibrated on {sum(len(k) for k in kp_blocks)} key pairs "
+                    f"({time.time() - t_k:.0f}s); sure (P >= {a.key_rules}): {sorted(r for r, v in rule_p.items() if v >= a.key_rules)}")
+                del kq_all, kd, keys_list, ys
             del d  # phase A never touches the doc strings again (ctx keeps d_src/d_rid); phase B reloads the table
             ctx.d = None
             release_memory()
             row0 = n_pairs_a
             gp_c = 0
             for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
-                cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi)
+                extra = key_extra(kp_blocks[bi], rule_p, a.key_rules) if kp_blocks is not None else None
+                cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi, extra=extra,
+                                         rev=rev_block(rev_q, q_idx, a.reverse_bypass))
+                del extra
                 gp = gt_pairs_block(qb["rid"].to_numpy(dtype=object), ctx.d_rid, gt_c)
                 gp_c += len(gp)
                 rec_curves.append(blocking_recall(cands, gp, len(qb), ks=sorted({1, 3, 5, a.k})).assign(n=len(gp)))
@@ -522,6 +782,16 @@ def main() -> None:
             t = time.time()
             pa, cascade_model = fit_cascade(Xa, y, qg, 3, a.seed, n_jobs=lgb_jobs)
             keep = cascade_keep(qg, pa, a.cascade_top, a.cascade_floor)
+            if "key_sure" in a_cols:  # sure key pairs bypass the top-N cap
+                ks = np.asarray(Xa[:, a_cols.index("key_sure")]) == 1
+                log(f"cascade: {int(ks.sum())} sure key pairs, {int((ks & ~keep).sum())} of them re-added past the cap")
+                keep |= ks
+                del ks
+            if "rev_sure" in a_cols:  # reverse pairs where the S1 is the doc's best S1 in several views
+                ks = np.asarray(Xa[:, a_cols.index("rev_sure")]) == 1
+                log(f"cascade: {int(ks.sum())} reverse-sure pairs, {int((ks & ~keep).sum())} of them re-added past the cap")
+                keep |= ks
+                del ks
             log(f"cascade fitted on {n_pairs_a} pairs x {len(a_cols)} stage-A features in {time.time() - t:.0f}s")
             del pa
         else:
@@ -641,7 +911,9 @@ def main() -> None:
             import joblib
             joblib.dump(dict(model=model, feats=feats, a_cols=a_cols, cascade_model=cascade_model,
                              cascade=dict(top=a.cascade_top, floor=a.cascade_floor, enabled=use_cascade),
-                             thr_prune=thr_prune, best=best, views=views), os.path.join(a.out_dir, "model.joblib"))
+                             thr_prune=thr_prune, best=best, views=views, key_calib=key_state["calib"] or None,
+                             key_rules=a.key_rules, reverse=dict(k=a.reverse_k, bypass=a.reverse_bypass)),
+                        os.path.join(a.out_dir, "model.joblib"))
         except Exception as e:  # noqa: BLE001
             log(f"model not saved: {e}")
         del X, y, qg, oof, fit_idx, fit_w, q_rid_tr, q_rid_str, gt_pairs
@@ -662,7 +934,11 @@ def main() -> None:
             raise SystemExit(f"--load-model views {mdl['views']} != --views {views}")
         model, feats, a_cols, cascade_model = mdl['model'], mdl['feats'], mdl['a_cols'], mdl['cascade_model']
         thr_prune, best = mdl['thr_prune'], mdl['best']
+        if mdl.get('key_calib'):
+            key_state.update(calib=mdl['key_calib'], p_min=mdl['key_rules'])
         use_cascade = bool(mdl['cascade']['enabled'])
+        rv = mdl.get('reverse') or dict(k=0, bypass=2)
+        a.reverse_k, a.reverse_bypass = rv['k'], rv['bypass']
         a.cascade_top, a.cascade_floor = mdl['cascade']['top'], mdl['cascade']['floor']
         thr_best = best['thr'] if best['rule'] == 'thr' else 0.0
         report['oof'] = dict(chosen=best, loaded_from=a.load_model)
@@ -709,16 +985,35 @@ def main() -> None:
         if cache is not None:
             cache.ensure_docs(ctx.tag, ctx.d_rid)
         prob_parts = []
+        rev_q = ctx.reverse(q, a.reverse_k) if a.reverse_k > 0 else None
+        kt = None
+        if key_state["calib"]:
+            from .hq_keys import rules_for_country, s1_vocab
+            kq_te = record_keys_chunked(q)
+            kt = dict(kq=kq_te, kd=record_keys_chunked(d), vocab=s1_vocab(kq_te),
+                      rule_p=rules_for_country(key_state["calib"], c), sure=[])
+            log(f"test/{c}: key rules {'(unseen country: min over train countries) ' if c not in key_state['calib'] else ''}"
+                f"sure: {sorted(r for r, v in kt['rule_p'].items() if v >= key_state['p_min'])}")
         c_sets: Dict[str, frozenset] = {}
         c_order, c_cand_rows, dp_parts = [], [], []
         c_s1 = c_empty = c_pred = c_pairs = 0
         c_counts = []
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
-            cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi)
+            extra = ksure = None
+            if kt is not None:
+                extra = key_extra(block_key_pairs(kt["kq"], q_idx, kt["kd"], kt["vocab"]), kt["rule_p"], key_state["p_min"])
+                ksure = extra.loc[extra["key_sure"] == 1, ["q", "c", "rule"]].drop_duplicates(["q", "c"])
+            cands, qb, _ = ctx.block(q_idx, a.k, verbose=(bi == 0), cache=cache, bi=bi, extra=extra,
+                                     rev=rev_block(rev_q, q_idx, a.reverse_bypass))
+            del extra
             n_before = len(cands)
             if use_cascade:
                 pa = predict_chunked(cascade_model, cands, a_cols)
                 keep_b = cascade_keep(cands["q"].to_numpy(), pa, a.cascade_top, a.cascade_floor)
+                if "key_sure" in cands:
+                    keep_b |= cands["key_sure"].to_numpy() == 1
+                if "rev_sure" in cands:
+                    keep_b |= cands["rev_sure"].to_numpy() == 1
                 del pa
             else:
                 keep_b = prune_score(cands) >= thr_c
@@ -744,6 +1039,10 @@ def main() -> None:
             cand_rows = [""] * len(qb)
             for qq, grp in cands.groupby("q")["c"]:
                 cand_rows[qq] = ",".join(ctx.d_rid[grp.values])
+            if ksure is not None:  # sure key pairs of the block (S1 rid, record rid, rule) -> coverage after global o2o
+                kt["sure"].append(pd.DataFrame({"s1": qb_rid[ksure["q"].to_numpy()], "rec": ctx.d_rid[ksure["c"].to_numpy()],
+                                                "rule": ksure["rule"].to_numpy()}))
+            del ksure
             if not a.no_global_o2o:
                 dp_parts.append(decided_pairs(sets, cands, qb_rid, ctx.d_rid))
             c_sets.update(sets)
@@ -767,6 +1066,16 @@ def main() -> None:
                 c_empty += not m
                 if a.test_gt:
                     pred_for_gt[r] = m
+        key_cov = (0, 0)
+        if kt is not None and kt["sure"]:  # QUEUE 3c: coverage of the sure key pairs by rule (final sets)
+            ks = pd.concat(kt["sure"], ignore_index=True)
+            ks["dec"] = [r in c_sets.get(s, ()) for s, r in zip(ks["s1"].to_numpy(), ks["rec"].to_numpy())]
+            tab = ks.groupby("rule")["dec"].agg(n="size", covered="mean").reset_index()
+            tab["rule_p"] = tab["rule"].map(kt["rule_p"])
+            tab.to_csv(os.path.join(a.out_dir, f"key_coverage_{c}.csv"), index=False)
+            log(f"test/{c}: sure key pairs {len(ks)}, covered {ks['dec'].mean():.3f}; by rule:\n{tab.to_string(index=False)}")
+            key_cov = (len(ks), int(ks["dec"].sum()))
+            del ks, tab
         del c_sets, c_order, c_cand_rows, dp_parts
         fh_m.flush()
         fh_c.flush()
@@ -778,6 +1087,7 @@ def main() -> None:
         test_cands[c] = stats_from_counts(counts_c)
         per_country.append(dict(country=c, n_s1=c_s1, empty_rate=c_empty / max(c_s1, 1), mean_matches=c_pred / max(c_s1, 1),
                                 cand_mean=test_cands[c]["mean"], cand_median=test_cands[c]["median"], o2o_removed=n_o2o,
+                                key_sure=key_cov[0], key_sure_decided=key_cov[1],
                                 prune_threshold=thr_c if thr_c is not None else np.nan))
         n_s1_te += c_s1
         n_empty += c_empty

@@ -5,9 +5,11 @@ Nobody answers questions: decide, act, log. Same competition as the box (read CL
 in this lane you ARE expected to change modelling logic.
 
 ## Machine and repos
-Starts on an A30 instance (24 GB GPU, 16 vCPU, ~112 GB RAM, not shared); it may later be resumed on an RTX PRO
-6000 (96 GB, 28 vCPU, ~160 GB RAM). Check `nproc`, `free -g`, `nvidia-smi` each session and size jobs to what you
-find. Only /home survives a pause (a pause kills running jobs: log what was running so the next session resumes it).
+A30 instance: 24 GB GPU, 16 vCPU, and a **64 GB RAM limit** set by the container (`/sys/fs/cgroup/memory.max`).
+`free` and /proc/meminfo show the whole host (~500 GB): ignore them. Our usage is `/sys/fs/cgroup/memory.current`.
+Past 64 GB the kernel kills the biggest process (exit 137 / "Killed"): if that happens, shrink the block size or
+the number of workers. The clock prints UTC: the 27 Sep 20:00 IST freeze is 14:30 UTC. Only /home survives a pause
+(a pause kills running jobs: log what was running so the next session resumes it).
 - `/home/amazon-ml-2026` on branch **jarvis**: all your code changes live here. Push with
   `git push -u origin jarvis`. Never push to main from this directory.
 - `/home/aml-main` is a worktree of main. Never edit it by hand: `bash scripts/jarvis/publish.sh` copies
@@ -39,17 +41,17 @@ touch Unstop.
 
 ## Resources: this is a big machine, don't run it like the box
 The pipeline's defaults were tuned for the box (~10 GB RAM): 100K-S1 blocks, few workers, features streamed to
-disk. Here RAM is not the limit, CPU time is. Starting point for full-data runs: `--block-size 500000` (one or two
-passes per country; 1000000 if peak RSS allows), `--n-jobs $(( $(nproc) - 2 ))`, `--stage-b-jobs $(nproc)` (each
-worker ~400 MB), `--topk-device cuda`, and `--cand-cache` / `--vec-cache` / `--feat-cache` under /home/cache_jv/ so
-a rerun skips every finished stage. QUEUE worker counts are starting points; size them by CPU, not RAM.
+disk. Here there is ~6x the box's RAM (64 GB), so CPU time is the usual limit. Starting point for full-data runs:
+`--block-size 500000` (one or two passes per country; don't go higher on 64 GB), `--n-jobs $(( $(nproc) - 2 ))`,
+`--stage-b-jobs $(nproc)` (each worker ~400 MB), `--topk-device cuda`, and `--cand-cache` / `--vec-cache` /
+`--feat-cache` under /home/cache_jv/ so a rerun skips every finished stage. QUEUE worker counts are starting points.
 The smoke (QUEUE 0) logs runtime AND peak RSS per stage in LOG.md. If one stage dominates, rewrite that stage to
 work in memory (load the store once, fork workers that share it, vectorise) in a `src/jv_*.py` module, check it
 reproduces the old stage's output on the smoke, then use it. Don't rewrite stages that aren't the bottleneck.
-Run 2 heavy jobs side by side (e.g. a CPU run next to GPU work) while MemAvailable stays > 24 GB.
-Heavy jobs run detached (`tmux new -d -s <name> '<cmd> > runs/jarvis/<name>.log 2>&1'`) and start as
-`python -m src.…` or `python scripts/…`: the driver's guard only sees those and kills the newest one when
-MemAvailable < 12 GB. Check `df -h /home` before writing big pools, delete your own intermediate caches when done,
+Run a second heavy job (e.g. GPU work next to a CPU run) only while memory.current plus its expected peak stays
+under ~56 GB. Heavy jobs run detached (`tmux new -d -s <name> '<cmd> > runs/jarvis/<name>.log 2>&1'`) and start as
+`python -m src.…` or `python scripts/…`. The driver's memory guard reads the host's numbers and never fires here, so
+the 64 GB rule above is yours to keep. Check `df -h /home` before writing big pools, delete your own intermediate caches when done,
 never delete `data/`.
 
 ## Cycle protocol
