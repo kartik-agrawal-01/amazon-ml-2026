@@ -51,6 +51,8 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    lands within 0.001 of the hidden best on both screens, HQ applies it to France in jv1 (Jarvis QUEUE 1b).
    — DONE (i)+(ii) 26 Sep 16:50 (loop): runs/day/unseen_thr.md. No plain rule within 0.001 on both screens; R2 'lower-only'
      = min(t_oof, R2) is: xc_us +0.0158, xc_in 0, mix +0.0005. It leaves v2's France threshold unchanged. R3 not done yet.
+   — DONE (iii) R3 26 Sep 19:20 (loop): unseen_thr.md §(iii). Two-sided R3 unstable (recall saturates -> t 0.02/0.99);
+     lower-only R3n = R2 lower-only (xc_us +0.0158, xc_in 0, mix +0.0002). Nothing beyond --thr-adapt.
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
    to "north 32" (5% of French addresses); zero-padded house numbers (also 3% of US / 5% of India S2/S3); région vs

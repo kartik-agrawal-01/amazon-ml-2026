@@ -375,3 +375,11 @@ Plan (QUEUE 1, P0 fast lane):
    France table: `python scripts/hq_ens/score_sub.py output_v3/matching_results.tsv --name v3`), SCOREBOARD row
    SUBMIT-READY (as a blend partner / fallback: Soha-2 LB 0.9808 is the best), git add runs/v3 submissions/v3_matching_results.tsv.
    Per-pair probs output_v3/test_probs_*.parquet are what HQ needs for a blend: tell HQ in LOG (too big for git).
+
+## Session 12 — 26 Sep 18:57 (Session 8 of this driver)
+- Start: no reboot (up 5:38). gate A (chain4) in train/us top-k (addr_c3 done 18:5x), chain8 waiting for it, chain5 stopped,
+  chain7 waiting. MemAvailable 6 GB. Jarvis ISSUES 1 already ported (14:30), nothing new there.
+- Light work: QUEUE 2d (iii) R3 sure-key threshold rule -> scripts/day/unseen_r3.py, runs/day/unseen_r3_*.txt,
+  unseen_thr.md §(iii). DONE 19:20: two-sided R3 unstable; lower-only R3n = R2 lower-only (--thr-adapt). No change to code.
+  (Peak RSS of the script 1.5-2.0 GB on the slice stores — above the 1 GB light-work target; ran one at a time with
+  MemAvailable ≥ 5.9 GB. Don't run it on full-data stores.)

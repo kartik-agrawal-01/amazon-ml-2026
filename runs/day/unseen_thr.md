@@ -58,3 +58,19 @@ Screen running: tmux `chain6` = n3ka (n3k + --thr-adapt) on xc_us, slice_mix and
 bash) until chain6 is done, then resumes with n3r.
 Caveat: t = 0.03 is extreme. At full density (12x more decoys) a very low threshold may cost more precision than on the
 slice. A floor (e.g. 0.10–0.15; 0.15 is the xc_us best) would be safer, but choosing it from this one screen would be tuning on the test.
+
+## (iii) R3 sure-key matching (loop, 26 Sep 19:20) — `scripts/day/unseen_r3.py <data> <cache_n3> <out>`
+Raw: `runs/day/unseen_r3_{xc_us_n3k,xc_in_n3,mix_n3k}.txt`. Sure pairs = hq_keys key_pairs + apply_rules (p_min 0.96),
+rules calibrated on the source's OOF S1 (context all S1; unseen target -> min over train countries). R3 = t where the
+target's sure-pair recall = source OOF recall at t_oof; R3n = same on recall relative to the p-floor (0.02) recall.
+
+| screen | source recall @t_oof (rel. floor) | target sure prec (hidden) | R3 t / ΔF | R3n t / ΔF | R3n lower-only ΔF | hidden best |
+|---|---|---|---|---|---|---|
+| xc_us (US->IN) | 0.9987 (0.99+) | 0.994 | 0.02 / +0.0139 | 0.03 / +0.0158 | +0.0158 | 0.15 / +0.0190 |
+| xc_in (IN->US) | 0.9823 (0.9975) | 0.999 | 0.99 / −0.0175 | 0.98 / −0.0088 | 0 | 0.86 / ~0 |
+| slice_mix | 0.9940 (0.9981) | IN 0.994, US 0.999 | IN .83 US .99 / −0.0102 | IN .81 US .99 / −0.0101 | +0.0002 | 0.74 / +0.0008 |
+
+Verdict: R3 is NOT usable two-sided: sure-pair recall saturates at 0.98-0.999, so tiny recall differences move t to
+the grid ends (0.02 or 0.99). Lower-only R3n reproduces R2 lower-only (xc_us +0.0158, xc_in 0, mix +0.0002) and adds
+nothing; no rule is within 0.001 of the hidden best on xc_us (0.9511 at t 0.15). Keep --thr-adapt (R2 lower-only) as is.
+Side fact: the sure pairs are 99.4% (India) / 99.9% (US) true on the hidden GT even when the country is unseen.

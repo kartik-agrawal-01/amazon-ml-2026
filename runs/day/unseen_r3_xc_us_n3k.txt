@@ -1,0 +1,17 @@
+source us: 402694 key pairs, 82813 sure (33527 S1), sure rules ['core_eq|a_eq', 'core_eq|num_eq', 'core_eq|street_eq_nonum', 'nsp_eq|a_eq', 'nsp_eq|num_eq', 'partial|a_eq|invented', 'reorder|a_eq', 'subset|a_eq', 'swap1|a_eq|invented', 'swap1|a_eq|realword']; sure recall at t_oof 0.9987
+source pooled sure recall at t_oof 0.85: 0.9987 (relative to floor 0.9994)
+
+| country | sure pairs | sure prec (hidden) | recall at t_oof | R3 t (pooled src) | R3 t (own src) | R3n t |
+|---|---|---|---|---|---|---|
+| india | 49183 | 0.9944 | 0.9812 | 0.02 | 0.02 | 0.03 |
+
+| per-country rule | thresholds | hidden F0.5 | Δ vs OOF-chosen |
+|---|---|---|---|
+| OOF-chosen | india 0.85 | 0.9321 | +0.0000 |
+| R3 | india 0.02 | 0.9461 | +0.0139 |
+| R3 own-country | india 0.02 | 0.9461 | +0.0139 |
+| R3n | india 0.03 | 0.9480 | +0.0158 |
+| R3 lower-only | india 0.02 | 0.9461 | +0.0139 |
+| R3 own-country lower-only | india 0.02 | 0.9461 | +0.0139 |
+| R3n lower-only | india 0.03 | 0.9480 | +0.0158 |
+RSS 1838476 KB 72.60 s
