@@ -169,3 +169,9 @@
   (runs/jarvis/jv1_test.cmd -> runs/jarvis/jv1_test.log, out /home/out_jv/jv1_test). Checked: old model.joblib loads with
   HEAD code; features.py diff since 8792474 = AML_GENERIC ablation only (default off) -> same features.
   If paused: rerun train `bash -c "$(cat runs/jarvis/jv1.cmd)"` (rename rev caches first), then `bash scripts/jarvis/chain_jv1.sh`.
+- 10:38 jv1 US train reverse top-3 done: 18.46M pairs, 3227 s (1.32M S1 queried). US key calibration 111 s. US block 0
+  (10:48): 208,206 key-sure (416 new), reverse 5.11M (2.91M new, 612,561 bypass the cap = 6.1/100K-S1 block... i.e. 6.1/S1
+  candidates flagged rev_sure, many already inside the top 10). memory.current 33 GB. Projection: US phase A ~11:15,
+  pool/CE start ~11:20, train pass done ~12:15, test pass (chain) ~12:15-16:00 UTC.
+- runs/jarvis/jv2.cmd drafted (QUEUE 2a train pass: jv1 flags + --ce-dir /home/pools/jv1_ce, feat-cache j2_feats,
+  CE_W placeholder -> set from `python -m src.jv_ce report ...` on the real pool). Order: jv1 test pass first (CPU), jv2 train after.
