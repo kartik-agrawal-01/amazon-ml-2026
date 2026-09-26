@@ -185,3 +185,15 @@ Plan (QUEUE 1, P0 fast lane):
    xc_us with no mix loss: make v2's set the default (only for India/US? the France words matter only for France,
    which the slices can't measure. Option: generic = v2 set + French words only, dropping dba/fka/aka/shri/sri/dr/mr/
    ta/as/www). Write the result for HQ in runs/day/n3_NOTES.md.
+- Where GT pairs are lost, by candidate-name script (diff_runs.py section "A: where GT pairs are lost"):
+  | run (base) | tag | GT | not candidate | cand. but rejected | TP rate |
+  |---|---|---|---|---|---|
+  | xc_us (US-trained -> India) | Indic-script name | 28491 | 3720 (13.1%) | 5293 (18.6%) | 68.4% |
+  | xc_us | ASCII name | 88662 | 1258 (1.4%) | 4981 (5.6%) | 93.0% |
+  | slice_mix (US+IN trained) | Indic-script name | 42167 | 3181 (7.5%) | 819 (1.9%) | 90.5% |
+  | slice_mix | ASCII name | 249939 | 1643 (0.7%) | 4609 (1.8%) | 97.5% |
+  | slice_mix | empty cand. address | 12299 | 1126 (9.2%) | 3423 (27.8%) | 63.0% |
+  With India in training, the Indic-name loss is mostly BLOCKING (10x the ASCII miss rate, at 8% density -> worse at
+  full density) -> n3ph (name_ph view) is the right screen. Without a country in training (xc_us, the France
+  situation) the model rejects 19% of that country's script-variant pairs. Empty-address candidates are the other
+  big hole (37% lost, mostly model rejections): candidate for a per-feature look later (QUEUE 6-ish).

@@ -56,3 +56,7 @@ print("\n== share by candidate-side tag (lost TP / gained TP / all GT)")
 for t in ("nonascii_name", "empty_addr", "ascii"):
     f = lambda S: sum(script_tag(e) == t for _, e in S)
     print(f"  {t:14s} lost {f(lost_tp):5d}  gained {f(gain_tp):5d}  GT {f(gt):6d}  A-TP {f(pa & gt):6d}  B-TP {f(pb & gt):6d}")
+print("\n== A: where GT pairs are lost, by tag (not a candidate / candidate but rejected)")
+for t in ("nonascii_name", "empty_addr", "ascii"):
+    G = {p for p in gt if script_tag(p[1]) == t}
+    print(f"  {t:14s} GT {len(G):6d}  not-cand {len(G - ca):6d}  rejected {len((G & ca) - pa):6d}  TP {len(G & pa):6d}")
