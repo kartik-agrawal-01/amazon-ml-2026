@@ -7,3 +7,25 @@
 - QUEUE 0 (smoke) PLAN: src.pipeline HEAD, all 6 views, k=15, 60K train S1, 60K test S1, block 60000,
   --n-jobs 14 --stage-b-jobs 8 --topk-device cuda, store under /home/cache_jv/store (first run builds the full store = normalisation of 24M rows),
   caches /home/cache_jv/smoke_*. Log -> runs/jarvis/smoke.log. Then project full-run time for 4 vs 6 views, k 10 vs 15.
+- 07:40 Store built under /home/cache_jv/store (test 122s stage + ~4 min normalise; train 477s). Vectorisers (6 views, max_df 0.01) cached at /home/cache_jv/vec6_s42.joblib.
+- Wrote src/pipeline_jv.py (copy of main's src/pipeline.py @ b68bd46) + src/jv_aug.py:
+  * exact-key rule pairs (hq_keys; ctx = ALL S1 of the country) and reverse top-3 pairs (every S2/S3 -> S1 of the whole
+    country, views full_w + name_c3) are merged into the pre-cascade union; features key_rule, rev_full_w_rank,
+    rev_name_c3_rank, src_fwd; 'sure' key pairs (calibrated P >= --key-pmin 0.96, France = min over train countries)
+    are force-kept after the cascade; --rev-force none|r0|p<x> optionally force-keeps reverse rank-0 pairs.
+  * train pass prints a policy table per country (recall fwd union / union+aug / cascade / +sure / +r0 ...; cands/S1).
+  * per-country OOF F0.5 (all sampled S1), mean matches vs GT; test: sure-pair coverage by rule, records under 2+ S1.
+  * --pool-dir: top-40 pre-cascade pool per S1 (stage-A feats, pa, y, kept, sure) as parquet (for QUEUE 2).
+  * Synthetic run (/home/synth) end-to-end OK.
+- FINDING: GPU dense-block top-k (blocking.topk_sparse_gpu) is SLOW on the A30 for the reverse direction:
+  4.13M India docs x 883K S1, full_w, k=3 -> 784 s. CPU sparse_dot_topn: 200K docs in 17.4 s on 6 threads
+  (=> ~160 s for all docs on 14 threads, ~5x faster). Forward CPU 20K S1 x 200K docs 0.3 s (6 thr).
+  -> jv_aug.reverse_topk now uses CPU sparse_dot_topn. Forward top-k: compare GPU vs CPU on the smoke next.
+- 08:17 smoke RESTARTED (tmux 'smoke', log runs/jarvis/smoke.log):
+  python -m src.pipeline_jv --data-dir data --out-dir /home/out_jv/smoke --cache-dir /home/cache_jv/store
+    --views name_c3,name_w,addr_c3,name_ph,full_w,addr_w --k 15 --max-df 0.01 --train-s1 60000 --test-limit 60000
+    --block-size 60000 --folds 3 --n-jobs 14 --stage-b-jobs 16 --topk-device cuda --vec-cache /home/cache_jv/vec6_s42.joblib
+    --pool-dir /home/pools/smoke
+  NEXT SESSION: if it died (pause), rerun that exact command. Then: read per-view top-k times (block 0 verbose lines
+  "S1->S2 <view> ... (Xs)"), stage-B time, peak RSS; project full run; decide GPU vs CPU forward top-k
+  (a 20K-S1 CPU forward per view/source ~0.3 s x (docs/200K) on 6 threads); write QUEUE 0 DONE; start jv1.
