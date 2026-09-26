@@ -17,7 +17,8 @@ def make_model(seed: int = 0, n_jobs: int = -1):
         import lightgbm as lgb
         return lgb.LGBMClassifier(n_estimators=700, learning_rate=0.05, num_leaves=63, min_child_samples=40,
                                   subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=1.0,
-                                  n_jobs=n_jobs, random_state=seed, verbose=-1), "lightgbm"
+                                  n_jobs=n_jobs, random_state=seed, verbose=-1,
+                                  deterministic=True, force_row_wise=True), "lightgbm"  # bit-reproducible refits
     except ImportError:
         from sklearn.ensemble import HistGradientBoostingClassifier
         return HistGradientBoostingClassifier(max_iter=400, learning_rate=0.06, max_leaf_nodes=63,

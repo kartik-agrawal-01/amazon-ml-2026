@@ -32,3 +32,18 @@ Plan (QUEUE 1, P0 fast lane):
   cache_dir (commit 802ee11); gate.sh aborts if the store does not resolve.
 - 12:05 gate restarted (tmux `gate`, log runs/day/gate.log): A = --cands-only -> cands_v2/ (train 150K + full test,
   v2 code), then B = rescore test with output_v2_train/model.joblib -> ~/aml_gate_out -> compare_matches.py.
+- LightGBM (model + cascade): deterministic=True, force_row_wise=True -> refits are bit-reproducible (tested:
+  identical probabilities on 2 fits). Numerics differ slightly from the Q0 runs; it doesn't change v2 gate B (loaded model).
+
+### NEXT (for the following sessions)
+1. Watch tmux `gate` / runs/day/gate.log. When "GATE PASS": keep the v2 per-pair probs:
+   `mkdir output_v2_probs && mv ~/aml_gate_out/test_probs_*.parquet output_v2_probs/` (HQ wants v2 vs v3 France
+   score distributions), record per-stage runtimes of gate B in LOG, then `rm -rf ~/aml_gate_out` and
+   `git worktree remove --force ~/aml_gate`; mark QUEUE 1 DONE. If FAIL: debug (fast-lane bug).
+2. QUEUE 2 (France fixes, HEAD): `bash scripts/day/qeval.sh n3 _n3 "xc_us slice_mix"` (builds cache_*_n3 stores
+   first), then xc_in if promising -> `python scripts/day/q_table.py n3`. KEEP/REVERT.
+3. v3 full data (if KEEP): store cache_n3 (new; never touch cache/), fast lane:
+   `bash scripts/run_pipeline.sh v3 --cache-dir cache_n3 --out-dir output_v3 --n-jobs 8 --stage-b-jobs 3 --topk-device cuda
+    --max-df 0.01 --train-s1 150000 --block-size 100000 --views name_c3,name_w,addr_c3,full_w --cand-cache cands_v2
+    --vec-cache cache_n3/vecs.joblib --save-probs`  (NB run_pipeline.sh hardcodes --out-dir output: pass the
+   python command directly instead). Candidates = v2's union (ranks from v2 blocking, cosines recomputed).

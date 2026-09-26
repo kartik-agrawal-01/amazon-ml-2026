@@ -29,7 +29,7 @@ def make_cascade_model(seed: int = 0, n_jobs: int = -1):
         import lightgbm as lgb
         return lgb.LGBMClassifier(n_estimators=300, learning_rate=0.08, num_leaves=31, min_child_samples=50,
                                   subsample=0.8, subsample_freq=1, colsample_bytree=0.9, n_jobs=n_jobs,
-                                  random_state=seed, verbose=-1)
+                                  random_state=seed, verbose=-1, deterministic=True, force_row_wise=True)
     except ImportError:
         from sklearn.ensemble import HistGradientBoostingClassifier
         return HistGradientBoostingClassifier(max_iter=200, learning_rate=0.1, max_leaf_nodes=31,
