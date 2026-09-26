@@ -102,3 +102,7 @@
 ## Session 3 — 26 Sep 09:11 UTC
 - jv1 (tmux jv1, pid 31319, started 08:52, commit 8792474) alive: train/india reverse top-k (6 views) in progress at 09:11,
   RSS 8.4 GB, memory.current 20 GB. GPU idle (waiting for /home/pools/jv1 train pool for QUEUE 2).
+- Merged origin/main (conflict only in CountryContext.reverse: took main's port b28824c of ISSUES #1). NOTE: running jv1
+  (old code) writes reverse caches as `*__rev3_<views joined by '-'>_N.parquet`; the merged code looks for views joined
+  by '+'. Before any rerun/test pass: `cd /home/cache_jv/j1_cand && for f in *__rev3_*-*.parquet; do mv "$f" "${f//-/+}"; done`
+  (check the rename touches only the view list).
