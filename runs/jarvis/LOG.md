@@ -29,3 +29,18 @@
   NEXT SESSION: if it died (pause), rerun that exact command. Then: read per-view top-k times (block 0 verbose lines
   "S1->S2 <view> ... (Xs)"), stage-B time, peak RSS; project full run; decide GPU vs CPU forward top-k
   (a 20K-S1 CPU forward per view/source ~0.3 s x (docs/200K) on 6 threads); write QUEUE 0 DONE; start jv1.
+- 08:28 smoke timings so far (India train, 24K S1 sample, 4.13M docs): doc matrices 43 s (6 views), exact keys 57 s,
+  reverse CPU full_w 266 s / name_c3 182 s (14 thr), forward GPU ~10 s per view per source for 24K S1
+  (-> ~340 s per view-source for India test 810K S1 on GPU; CPU sdt est. ~70-140 s) => forward on CPU for jv1.
+  Train key calibration (India, smoke sample): core_eq|num_eq P=0.83 (HQ full-train 0.958): with a sampled kq,
+  hq_keys.key_pairs' group cap (n_q*n_d <= 2000) admits big chain groups the full-S1 enumeration skips -> lower P
+  (conservative). Sure rules India smoke: core_eq|a_eq, core_eq|c_empty, disjoint|a_eq|invented, nsp_eq|a_eq,
+  partial|a_eq|*, reorder, subset, swap1|a_eq|*.
+- 08:28 jv1 LAUNCHED in parallel (tmux 'jv1', log runs/jarvis/jv1.log, commit e38f8fa):
+  python -m src.pipeline_jv --data-dir data --out-dir /home/out_jv/jv1 --cache-dir /home/cache_jv/store
+    --views name_c3,name_w,addr_c3,name_ph,full_w,addr_w --k 15 --max-df 0.01 --train-s1 600000 --block-size 500000
+    --folds 5 --n-jobs 14 --stage-b-jobs 16 --topk-device cpu --vec-cache /home/cache_jv/vec6_s42.joblib
+    --cand-cache /home/cache_jv/cand_jv1 --feat-cache /home/cache_jv/feat_jv1 --pool-dir /home/pools/jv1
+  (rev-force none: reverse pairs only enter the pre-cascade union; sure key pairs force-kept.)
+  If killed by a pause: rerun the same command (cand-cache skips finished forward top-k blocks; model.joblib in
+  /home/out_jv/jv1 -> add --load-model /home/out_jv/jv1/model.joblib to resume at the test pass).
