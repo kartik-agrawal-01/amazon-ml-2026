@@ -65,6 +65,7 @@ one-to-one + key rules (+ India recall). ens2c (LOG #3: one-to-one + key pairs o
    a) Decompose India's missed GT pairs on the full-density train pass: blocking miss / cascade cut / model FN / model
       FP, by category (Indic-script name, empty candidate address, name-token Jaccard bins, address Jaccard bins,
       transliterated legal forms). Write `runs/day/india_recall.md`.
+   — PARTIAL 26 Sep (loop): blocking part DONE in runs/day/india_recall.md (recall 0.933; Indic-transliterated names = 55% of misses, 32% have identical phonetic keys). Cascade/model buckets pending the fast-lane train pass.
    b) Attack the biggest bucket: India-only k 10 → 20 on the name views (GPU top-k is cheap), the `name_ph` view back
       for India only, and/or India cascade_top 12. Also try REVERSE blocking (infra's idea): each S2/S3 record
       queries its top-3 S1 per view, and those pairs join the S1's candidates after the cascade, like the key
