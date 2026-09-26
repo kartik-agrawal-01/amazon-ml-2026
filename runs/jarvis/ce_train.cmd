@@ -1,0 +1,1 @@
+source /home/venv/bin/activate; cd /home/amazon-ml-2026; while ! grep -q "pool: train/us" runs/jarvis/jv1.log; do pgrep -f "src.pipeline --data-dir" >/dev/null || { echo "jv1 gone before pool"; exit 1; }; sleep 60; done; echo "pool ready $(date -u)"; python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048

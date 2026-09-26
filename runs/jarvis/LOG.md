@@ -116,3 +116,14 @@
   0.9596 (154/S1) | exact keys: 92 new pairs of 92,667 sure (~0) | reverse-sure (rev_best>=2, bypasses the cap):
   5.35 pairs/S1, precision 0.54 -> WATCH final cands/S1 (budget <= 12); if too many, --reverse-bypass 3 is a
   model-only rerun from the cand cache.
+- 09:43 jv1 India train phase A done in 2977 s (peak RSS 14.4 GB); blocks: 331896/345808, 331950/345834, 133974/139479
+  GT found pre-cascade (0.960). US phase A started 09:43 (359,875 S1 sampled, 6.19M docs; reverse first).
+- 09:45 QUEUE 2 PILOT (runs/jarvis/cepilot.log): pseudo-pool from the India block-0 cand cache, first 30K S1, top-40 per
+  S1 by a crude rank proxy (pool holds 95,424 of 103,789 GT = 0.919), jv_ce train 2 folds by S1, 600K pairs/fold,
+  MiniLM-L12 1 epoch: fine-tune 2.17K pairs/s (277 s/fold), predict 25.7K pairs/s. OOF: AUC proxy 0.952 vs CE 0.9994;
+  recall@5 / @10: proxy 0.766 / 0.863, CE 0.880 / 0.919 (= the pool ceiling). The real pool uses the cascade score
+  (much stronger than the proxy), so the gain vs the cascade is still open, but the CE clearly ranks well.
+  Code works end to end on real store texts.
+- 09:56 tmux 'ce' (runs/jarvis/ce_train.cmd, log runs/jarvis/ce_train.log): waits for "pool: train/us" in jv1.log, then
+  `python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048`
+  (projection: 2 x (3M pairs ~23 min + 12M OOF pairs ~8 min) ~ 1.1 h). If paused: rerun `bash runs/jarvis/ce_train.cmd`.
