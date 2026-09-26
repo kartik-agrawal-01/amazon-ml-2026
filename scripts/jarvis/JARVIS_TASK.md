@@ -37,12 +37,20 @@ intfloat/multilingual-e5-base, paraphrase-multilingual-MiniLM-L12-v2, Qwen2.5-7B
 `utils/validate_submission.py`. `candidate_pairs.tsv` must be EXACTLY the pairs the final model scores. Never
 touch Unstop.
 
-## Resources
-Heavy jobs run detached: `tmux new -d -s <name> '<cmd> > runs/jarvis/<name>.log 2>&1'`, started as
-`python -m src.…` or `python scripts/…` (the driver's guard only sees those; it kills the newest one when
-MemAvailable < 12 GB). Up to 2 heavy CPU jobs at once while MemAvailable stays > 24 GB; a GPU job may run
-alongside. Start from `--n-jobs $(( $(nproc) - 2 )) --stage-b-jobs $(( $(nproc) / 2 )) --topk-device cuda`. Check `df -h /home` before writing big
-pools and delete your own intermediate caches when done. Never delete `data/`.
+## Resources: this is a big machine, don't run it like the box
+The pipeline's defaults were tuned for the box (~10 GB RAM): 100K-S1 blocks, few workers, features streamed to
+disk. Here RAM is not the limit, CPU time is. Starting point for full-data runs: `--block-size 500000` (one or two
+passes per country; 1000000 if peak RSS allows), `--n-jobs $(( $(nproc) - 2 ))`, `--stage-b-jobs $(nproc)` (each
+worker ~400 MB), `--topk-device cuda`, and `--cand-cache` / `--vec-cache` / `--feat-cache` under /home/cache_jv/ so
+a rerun skips every finished stage. QUEUE worker counts are starting points; size them by CPU, not RAM.
+The smoke (QUEUE 0) logs runtime AND peak RSS per stage in LOG.md. If one stage dominates, rewrite that stage to
+work in memory (load the store once, fork workers that share it, vectorise) in a `src/jv_*.py` module, check it
+reproduces the old stage's output on the smoke, then use it. Don't rewrite stages that aren't the bottleneck.
+Run 2 heavy jobs side by side (e.g. a CPU run next to GPU work) while MemAvailable stays > 24 GB.
+Heavy jobs run detached (`tmux new -d -s <name> '<cmd> > runs/jarvis/<name>.log 2>&1'`) and start as
+`python -m src.…` or `python scripts/…`: the driver's guard only sees those and kills the newest one when
+MemAvailable < 12 GB. Check `df -h /home` before writing big pools, delete your own intermediate caches when done,
+never delete `data/`.
 
 ## Cycle protocol
 1. Take the top unfinished QUEUE item; write the plan in LOG.md. 2. Implement. 3. Evaluate per the Objective.
