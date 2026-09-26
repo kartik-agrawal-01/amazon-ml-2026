@@ -408,3 +408,8 @@ Plan (QUEUE 1, P0 fast lane):
   real pairs IN/US/FR, all 55 stage-B features bitwise equal on 150K India + 300K France pairs; stage B −49%. KEEP
   (runtime rule, ΔQ 0 by construction). v3 (launched by chain8 from HEAD) gets it; gate B runs in ~/aml_gate (own src)
   so it is unaffected. rapidfuzz 3.14.6 was already in the env (MIT).
+- After cycle 7 stage B is flat (152 us/pair single process, from 409 under the profiler): per-pair set building ~25%,
+  jw ~20%. Next speed step (not done; do it only when no full-data job depends on HEAD): build token sets once per unique
+  q/c record and index them, instead of per pair.
+- Session 12 ends ~19:30. Running unchanged: chain4 (gate A, train/us S1->S3 top-k), chain8 (waits), chain5 (stopped),
+  chain7 (waits), sysmon, gpulog. NEXT list above (session 13+) still applies.
