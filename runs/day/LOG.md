@@ -144,3 +144,13 @@ Plan (QUEUE 1, P0 fast lane):
   runs of them belong to the Jarvis lane; port fixes from runs/jarvis/ISSUES.md — file does not exist yet) and pushed
   everything (e05b148). The gate A/B at the end of chain3 is still needed for the box's fallback v3 (France fixes +
   global o2o only, per the new UPLOAD POLICY).
+- 14:25 n3 xc_us DONE: hidden F 0.9273 vs base 0.9344 (-0.0071) although the train OOF rose (0.98395 vs 0.98365).
+  India test: empty 8.0% (base 7.6%), mean matches 2.93 (2.98), losses in every GT bucket (1-true 0.822 vs 0.838,
+  3+ 0.937 vs 0.944); cands/S1 5.3 vs 5.1, train cascade recall same (0.990). So the US-trained model transfers WORSE
+  to India with HQ's France fixes (normalize.py + features.py of 7defba7) - exactly the unseen-country situation of
+  France. slice_mix running (n3), then n3k/n3ph/n3r (all on the _n3 stores).
+### NEXT (adds to the list above)
+5. If n3 slice_mix also does not beat base (0.9808): n3 is NOT a clear KEEP -> write runs/day/n3_NOTES.md for HQ with
+   both tables, and run the ablation once the chain is idle: (a) `n3f` = n3 stores + v2's features.py
+   (`git show 48bc4e7:src/features.py`) to split normalisation vs feature effects; (b) xc_in for n3 (train India ->
+   test US) for the full Q. n3k/n3ph/n3r then need to be compared against n3 AND re-run on base stores if n3 is reverted.
