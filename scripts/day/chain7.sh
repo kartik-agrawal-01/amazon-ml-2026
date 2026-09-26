@@ -25,3 +25,6 @@ step() {
 qeval() { bash scripts/day/qeval.sh "$@" > runs/day/qeval_$1.log 2>&1; grep -q QEVAL_DONE runs/day/qeval_$1.log; }
 step n3r qeval n3r _n3 "xc_us slice_mix" --key-rules 0.96 --thr-adapt --reverse-k 3 --reverse-bypass 2
 echo "[chain7] ALL DONE"
+# appended s10: 2nd-seed n3ka xc_us (NEXT 4: is the +0.019 xc_us gain outside the ±0.007 seed noise?)
+step n3ka_s7 qeval n3ka_s7 _n3 "xc_us" --key-rules 0.96 --thr-adapt --seed 7
+echo "[chain7] seed step done"

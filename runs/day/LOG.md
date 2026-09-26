@@ -331,3 +331,6 @@ Plan (QUEUE 1, P0 fast lane):
   placeholder, runs n3r = champion flags + --reverse-k 3 --reverse-bypass 2 (xc_us, slice_mix) -> compare with row 6.
 - scripts/day/v3.sh (NOT launched): full data, store cache_n3 (new), cands_v2 unions, --key-rules 0.96 --thr-adapt
   --thr-adapt-floor 0.30, --feat-cache feats_v3, --save-probs, then the validator. Launch only after gate B passes.
+- 18:26 n3ka xc_in DONE: 0.9818 (n3 0.9819), OOF 0.97067, adapt keeps US at 0.85 (as the offline check said), cands/S1 7.97,
+  17.4 min, 3.1 GB. **n3ka Q = 0.9726 confirmed (row 6) = champion.** chain6 exited, chain4 resumed: n3ph.done touched,
+  n3r skipped by the placeholder, gateA started 18:26 (DUTY 0.3). Appended to chain7: n3ka_s7 (seed 7, xc_us) for NEXT 4.
