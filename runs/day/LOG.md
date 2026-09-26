@@ -447,3 +447,13 @@ Plan (QUEUE 1, P0 fast lane):
   --load-model output_v3/model.joblib --thr-adapt --thr-adapt-floor 0.30` must reproduce output_v3/matching_results.tsv
   (scripts/day/compare_matches.py); then a winning --variant from model_capacity.md -> output_v4 (SUBMIT-READY if its
   OOF gain ≥ 0.0015 on both countries; it can't be screened on Q because the slices have no feat caches).
+- 19:36 GATE A RESTARTED AT DUTY 0.6 (was 0.3). Why: projected from the train/us passes (356-605 s per pass at 0.3),
+  the test phase (US 7 + India 9 + France 3 blocks x 8 passes) ≈ 17 h -> gate A ~12:30 Sun, gate B ~14:00, v3 ~16:30,
+  i.e. no margin for a single reboot before the 20:00 freeze and no time for any post-v3 step. Evidence for 0.6: slice
+  screens ran at 0.6 all day (13:18 -> now, no reboot); session 5 found the 4th reboot was a hard power loss at 64 W /
+  0% util (not GPU load); v2 ran 5 h of top-k at full duty overnight. Procedure: SIGKILL chain8 bash (so its EXIT trap
+  did not resume chain5) and chain4 bash + gate.sh, gate python exited with them (was in test/france block 0 top-k:
+  only that block lost; train/india + train/us unions are in cands_v2). chain4.sh line 34 now `AML_GPU_DUTY=${GATE_DUTY:-0.6}`;
+  relaunched tmux chain4 (steps before gateA skip via .done) and chain8 (re-stopped chain5, waits for chain4).
+  Old log: runs/day/gate_run1_duty03.log. If the box reboots during gate A now: relaunch with `GATE_DUTY=0.3` in the
+  tmux command (cached blocks are skipped) - one reboot at 0.6 costs ~1 block, still far less than 0.3's 8 h.
