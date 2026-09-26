@@ -128,6 +128,29 @@ def stats_from_counts(counts: np.ndarray, n_kept: int = None, n_true: int = None
     return out
 
 
+def decided_pairs(sets: Dict[str, frozenset], cands: pd.DataFrame, q_rid: np.ndarray, d_rid: np.ndarray):
+    """(s1, record, p) arrays of the candidate pairs that decide() kept."""
+    s1 = q_rid[cands["q"].to_numpy()]
+    rec = d_rid[cands["c"].to_numpy()]
+    m = np.fromiter((r in sets[q] for q, r in zip(s1, rec)), bool, len(s1))
+    return s1[m], rec[m], cands["p"].to_numpy()[m]
+
+
+def global_o2o(sets: Dict[str, frozenset], s1: np.ndarray, rec: np.ndarray, p: np.ndarray) -> int:
+    """Global one-to-one over ALL blocks of a country (decide() only sees one block): a record kept under several
+    S1s stays only with its max-p S1 (the GT is strictly one-to-one). Edits `sets` in place; returns pairs removed."""
+    from .hq_keys import global_one_to_one
+    if len(s1) == 0:
+        return 0
+    keep = global_one_to_one(s1, rec, p)
+    drop: Dict[str, set] = {}
+    for q, r in zip(s1[~keep], rec[~keep]):
+        drop.setdefault(q, set()).add(r)
+    for q, rs in drop.items():
+        sets[q] = frozenset(sets[q] - rs)
+    return int((~keep).sum())
+
+
 # ------------------------------------------------------- candidate cache (fast lane)
 class CandCache:
     """Pre-cascade candidate union (q, c, <view>_rank, n_views) per (split, country, block), saved as parquet.
@@ -319,6 +342,7 @@ def main() -> None:
     ap.add_argument("--vec-cache", default="", help="joblib file of the fitted vectorisers (loaded if present, else fitted + saved)")
     ap.add_argument("--feat-cache", default="", help="keep the final pair features: train_X.f32 + train_meta.npz/json and "
                     "one parquet per test block (s1, cand, features, p) -> model/rule changes without stage A/B")
+    ap.add_argument("--no-global-o2o", action="store_true", help="one-to-one per block only (v2 behaviour)")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -685,6 +709,8 @@ def main() -> None:
         if cache is not None:
             cache.ensure_docs(ctx.tag, ctx.d_rid)
         prob_parts = []
+        c_sets: Dict[str, frozenset] = {}
+        c_order, c_cand_rows, dp_parts = [], [], []
         c_s1 = c_empty = c_pred = c_pairs = 0
         c_counts = []
         for bi, q_idx in enumerate(blocks(len(q), a.block_size)):
@@ -718,19 +744,30 @@ def main() -> None:
             cand_rows = [""] * len(qb)
             for qq, grp in cands.groupby("q")["c"]:
                 cand_rows[qq] = ",".join(ctx.d_rid[grp.values])
+            if not a.no_global_o2o:
+                dp_parts.append(decided_pairs(sets, cands, qb_rid, ctx.d_rid))
+            c_sets.update(sets)
+            c_order.append(qb_rid)
+            c_cand_rows.append(cand_rows)
+            c_s1 += len(qb)
+            c_pairs += len(cands)
+            log(f"test/{c} block {bi} ({len(qb)} S1): {n_before} cands -> {len(cands)} kept ({len(cands) / len(qb):.1f}/S1), "
+                f"{sum(1 for r in qb_rid if sets[r])} S1 with matches")
+            del cands, sets, cand_rows, qb
+        n_o2o = 0
+        if dp_parts:
+            n_o2o = global_o2o(c_sets, *(np.concatenate([d[i] for d in dp_parts]) for i in range(3)))
+            log(f"test/{c}: global one-to-one removed {n_o2o} pairs (records kept under several S1s across blocks)")
+        for qb_rid, cand_rows in zip(c_order, c_cand_rows):
             for i, r in enumerate(qb_rid):
-                m = sets[r]
+                m = c_sets[r]
                 fh_m.write(f"{r}\t{','.join(sorted(m))}\n")
                 fh_c.write(f"{r}\t{cand_rows[i]}\n")
                 c_pred += len(m)
                 c_empty += not m
                 if a.test_gt:
                     pred_for_gt[r] = m
-            c_s1 += len(qb)
-            c_pairs += len(cands)
-            log(f"test/{c} block {bi} ({len(qb)} S1): {n_before} cands -> {len(cands)} kept ({len(cands) / len(qb):.1f}/S1), "
-                f"{sum(1 for r in qb_rid if sets[r])} S1 with matches")
-            del cands, sets, cand_rows, qb
+        del c_sets, c_order, c_cand_rows, dp_parts
         fh_m.flush()
         fh_c.flush()
         if prob_parts:
@@ -740,7 +777,7 @@ def main() -> None:
         count_parts.append(counts_c)
         test_cands[c] = stats_from_counts(counts_c)
         per_country.append(dict(country=c, n_s1=c_s1, empty_rate=c_empty / max(c_s1, 1), mean_matches=c_pred / max(c_s1, 1),
-                                cand_mean=test_cands[c]["mean"], cand_median=test_cands[c]["median"],
+                                cand_mean=test_cands[c]["mean"], cand_median=test_cands[c]["median"], o2o_removed=n_o2o,
                                 prune_threshold=thr_c if thr_c is not None else np.nan))
         n_s1_te += c_s1
         n_empty += c_empty

@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from .model import decide, feature_importance, make_model, oof_predict, subsample_negatives, sweep_rules
-from .pipeline import log, peak_rss_mb, predict_chunked, release_memory, stats_from_counts
+from .pipeline import decided_pairs, global_o2o, log, peak_rss_mb, predict_chunked, release_memory, stats_from_counts
 from .store import gt_dict, load_gt_pairs, load_meta
 
 
@@ -36,6 +36,7 @@ def main() -> None:
     ap.add_argument("--drop-feats", default="", help="comma list of features left out of the model")
     ap.add_argument("--load-model", default=None, help="model.joblib to use instead of retraining")
     ap.add_argument("--save-probs", action="store_true")
+    ap.add_argument("--no-global-o2o", action="store_true", help="one-to-one per block only (v2 behaviour)")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
     fc = a.feat_cache
@@ -102,8 +103,33 @@ def main() -> None:
     fh_m.write("source1_entity_id\tmatched_entity_ids\n")
     fh_c.write("source1_entity_id\tcandidate_entity_ids\n")
     per, counts_all, probs = {}, [], {}
+    buf = dict(c=None, sets={}, order=[], rows=[], dp=[])
+
+    def flush():
+        """Write one country's rows after the global one-to-one over all its blocks."""
+        c = buf["c"]
+        if c is None:
+            return
+        n_rm = 0
+        if buf["dp"]:
+            n_rm = global_o2o(buf["sets"], *(np.concatenate([d[i] for d in buf["dp"]]) for i in range(3)))
+            log(f"{c}: global one-to-one removed {n_rm} pairs")
+        st = per.setdefault(c, dict(n_s1=0, empty=0, pred=0, o2o_removed=n_rm))
+        for q_rid, cand_rows in zip(buf["order"], buf["rows"]):
+            for i, r in enumerate(q_rid):
+                m = buf["sets"][r]
+                fh_m.write(f"{r}\t{','.join(sorted(m))}\n")
+                fh_c.write(f"{r}\t{cand_rows[i]}\n")
+                st["n_s1"] += 1
+                st["empty"] += not m
+                st["pred"] += len(m)
+        buf.update(c=None, sets={}, order=[], rows=[], dp=[])
+
     for f in files:
         c = re.match(r"test__(.+)__b\d+\.parquet", os.path.basename(f)).group(1)
+        if c != buf["c"]:
+            flush()
+            buf["c"] = c
         df = pd.read_parquet(f)
         q_rid = np.load(f[: -len(".parquet")] + "_qrid.npy").astype(str).astype(object)
         q = pd.Index(q_rid).get_indexer(df["s1"].to_numpy())
@@ -114,26 +140,25 @@ def main() -> None:
         cand_rows = [""] * len(q_rid)
         for qq, grp in df.groupby(q, sort=False)["cand"]:
             cand_rows[qq] = ",".join(grp.values)
-        st = per.setdefault(c, dict(n_s1=0, empty=0, pred=0))
-        for i, r in enumerate(q_rid):
-            m = sets[r]
-            fh_m.write(f"{r}\t{','.join(sorted(m))}\n")
-            fh_c.write(f"{r}\t{cand_rows[i]}\n")
-            st["n_s1"] += 1
-            st["empty"] += not m
-            st["pred"] += len(m)
+        if not a.no_global_o2o:
+            buf["dp"].append(decided_pairs(sets, pairs, q_rid, d_uniq.astype(object)))
+        buf["sets"].update(sets)
+        buf["order"].append(q_rid)
+        buf["rows"].append(cand_rows)
         counts_all.append(np.bincount(q, minlength=len(q_rid)))
         if a.save_probs:
             probs.setdefault(c, []).append(pd.DataFrame({"s1": df["s1"], "cand": df["cand"], "p": pairs["p"],
                                                          "score": df["score"]}))
         log(f"{os.path.basename(f)}: {len(q_rid)} S1, {len(df)} pairs, {sum(1 for r in q_rid if sets[r])} with matches")
         del df, pairs, sets
+    flush()
     fh_m.close()
     fh_c.close()
     for c, parts in probs.items():
         pd.concat(parts, ignore_index=True).to_parquet(os.path.join(a.out_dir, f"test_probs_{c}.parquet"), index=False)
     tab = pd.DataFrame({c: dict(n_s1=v["n_s1"], empty_rate=v["empty"] / max(v["n_s1"], 1),
-                                mean_matches=v["pred"] / max(v["n_s1"], 1)) for c, v in per.items()}).T
+                                mean_matches=v["pred"] / max(v["n_s1"], 1), o2o_removed=v["o2o_removed"])
+                        for c, v in per.items()}).T
     print(tab.to_string())
     report["test_pred_by_country"] = tab.reset_index().rename(columns={"index": "country"}).to_dict(orient="records")
     report["test_candidates"] = dict(overall=stats_from_counts(np.concatenate(counts_all)))
