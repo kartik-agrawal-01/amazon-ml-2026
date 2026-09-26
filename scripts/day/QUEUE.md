@@ -10,7 +10,8 @@ country. (2) Train GT has 3.46 true matches per S1 in both US and India. v2 pred
 UPLOAD POLICY (HQ, 26 Sep 12:30): uploads are spent only on files expected to beat the best LB by ≥ 1 pt. So do
 NOT run a full-data test pass per item: implement and evaluate items 2, 3, 4 (and 5 if ready) separately on the
 full-density train pass / slices, then run ONE full-data test pass with every KEEP → v3 = France fixes + global
-one-to-one (items 2–3; key candidates and wider blocking now run on the Jarvis lane, scripts/jarvis/QUEUE.md).
+one-to-one (items 2–3). Key candidates, reverse blocking and name_ph at FULL density run on the Jarvis lane
+(scripts/jarvis/QUEUE.md). The box's v3 is the fallback if Jarvis fails.
 ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
 
 1. [P0] FAST LANE + correctness gate (see DAY_TASK.md). Nothing else until it passes.
@@ -46,9 +47,11 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
       `disjoint|a_eq|invented` in France vs 92% in US; target ≥ 85%). SUBMIT-READY if the train-pass OOF holds; HQ
       decides the upload.
    d) Save per-pair test probabilities (P0-c).
-4. [Keys — MOVED to the Jarvis lane (scripts/jarvis/QUEUE.md item 1b): SKIP on the box, mark it SKIPPED.]
-   The loop's 2b result shows why: most sure pairs v2 misses were cut before the model (France 71%, India 48%),
-   so they must enter as post-cascade candidates, and Jarvis has the RAM for that plus reverse blocking.
+4. [Keys + reverse blocking — IMPLEMENTED on main by the box (5b8720f, 628591f, f4fd6f1): the box OWNS this code.]
+   The box only slice-screens it (chain3: n3k, n3ph, n3r). The FULL-DENSITY runs and the full-data files belong
+   to the Jarvis lane (scripts/jarvis/QUEUE.md item 1, same flags), so don't start a full-data run of them here.
+   Watch `runs/jarvis/ISSUES.md` on main: Jarvis files the minimal fixes it needed at full density there (it
+   commits them on its branch). Port each fix to main in your next session and note it in runs/day/LOG.md.
 5. [India recall — moved up; the largest measured loss] India: 3.12 predicted matches/S1 vs 3.465 in the train GT (US
    3.35 vs 3.459). That is ≈ 0.3 true pairs/S1 missing on 47% of test. Exact keys don't fix it: India's key-rule
    coverage is already 93–99%, so the loss is fuzzy (Indic scripts, landmark addresses, heavy reordering). Full-density
@@ -56,8 +59,8 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    a) Decompose India's missed GT pairs on the full-density train pass: blocking miss / cascade cut / model FN / model
       FP, by category (Indic-script name, empty candidate address, name-token Jaccard bins, address Jaccard bins,
       transliterated legal forms). Write `runs/day/india_recall.md`.
-   b) MOVED to the Jarvis lane (its item 1: 6 views, k 15, key + reverse candidates, 600K train S1 at full
-      density). On the box, do 5a only; mark 5 DONE after 5a.
+   b) Slice screens on the box (n3ph = name_ph back, n3r = reverse blocking) are fine. The full-density
+      evaluation runs on Jarvis (item 1: 6 views, k 15, keys + reverse, 600K train S1).
 6. [France] Country-neutral model: adversarial validation (classifier France-vs-US/India pairs on the pair features),
    drop or re-normalise the most country-shifted features (e.g. rank/percentile within country instead of raw
    counts); evaluate Q. Also: 36% of French S2/S3 addresses have no region/département while S1 always has one
