@@ -37,6 +37,18 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    at thr 0.70 + one-to-one on that sample, plus predicted matches/S1 and empty rate per country →
    `runs/day/v2_oof_by_country.md`. If no dump exists, write that in one line and stop (do NOT retrain v2).
    — DONE 26 Sep 15:45 (loop): runs/day/v2_oof_by_country.md. OOF India 0.9476 / US 0.9722; India cand recall 0.919 vs US 0.976.
+2d. [France-relevant, light work on saved probs — HQ needs it by ~21:30 for the jv1 France threshold] Unseen-country
+   threshold (follows your 15:13 finding and NEXT 2). On the cross-country screens with --save-probs outputs (xc_in
+   from n3xin, xc_us from the next xc_us run), for the TARGET country:
+   (i) hidden F0.5 vs threshold 0.30–0.95, step 0.05 (thr_sweep.py);
+   (ii) three LABEL-FREE rules for picking the target's threshold, each scored by the hidden F0.5 it gives:
+        R1 count matching: t where the target's predicted matches/S1 = (source OOF predicted matches/S1 ÷ source GT
+           matches/S1, both at the OOF threshold) × the target's GT matches/S1 (for France we assume 3.46 as in US/India);
+        R2 empty matching: t where the target's predicted-empty rate = the source's OOF predicted-empty rate;
+        R3 sure-key matching: t where the target's recall of its 'sure' exact-key pairs (src/hq_keys key_pairs +
+           apply_rules, p_min 0.96, on the slice) = the source's at its OOF threshold.
+   Table per screen: OOF-chosen t, hidden-best t, R1/R2/R3 t, hidden F at each → `runs/day/unseen_thr.md`. If a rule
+   lands within 0.001 of the hidden best on both screens, HQ applies it to France in jv1 (Jarvis QUEUE 1b).
 3. [France, HQ-DONE diagnosis → APPLY + EVALUATE] HQ's France fixes are in `src/normalize.py` + `src/features.py`
    (commit 7defba7 "france: normalisation fixes"; write-up `docs/FRANCE_FIXES.md`). Bugs fixed: "N° 32" normalised
    to "north 32" (5% of French addresses); zero-padded house numbers (also 3% of US / 5% of India S2/S3); région vs
