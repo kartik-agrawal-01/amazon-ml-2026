@@ -84,3 +84,14 @@
   (pre-tokenised unique texts; tokenizer-per-pair was 5K/s). => 3M pairs/fold ~23 min, OOF 24M pool pairs ~20 min,
   test 1.73M S1 x 40 x 2 folds ~1.8 h (--test-top 20: ~55 min).
   Run after jv1 train pass: python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048
+- 2b prep: src/jv_ce_feats.py (ce_p, ce_rank, ce_gap over the S1's pool) writes an augmented feat-cache so main's
+  `python -m src.rescore` retrains the matcher with ce features (OOF) and rescores the cached test blocks. Not yet run.
+- NEXT SESSION PLAN (in order):
+  1. jv1 train pass (tmux jv1): if dead w/o "done" -> rerun `bash -c "$(cat runs/jarvis/jv1.cmd)"` (reverse + forward cached).
+     When done: record per-country recall (union / cascade / +bypass), OOF per country + overall, cands/S1 in SCOREBOARD.
+  2. Gate OOF >= 0.9653 & no country down -> test pass: same command minus --skip-test plus
+     `--load-model /home/out_jv/jv1/model.joblib` (keeps --pool-dir so the test pool is written). Then validator -> SUBMIT-READY.
+  3. As soon as /home/pools/jv1/train__*.parquet exist (after the cascade, before stage B finishes) the GPU is free:
+     tmux ce: python -m src.jv_ce train --pool /home/pools/jv1 --store /home/cache_jv/store --out /home/pools/jv1_ce --pred-bs 2048
+     (host RAM: pool 24M rows + texts ~ 6-8 GB; check memory.current + jv1 peak < 56 GB first).
+  4. After the test pool exists: jv_ce test (--test-top 40 or 20), jv_ce_feats, src.rescore --feat-cache /home/cache_jv/j2_feats.
