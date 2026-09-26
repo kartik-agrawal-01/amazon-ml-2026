@@ -55,3 +55,14 @@ Plan (QUEUE 1, P0 fast lane):
   name_c3 49->47 s, name_w 63->46 s, addr_c3 50->46 s, full_w 94->48 s (train/india phase 575 s -> ~390 s).
 - NEXT addition for step 3 (v3 full data): add `--feat-cache feats_v3` to the v3 command -> later model/rule
   experiments on full data via src.rescore in minutes.
+
+## Session 2 — 26 Sep 12:44 (driver restarted after a REBOOT)
+- Box rebooted ~12:15-12:42 (uptime 2 min at 12:44; power). Gate A died in train/us top-k (gate log -> runs/day/gate_try1.log).
+  cands_v2/ kept train_india b000 + vecs.joblib -> 12:45 gate restarted (tmux `gate`, same script); it reuses the cached
+  vectorisers and the train/india union, recomputes the rest.
+- GIT AUTH LOST with the reboot: the credential cache (credential.helper cache) is empty, no ssh key / gh on the box ->
+  `git pull`/`git push` fail ("could not read Username"). Commits stay LOCAL until a human re-authenticates
+  (e.g. `git push` once interactively in tmux). HQ cannot see this session's results until then.
+- Found uncommitted WIP from the previous session in src/pipeline.py: QUEUE 4a key rules (`--key-rules 0.96`:
+  calibrate hq_keys rules per train country on ALL S1 context, inject sure pairs into the union, bypass the cascade cap,
+  features key_p/key_sure; test pass: unseen country gets the min over train countries). Reviewed; smoke-testing it.
