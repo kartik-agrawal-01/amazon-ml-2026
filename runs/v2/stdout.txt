@@ -1,0 +1,67 @@
+[    3.2s] top-k device: cuda (cuda available: True) | stage-B workers: 4
+[store] test: using store cache/test_meta.json (11702133 rows, countries ['france', 'india', 'us'])
+[store] train: using store cache/train_meta.json (12527040 rows, countries ['india', 'us'])
+[    8.8s] GT: 2206821 S1, 7638365 pairs; S2/S3 ids linked to >1 S1: 0 -> one-to-one filter ON
+[  213.5s] vectorisers (fit on 2500000 rows): [('name_c3', 19294), ('name_w', 106274), ('addr_c3', 22727), ('full_w', 287718)]
+[  214.4s] model loaded from output_v2_train/model.joblib: 83 features, cascade=on (top 10, floor 0.002), rule {'rule': 'thr', 'one2one': True, 'thr': 0.7, 'f05': 0.9623078254314535} | training skipped
+[  256.5s] test/france: doc matrices [('name_c3', (1434993, 19294), 9677463), ('name_w', (1434993, 106274), 3414801), ('addr_c3', (1434993, 22727), 11869797), ('full_w', (1434993, 287718), 8213373)] (41s)
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+/home/kartik/amazon-ml-2026/src/blocking.py:136: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  Dt = torch.sparse_csr_tensor(torch.from_numpy(D.indptr.astype(np.int64)), torch.from_numpy(D.indices.astype(np.int64)),
+      S1->S2 name_c3     996159 pairs (31.2s)
+      S1->S2 name_w      999438 pairs (53.3s)
+      S1->S2 addr_c3     996930 pairs (31.9s)
+      S1->S2 full_w     1000000 pairs (97.3s)
+      S1->S3 name_c3     996155 pairs (31.8s)
+      S1->S3 name_w      999427 pairs (54.3s)
+      S1->S3 addr_c3     996930 pairs (32.9s)
+      S1->S3 full_w     1000000 pairs (98.1s)
+[  862.2s] test/france block 0 (100000 S1): 6154287 cands -> 979199 kept (9.8/S1), 94668 S1 with matches
+[ 1467.5s] test/france block 1 (100000 S1): 6153087 cands -> 979458 kept (9.8/S1), 94966 S1 with matches
+[ 1832.3s] test/france block 2 (59452 S1): 3658645 cands -> 586221 kept (9.9/S1), 56390 S1 with matches
+[ 1832.8s] test/france: done in 1618s | peak RSS so far 4132 MB
+[ 1931.0s] test/india: doc matrices [('name_c3', (4717565, 19294), 33062789), ('name_w', (4717565, 106274), 10290349), ('addr_c3', (4717565, 22727), 56888852), ('full_w', (4717565, 287718), 34730746)] (96s)
+      S1->S2 name_c3     974600 pairs (90.6s)
+      S1->S2 name_w      996106 pairs (112.8s)
+      S1->S2 addr_c3     999070 pairs (93.2s)
+      S1->S2 full_w      999996 pairs (164.6s)
+      S1->S3 name_c3     974600 pairs (96.7s)
+      S1->S3 name_w      996126 pairs (118.8s)
+      S1->S3 addr_c3     999070 pairs (97.7s)
+      S1->S3 full_w      999996 pairs (170.7s)
+[ 3069.2s] test/india block 0 (100000 S1): 5905053 cands -> 917905 kept (9.2/S1), 93406 S1 with matches
+[ 4246.9s] test/india block 1 (100000 S1): 5906964 cands -> 918181 kept (9.2/S1), 93343 S1 with matches
+[ 5376.0s] test/india block 2 (100000 S1): 5906464 cands -> 917025 kept (9.2/S1), 93275 S1 with matches
+[ 6504.8s] test/india block 3 (100000 S1): 5908354 cands -> 917035 kept (9.2/S1), 93313 S1 with matches
+[ 7634.2s] test/india block 4 (100000 S1): 5910012 cands -> 917925 kept (9.2/S1), 93256 S1 with matches
+[ 8764.7s] test/india block 5 (100000 S1): 5908225 cands -> 916922 kept (9.2/S1), 93376 S1 with matches
+[ 9892.4s] test/india block 6 (100000 S1): 5904405 cands -> 917995 kept (9.2/S1), 93444 S1 with matches
+[11020.2s] test/india block 7 (100000 S1): 5910840 cands -> 917472 kept (9.2/S1), 93260 S1 with matches
+[11150.6s] test/india block 8 (9986 S1): 589242 cands -> 97468 kept (9.8/S1), 9337 S1 with matches
+[11151.1s] test/india: done in 9318s | peak RSS so far 6846 MB
+[11232.1s] test/us: doc matrices [('name_c3', (3817031, 19294), 31459340), ('name_w', (3817031, 106274), 9256146), ('addr_c3', (3817031, 22727), 33933735), ('full_w', (3817031, 287718), 21850690)] (79s)
+      S1->S2 name_c3     994330 pairs (76.4s)
+      S1->S2 name_w      993502 pairs (99.1s)
+      S1->S2 addr_c3     999867 pairs (77.1s)
+      S1->S2 full_w     1000000 pairs (147.7s)
+      S1->S3 name_c3     994330 pairs (79.5s)
+      S1->S3 name_w      993622 pairs (101.7s)
+      S1->S3 addr_c3     999870 pairs (80.3s)
+      S1->S3 full_w     1000000 pairs (150.8s)
+[12216.2s] test/us block 0 (100000 S1): 5775042 cands -> 887826 kept (8.9/S1), 94574 S1 with matches
+[13198.7s] test/us block 1 (100000 S1): 5778580 cands -> 887020 kept (8.9/S1), 94418 S1 with matches
+[14180.9s] test/us block 2 (100000 S1): 5777002 cands -> 888508 kept (8.9/S1), 94595 S1 with matches
+[15163.0s] test/us block 3 (100000 S1): 5780491 cands -> 887705 kept (8.9/S1), 94512 S1 with matches
+[16147.0s] test/us block 4 (100000 S1): 5780644 cands -> 887513 kept (8.9/S1), 94461 S1 with matches
+[17131.1s] test/us block 5 (100000 S1): 5775446 cands -> 887769 kept (8.9/S1), 94508 S1 with matches
+[17756.5s] test/us block 6 (63106 S1): 3649297 cands -> 572457 kept (9.1/S1), 59675 S1 with matches
+[17757.1s] test/us: done in 6606s | peak RSS so far 7263 MB
+           n_s1  empty_rate  mean_matches  cand_mean  cand_median  prune_threshold
+country                                                                           
+france   259452    0.051755      3.304018   9.808666         10.0              NaN
+india    809986    0.066638      3.117367   9.182786         10.0              NaN
+us       663106    0.054837      3.349458   8.895709         10.0              NaN
+[17757.2s] test: 1732544 S1 rows written | predicted-empty=6.0% | mean matches=3.23 | candidates/S1 mean 9.2 median 10 p90 10 max 10
+[17757.3s] copied report + matching_results to runs/v2/ (commit report.json + stdout.txt, not the tsv)
+[17757.3s] done | peak RSS 7263 MB

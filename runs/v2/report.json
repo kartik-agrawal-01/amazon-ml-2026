@@ -1,0 +1,133 @@
+{
+  "args": {
+    "data_dir": "data",
+    "out_dir": "output",
+    "cache_dir": "cache",
+    "k": 10,
+    "views": "name_c3,name_w,addr_c3,full_w",
+    "max_df": 0.01,
+    "dense": false,
+    "dense_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "block_size": 100000,
+    "train_s1": 150000,
+    "neg_rate": 0.5,
+    "test_limit": 0,
+    "cascade_top": 10,
+    "cascade_floor": 0.002,
+    "no_cascade": false,
+    "keep_recall": 0.998,
+    "vec_sample": 2500000,
+    "folds": 5,
+    "seed": 42,
+    "n_jobs": 8,
+    "topk_device": "cuda",
+    "stage_b_jobs": 4,
+    "rule": "auto",
+    "thr": 0.5,
+    "no_one2one": false,
+    "test_gt": "",
+    "run_name": "v2",
+    "load_model": "output_v2_train/model.joblib",
+    "skip_test": false
+  },
+  "env": {
+    "python": "3.11.16",
+    "machine": "user-MS-7A93"
+  },
+  "peak_rss_mb": {
+    "store": 651,
+    "test": 7263
+  },
+  "gt": {
+    "n_s1": 2206821,
+    "singleton_rate": 0.05584820880352326,
+    "multi_s1_ids": 0
+  },
+  "oof": {
+    "chosen": {
+      "rule": "thr",
+      "one2one": true,
+      "thr": 0.7,
+      "f05": 0.9623078254314535
+    },
+    "loaded_from": "output_v2_train/model.joblib"
+  },
+  "loaded_model": "output_v2_train/model.joblib",
+  "test_pred_by_country": [
+    {
+      "country": "france",
+      "n_s1": 259452,
+      "empty_rate": 0.051755237963091436,
+      "mean_matches": 3.304017698842175,
+      "cand_mean": 9.808665957479612,
+      "cand_median": 10.0,
+      "prune_threshold": NaN
+    },
+    {
+      "country": "india",
+      "n_s1": 809986,
+      "empty_rate": 0.06663818880820162,
+      "mean_matches": 3.1173674606721598,
+      "cand_mean": 9.182785875311426,
+      "cand_median": 10.0,
+      "prune_threshold": NaN
+    },
+    {
+      "country": "us",
+      "n_s1": 663106,
+      "empty_rate": 0.05483738648119607,
+      "mean_matches": 3.34945845762216,
+      "cand_mean": 8.895708981671106,
+      "cand_median": 10.0,
+      "prune_threshold": NaN
+    }
+  ],
+  "test_candidates": {
+    "overall": {
+      "pairs": 15881604,
+      "n_s1": 1732544,
+      "mean": 9.166638192161354,
+      "median": 10.0,
+      "p90": 10.0,
+      "max": 10,
+      "zero_share": 4.6174873480846666e-06
+    },
+    "per_country": {
+      "france": {
+        "pairs": 2544878,
+        "n_s1": 259452,
+        "mean": 9.808665957479612,
+        "median": 10.0,
+        "p90": 10.0,
+        "max": 10,
+        "zero_share": 0.0
+      },
+      "india": {
+        "pairs": 7437928,
+        "n_s1": 809986,
+        "mean": 9.182785875311426,
+        "median": 10.0,
+        "p90": 10.0,
+        "max": 10,
+        "zero_share": 7.4075354388841286e-06
+      },
+      "us": {
+        "pairs": 5898798,
+        "n_s1": 663106,
+        "mean": 8.895708981671106,
+        "median": 10.0,
+        "p90": 10.0,
+        "max": 10,
+        "zero_share": 3.0161090383739555e-06
+      }
+    }
+  },
+  "test_pred": {
+    "n_s1": 1732544,
+    "empty_rate": 0.05989285120608769,
+    "mean_matches": 3.2341481659340254,
+    "cand_pairs": 15881604,
+    "cand_pairs_per_s1": 9.166638192161354
+  },
+  "runtime_s": 17757.2
+}

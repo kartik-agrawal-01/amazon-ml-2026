@@ -171,3 +171,13 @@
   submissions/v2_partial_matching_results.tsv (write NOTES); (2) after the watcher pushes, run
   `python scripts/night/b4_table.py` when runs/{xc_us,slice_mix,xc_in}/report.json exist and put the table +
   cross-country drop into the morning summary; (3) morning summary at the TOP of NIGHT_LOG.md ("QUEUE DONE").
+- 06:24 A4 v2 FINISHED (post watcher): validator exit 0; output_v2/ archived; submissions/v2_matching_results.tsv
+    [17757.2s] test: 1732544 S1 rows written | predicted-empty=6.0% | mean matches=3.23 | candidates/S1 mean 9.2 median 10 p90 10 max 10
+    [17757.3s] done | peak RSS 7263 MB
+    ## Test per-country
+    
+    | country | n_s1 | empty_rate | mean_matches | cand_mean | cand_median |
+    |---|---|---|---|---|---|
+    | france | 259452 | 0.052 | 3.30 | 9.8 | 10 |
+    | india | 809986 | 0.067 | 3.12 | 9.2 | 10 |
+    | us | 663106 | 0.055 | 3.35 | 8.9 | 10 |
