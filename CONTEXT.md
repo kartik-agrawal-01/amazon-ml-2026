@@ -43,7 +43,7 @@
 ## Current state (26 Sep ~16:20 IST)
 - **Public LB: Soha's new model (soha_matching_results_2.tsv) = 0.980795 — NEW BEST (+3.4 vs v2)** (LOG #4, ~16:00).
   Earlier: v2 = 0.947 · ens1 consensus v2∩Soha = 0.9449 · Atharv = 0.944 · Soha's first pipeline 0.948. Target 98.4+.
-  Uploads: **Day2 4/5** (1 left, expires at midnight; to be confirmed). HQ proposes `soha2k2` for it: Soha-2 + 34.9K French
+  Uploads: **Day2 4/5** (1 left, confirmed; expires at midnight). HQ proposes `soha2k2` for it: Soha-2 + 34.9K French
   exact-key pairs she misses (worst case +0.14, likely +0.2 to +0.3; LOG proposed row). The ≥ +1 pt bar was set when the
   best was 0.947; jv1 (our pipeline) can no longer beat the best on its own — its value is now as a blend partner.
 - **Soha-2 vs v2 (label-free, scripts/hq_ens/dissect.py):** India +0.22 matches/S1 (3.34 vs 3.12), almost all fuzzy
