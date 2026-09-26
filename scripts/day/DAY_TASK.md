@@ -36,7 +36,10 @@ Screen on xc_us + slice_mix first (~30 min, `--n-jobs 8 --topk-device cuda`); ru
 16 GB RAM shared (~10 GB usable), RTX 5060 Ti 16 GB. ONE heavy job at a time (slice evals ~3.5 GB, full-data
 ~7.3 GB). A driver guard kills the NEWEST heavy job at MemAvailable < 1.5 GB. Run heavy jobs detached in tmux
 (`~/miniforge3/envs/aml/bin/tmux new -d -s <name> '<cmd> > runs/day/<name>.log 2>&1'`); while one runs, do
-only light work (code the next experiment, analyse existing outputs). Never delete `data/`, `output_v2*/`,
+only light work (code the next experiment, analyse existing outputs). Light work must stay under ~1 GB RAM
+(stream big TSVs such as output_v2/candidate_pairs.tsv in chunks, never load them whole) and run as
+`python scripts/<name>.py`: the guard only sees `python -m src.…` / `python scripts/…` processes, so a hungry
+inline `python -` / `python -c` job makes it kill your heavy job instead. Never delete `data/`, `output_v2*/`,
 `submissions/`, built stores/caches.
 
 ## Rules that stay fixed (disqualification otherwise)

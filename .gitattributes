@@ -3,3 +3,5 @@
 *.png binary
 *.parquet binary
 *.pkl binary
+# TSVs byte-exact on every OS (Windows checkout was adding CRLF, breaking md5 checks of submission files)
+*.tsv -text
