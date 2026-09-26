@@ -437,37 +437,55 @@ def cmd_report(a):
              f"{dist[tb_]:.3f}; at 0.70 the distance is {dist[0.7]:.3f}).\n")
 
     # ------------------------------------------------------------------ E
-    R.append("## E. Agreement with submissions/soha_matching_results.tsv\n")
-    sp_ = os.path.join("submissions", "soha_matching_results.tsv")
-    if not os.path.exists(sp_):
-        R.append("File not present in the repo -> skipped.\n")
-    else:
-        from src.metric import read_matches_tsv
-        ours = read_matches_tsv(a.v2_matching)
-        hers = read_matches_tsv(sp_)
-        rec = load_meta(a.cache_dir, "test")
-        rows = []
-        for c in COUNTRIES:
-            ids = load_country(rec, c, ["rid", "src"])
-            ids = ids.loc[ids["src"] == 1, "rid"].tolist()
-            ex_, jac, one = [], [], []
-            for r in ids:
-                x, y = ours.get(r, frozenset()), hers.get(r, frozenset())
-                ex_.append(x == y)
-                jac.append(1.0 if not x and not y else len(x & y) / len(x | y))
-                one.append(bool(x) != bool(y))
-            rows.append(dict(country=c, n_s1=len(ids), exact_set_agreement=np.mean(ex_), mean_jaccard=np.mean(jac),
-                             one_empty_other_not=np.mean(one)))
-        R.append(md_table(pd.DataFrame(rows), "{:.4f}") + "\n")
+    R.extend(part_e(a))
 
     with open(os.path.join(rd, "REPORT.md"), "w") as fh:
         fh.write("\n".join(R) + "\n")
     log(f"wrote {rd}/REPORT.md")
 
 
+def part_e(a):
+    """E. per-country agreement between v2 and submissions/soha_matching_results.tsv (all test S1)."""
+    R = ["## E. Agreement with submissions/soha_matching_results.tsv\n"]
+    sp_ = os.path.join("submissions", "soha_matching_results.tsv")
+    if not os.path.exists(sp_):
+        return R + ["File not present in the repo -> skipped.\n"]
+    from src.metric import read_matches_tsv
+    ours, hers = read_matches_tsv(a.v2_matching), read_matches_tsv(sp_)
+    meta = load_meta(a.cache_dir, "test")
+    rows = []
+    for c in COUNTRIES:
+        ids = load_country(meta, c, ["rid", "src"])
+        ids = ids.loc[ids["src"] == 1, "rid"].tolist()
+        ex_, jac, one, o_only, h_only = [], [], [], [], []
+        for r in ids:
+            x, y = ours.get(r, frozenset()), hers.get(r, frozenset())
+            ex_.append(x == y)
+            jac.append(1.0 if not x and not y else len(x & y) / len(x | y))
+            one.append(bool(x) != bool(y))
+            o_only.append(bool(x) and not y)
+            h_only.append(bool(y) and not x)
+        rows.append(dict(country=c, n_s1=len(ids), exact_set_agreement=np.mean(ex_), mean_jaccard=np.mean(jac),
+                         one_empty_other_not=np.mean(one), v2_nonempty_soha_empty=np.mean(o_only),
+                         soha_nonempty_v2_empty=np.mean(h_only),
+                         v2_mean_matches=np.mean([len(ours.get(r, ())) for r in ids]),
+                         soha_mean_matches=np.mean([len(hers.get(r, ())) for r in ids]),
+                         soha_rows_missing=np.mean([r not in hers for r in ids])))
+    return R + [md_table(pd.DataFrame(rows), "{:.4f}") + "\n"]
+
+
+def cmd_agree(a):
+    """Recompute part E only and splice it into an existing REPORT.md."""
+    p = os.path.join(a.run_dir, "REPORT.md")
+    s = open(p).read()
+    s = s[:s.index("## E. Agreement")] + "\n".join(part_e(a)) + "\n"
+    open(p, "w").write(s)
+    log(f"part E written to {p}")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("phase", choices=["score", "report"])
+    ap.add_argument("phase", choices=["score", "report", "agree"])
     ap.add_argument("--cache-dir", default="cache")
     ap.add_argument("--model", default="output_v2/model.joblib")
     ap.add_argument("--v2-report", default="output_v2/report.json")
@@ -482,7 +500,7 @@ def main():
     ap.add_argument("--topk-device", default="cuda")
     ap.add_argument("--seed", type=int, default=7)
     a = ap.parse_args()
-    cmd_score(a) if a.phase == "score" else cmd_report(a)
+    {"score": cmd_score, "report": cmd_report, "agree": cmd_agree}[a.phase](a)
 
 
 if __name__ == "__main__":

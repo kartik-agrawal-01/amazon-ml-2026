@@ -8,5 +8,5 @@ Runtime: vectoriser refit 214 s; France block 659 s; US 1078 s; India 1242 s; re
 Reproduction: block-0 candidate counts, kept pairs and S1-with-matches match runs/v2/stdout.txt exactly;
 predicted sets agree 100.0% with output_v2/matching_results.tsv on all 3 x 100K S1 (India 5,905,050 vs 5,905,053 raw
 candidates = GPU float ties, no effect after the cascade). Vocab sizes identical to v2.
-No src/ file changed. Part E skipped: submissions/soha_matching_results.tsv is not in the repo.
+No src/ file changed. Part E added after soha_matching_results.tsv arrived (python scripts/france_diag.py agree).
 See REPORT.md "Summary" for findings.
