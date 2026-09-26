@@ -44,3 +44,14 @@
   (rev-force none: reverse pairs only enter the pre-cascade union; sure key pairs force-kept.)
   If killed by a pause: rerun the same command (cand-cache skips finished forward top-k blocks; model.joblib in
   /home/out_jv/jv1 -> add --load-model /home/out_jv/jv1/model.joblib to resume at the test pass).
+- 08:38 smoke India train (24K S1): union+aug 3.19M cands (133/S1), GT found 79738/83062 = 0.960 (v2 blocking k=10
+  India 0.933); phase A 724 s, peak RSS 11.1 GB. GPU forward: 10-11 s per view per source for 24K S1 (12 calls).
+  Both smoke and jv1 are in reverse top-k now (sharing 16 CPUs, so both are slower than solo).
+- SESSION 1 END (08:40). Running: tmux 'smoke' (QUEUE 0) and tmux 'jv1' (QUEUE 1). NEXT SESSION:
+  1. check both logs (Traceback? `dmesg | tail`); smoke: per-country policy table (after "cascade fitted"), OOF per
+     country, stage-B time, test timings, validator is not needed for the smoke. Write QUEUE 0 DONE + projection.
+  2. choose --rev-force from the smoke/jv1 policy table (keep cands/S1 <= 12; v2 9.17).
+  3. jv1: when training finishes, compare OOF per country vs v2 0.9623 (gate +0.3 pt, no country down); the test pass
+     follows automatically -> validator -> submissions/jv1_matching_results.tsv -> SCOREBOARD SUBMIT-READY.
+     Validator: python data/student_resource/utils/validate_submission.py --matching /home/out_jv/jv1/matching_results.tsv
+       --candidate /home/out_jv/jv1/candidate_pairs.tsv --test-dir data/student_resource/dataset/test
