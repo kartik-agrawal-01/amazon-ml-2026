@@ -1,0 +1,1 @@
+python -m src.pipeline --data-dir data_slice --cache-dir cache_slice_n3 --out-dir output_day_n3ka_slice_mix --run-name day_n3ka_slice_mix --test-gt data_slice/test_ground_truth_HIDDEN.tsv --n-jobs 6 --stage-b-jobs 4 --topk-device cuda --max-df 0.01 --train-s1 40000 --block-size 50000 --folds 3 --views name_c3,name_w,addr_c3,full_w --save-probs --key-rules 0.96 --thr-adapt

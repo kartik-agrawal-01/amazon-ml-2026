@@ -305,3 +305,19 @@ Plan (QUEUE 1, P0 fast lane):
 - 17:25 chain6 started n3ka (xc_us -> slice_mix -> xc_in, unfloored --thr-adapt). Expect ~18:30.
 - 17:42 n3ka xc_us DONE: **0.9507** (n3k 0.9321, +0.0186), India t 0.07 (OOF 0.85, src_empty 0.0564), OOF 0.98415, 16.3 min,
   3.1 GB. Offline with floor (key forcing ignored): floor 0.15 -> 0.9511, floor 0.30 -> 0.9497.
+- 18:09 n3ka slice_mix DONE: 0.9821 (n3k 0.9815), OOF 0.97712, cands/S1 5.99; adapt t India 0.67 / US 0.85. n3ka Q = 0.9726
+  (with n3's xc_in) = +0.0058 vs n3k -> **KEEP, new champion** (row 6; provisional: n3ka xc_in is running in chain6, adapt
+  is expected to keep the US at 0.85 as in the offline check -> 0.9819).
+  **Recipe for v3/jv1: n3 stores (HQ France fixes) + --key-rules 0.96 + --thr-adapt --thr-adapt-floor 0.30.** HQ: the
+  floor is from runs/day/floor_evidence.md (full-density low-t precision cost is 1.4–2.2x the slice's).
+- Full-data promotion (champion − v2 ≥ 0.002) is due, but per HQ's upload policy full-density/full-data runs of the key
+  code belong to Jarvis; the box's v3 needs the fast-lane gate (gateA/gateB, still queued at the end of chain4).
+- Session 9 ends ~18:15. Running: chain6 (n3ka xc_in), then chain4 resumes (n3r, gateA, gateB), then chain5 (n4ph).
+### NEXT (session 10+)
+1. n3ka xc_in (runs/day/qeval_n3ka.log QEVAL_DONE) -> finalise SCOREBOARD row 6 (Q with the real xc_in). Check chain4's
+   bash is no longer STAT T after chain6 exits (`kill -CONT 54443` if it is).
+2. Consider bringing gateA/gateB forward (before n3r) so the box can build v3 = row-6 recipe on the full data via
+   the fast lane as the Jarvis fallback. Edit chain4 only between steps (it is a bash script read incrementally: do NOT
+   edit it while it runs; write a new chain script instead that SIGSTOPs chain4 like chain6 does).
+3. n4ph (chain5) vs n3ph when it finishes; evaluate with --key-rules 0.96 --thr-adapt too, or compare to n3ph.
+4. xc_us noise ±0.007: a second-seed xc_us of n3ka would confirm the +0.019 (it is ~3x the noise already).
