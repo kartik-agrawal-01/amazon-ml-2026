@@ -264,3 +264,16 @@ Plan (QUEUE 1, P0 fast lane):
 3. n4ph vs n3ph when chain5 finishes. If n4ph wins on xc_us with mix flat -> run its xc_in; KEEP -> AML_PH=2 behaviour
    becomes the default (remove the switch, and tell HQ in LOG: it changes normalize.py = store rebuild).
 4. Gate A/B are at the end of chain4 (hours away). If HQ needs v3 sooner, consider running the gate before n3r.
+
+## Session 8 — 26 Sep 16:41 (Session 4 of this driver)
+- Start: chain4 running n3ph (xc_us), chain5 waiting. Plan: QUEUE 2d (unseen-country threshold; HQ needs it by 21:30).
+- 17:15 QUEUE 2d (i)+(ii) DONE -> runs/day/unseen_thr.md (scripts/day/unseen_thr.py). xc_us (US->India): hidden F rises
+  monotonically as t drops, 0.85 -> 0.15: 0.9321 -> 0.9511 (+0.019). xc_in: the OOF-chosen 0.85 is already best. R1
+  (count) and R2 (empty-rate) matching overshoot on xc_in (0.97/0.99: −0.005/−0.018), but their LOWER-ONLY versions
+  min(t_oof, R) never hurt: R2lo xc_us +0.0158, xc_in 0, mix +0.0005 -> est ΔQ ≈ +0.005. v2 France counts (empty 5.2%,
+  3.30/S1) are already at the source level, so R2lo would NOT change v2's France threshold.
+- Implemented opt-in `--thr-adapt` (R2 lower-only per test country) in src/pipeline.py; the default is unchanged.
+  Offline check (scripts/day/check_adapt.py) reproduces 0.9480 / 0.9819.
+- tmux chain6: SIGSTOPs the chain4 bash (pid 54443; its running n3ph python is unaffected), waits for n3ph to exit,
+  runs n3ka = --key-rules 0.96 --thr-adapt on _n3 (xc_us, slice_mix, xc_in), then SIGCONTs chain4 (trap on EXIT).
+  If a reboot/kill leaves chain4 stopped: `kill -CONT $(pgrep -xf 'bash scripts/day/chain4.sh')`.

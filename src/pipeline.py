@@ -152,6 +152,27 @@ def global_o2o(sets: Dict[str, frozenset], s1: np.ndarray, rec: np.ndarray, p: n
     return int((~keep).sum())
 
 
+def adapt_threshold(sets: Dict[str, frozenset], s1: np.ndarray, rec: np.ndarray, p: np.ndarray, thr: float,
+                    src_empty: float) -> float:
+    """QUEUE 2d rule 'R2 lower-only' (label-free, per test country): the threshold t <= thr (0.01 grid) whose
+    predicted-empty rate over the country's S1s is closest to the source OOF empty rate; then drops pairs with p < t
+    from `sets` (in place; sets were decided at the p floor). A seen country usually keeps ~thr; an unseen one, where
+    the model is less confident, gets a lower t (xc_us US->India: hidden F 0.9321 -> 0.9480)."""
+    live = np.fromiter((r in sets[q] for q, r in zip(s1, rec)), bool, len(s1))
+    s1, rec, p = s1[live], rec[live], p[live]
+    maxp = pd.Series(p).groupby(s1).max().to_numpy() if len(p) else np.zeros(0)
+    n = len(sets)
+    grid = np.round(np.arange(0.02, thr + 1e-9, 0.01), 2)
+    empty = np.array([1.0 - (maxp >= t).sum() / max(n, 1) for t in grid])
+    t_c = float(min(thr, grid[int(np.argmin(np.abs(empty - src_empty)))])) if len(grid) else thr
+    drop: Dict[str, set] = {}
+    for q, r in zip(s1[p < t_c], rec[p < t_c]):
+        drop.setdefault(q, set()).add(r)
+    for q, rs in drop.items():
+        sets[q] = frozenset(sets[q] - rs)
+    return t_c
+
+
 # ------------------------------------------------------- exact-key 'sure' pairs (QUEUE 4a, src/hq_keys.py)
 def record_keys_chunked(rec: pd.DataFrame, chunk: int = 500_000) -> pd.DataFrame:
     """hq_keys.record_keys in chunks (its per-address token lists would cost GBs on a 5M-doc country at once)."""
@@ -564,6 +585,8 @@ def main() -> None:
                     "top-k S1 of the country per view; pairs join the union (features rev_rank/rev_n/rev_best)")
     ap.add_argument("--reverse-bypass", type=int, default=2, help="reverse pairs where the S1 is the doc's best S1 in >= this "
                     "many views bypass the cascade cap (0 = never)")
+    ap.add_argument("--thr-adapt", action="store_true", help="QUEUE 2d: per test country, lower the threshold until "
+                    "the predicted-empty rate matches the OOF one (never raises it; needs rule thr + global o2o)")
     ap.add_argument("--save-probs", action="store_true", help="write per-pair test probabilities to <out>/test_probs_<country>.parquet")
     a = ap.parse_args()
     os.makedirs(a.out_dir, exist_ok=True)
@@ -911,7 +934,11 @@ def main() -> None:
         log(f"OOF macro F0.5 (chosen) = {best['f05']:.5f} with {best}")
         report["oof"] = dict(model=kind, auc=float(roc_auc_score(y, oof)), rules=tab.to_dict(orient="records"), chosen=best)
         print("  OOF breakdown:")
-        macro_f05(gt_tr, decide(pairs, q_rid_str, d_rid_str, best["rule"], thr_best, bool(best["one2one"])), verbose=True)
+        oof_sets = decide(pairs, q_rid_str, d_rid_str, best["rule"], thr_best, bool(best["one2one"]))
+        best["src_empty"] = float(np.mean([not v for v in oof_sets.values()]))  # for --thr-adapt (label-free)
+        log(f"OOF predicted-empty rate at the chosen rule: {best['src_empty']:.4f}")
+        macro_f05(gt_tr, oof_sets, verbose=True)
+        del oof_sets
         pd.DataFrame({"s1": q_rid_str[qg], "cand": d_rid_str[c_codes], "y": y, "p": oof}).to_csv(
             os.path.join(a.out_dir, "oof_pairs.tsv.gz"), sep="\t", index=False)
         del pairs, gt_tr, d_uniq, c_codes, d_rid_str, cid, sw_mask
@@ -981,6 +1008,9 @@ def main() -> None:
     per_country, count_parts, test_cands = [], [], {}
     n_s1_te = n_empty = n_pred = n_pairs_te = 0
     pred_for_gt: Dict[str, frozenset] = {}
+    adapt = bool(a.thr_adapt) and best["rule"] == "thr" and not a.no_global_o2o and "src_empty" in best
+    if a.thr_adapt and not adapt:
+        log("--thr-adapt ignored (needs rule thr, global one-to-one and a model trained with this code)")
     for c in countries_te:
         t_c = time.time()
         rec = load_country(meta_te, c, cols)
@@ -1051,7 +1081,7 @@ def main() -> None:
             if a.save_probs:
                 prob_parts.append(pd.DataFrame({"s1": qb_rid[cands["q"].to_numpy()], "cand": ctx.d_rid[cands["c"].to_numpy()],
                                                 "p": cands["p"].to_numpy(), "score": cands["score"].to_numpy()}))
-            sets = decide(cands, qb_rid, ctx.d_rid, best["rule"], thr_best, bool(best["one2one"]))
+            sets = decide(cands, qb_rid, ctx.d_rid, best["rule"], 0.02 if adapt else thr_best, bool(best["one2one"]))
             cand_rows = [""] * len(qb)
             for qq, grp in cands.groupby("q")["c"]:
                 cand_rows[qq] = ",".join(ctx.d_rid[grp.values])
@@ -1073,6 +1103,11 @@ def main() -> None:
         if dp_parts:
             n_o2o = global_o2o(c_sets, *(np.concatenate([d[i] for d in dp_parts]) for i in range(3)))
             log(f"test/{c}: global one-to-one removed {n_o2o} pairs (records kept under several S1s across blocks)")
+        thr_cty = thr_best
+        if adapt:
+            thr_cty = adapt_threshold(c_sets, *(np.concatenate([d[i] for d in dp_parts]) for i in range(3)),
+                                  thr=thr_best, src_empty=best["src_empty"])
+            log(f"test/{c}: --thr-adapt threshold {thr_cty:.2f} (OOF-chosen {thr_best:.2f}, OOF empty {best['src_empty']:.4f})")
         for qb_rid, cand_rows in zip(c_order, c_cand_rows):
             for i, r in enumerate(qb_rid):
                 m = c_sets[r]
@@ -1103,7 +1138,7 @@ def main() -> None:
         test_cands[c] = stats_from_counts(counts_c)
         per_country.append(dict(country=c, n_s1=c_s1, empty_rate=c_empty / max(c_s1, 1), mean_matches=c_pred / max(c_s1, 1),
                                 cand_mean=test_cands[c]["mean"], cand_median=test_cands[c]["median"], o2o_removed=n_o2o,
-                                key_sure=key_cov[0], key_sure_decided=key_cov[1],
+                                key_sure=key_cov[0], key_sure_decided=key_cov[1], thr=thr_cty,
                                 prune_threshold=thr_c if thr_c is not None else np.nan))
         n_s1_te += c_s1
         n_empty += c_empty
