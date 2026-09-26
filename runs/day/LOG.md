@@ -127,3 +127,16 @@ Plan (QUEUE 1, P0 fast lane):
   the cascade cap (like key_sure). Stored in model.joblib (`reverse`), restored by --load-model. Unit test vs brute force:
   scripts/day/test_reverse.py (exact). Not yet run end-to-end -> first real run is the chain step n3r.
 - Chain restarted 13:26 with n3r inserted after n3ph: base -> n3 -> n3k -> n3ph -> n3r -> gateA -> gateB.
+- 14:07 base DONE: Q=0.9669 (mix 0.9808, xc_us 0.9344, xc_in not run -> Q0 value). Within noise of Q0 (+0.0003); this
+  is the reference for n3/n3k/n3ph/n3r (compare to it, not to Q0). Runtimes with --n-jobs 6: xc_us 15.5 min,
+  slice_mix 25.1 min; peak RSS 3.3 GB. No reboot during base (sysmon: CPU max ~72 C, MemAvailable ~8.6 GB).
+- 14:07 n3 started (builds the cache_*_n3 stores first).
+
+### NEXT (session 6+)
+1. Chain3 (tmux `chain`) runs n3 -> n3k -> n3ph -> n3r -> gateA -> gateB unattended. After each step:
+   `python scripts/day/q_table.py <tag>`, compare to base (0.9669), SCOREBOARD row, KEEP/REVERT decision.
+   n3 (France fixes) is KEEP-without-Q-rule per QUEUE 3 unless OOF drops. n3k / n3ph / n3r are measured against n3.
+2. If n3r crashes (first end-to-end run of --reverse-k): runs/day_n3r_*/stdout.txt, fix, rerun n3r alone.
+3. After a reboot: pgrep check, then relaunch sysmon, gpulog and chain (see Session 4 NEXT; chain3.sh instead of
+   chain1/chain2 - it is resumable via runs/day/chain/*.done). Check runs/day/sysmon.log tail for the moments before.
+4. Git auth still missing -> everything is committed locally only (HQ can't see it). Humans: please `git push` once.
