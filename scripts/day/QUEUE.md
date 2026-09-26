@@ -65,6 +65,8 @@ ens2c (LOG #3: one-to-one + key pairs on top of v2) is HELD, not uploaded.
    a) Decompose India's missed GT pairs on the full-density train pass: blocking miss / cascade cut / model FN / model
       FP, by category (Indic-script name, empty candidate address, name-token Jaccard bins, address Jaccard bins,
       transliterated legal forms). Write `runs/day/india_recall.md`.
+      — DONE 26 Sep 16:15 (loop): runs/day/india_recall.md. Lost 11.4% of GT = blocked 6.7% / cascade 1.4% / model FN 3.3%;
+        Indic cand names 20.5% blocked; empty cand address TP rate 43%.
    b) Slice screens on the box (n3ph = name_ph back, n3r = reverse blocking) are fine. The full-density
       evaluation runs on Jarvis (item 1: 6 views, k 15, keys + reverse, 600K train S1).
 6. [France] Country-neutral model: adversarial validation (classifier France-vs-US/India pairs on the pair features),
